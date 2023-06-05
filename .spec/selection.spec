@@ -1,0 +1,2 @@
+if (NativeCondition) {}
+advif (pyCondition) {}

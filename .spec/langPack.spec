@@ -1,0 +1,1 @@
+Langpck or LangPackage are a collection of lang.json files containing translation for al the text in the app

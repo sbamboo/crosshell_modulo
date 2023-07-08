@@ -1,0 +1,40 @@
+==============================[ Crosshell License ]==============================
+This license applies to the current repository where this file is contained in. Currently: "Crosshell Modulo".
+This license is here to inform both be the author and any user who comes by this repository about the rights that they have and the usage agreements regarding this repository's content.
+
+Throughout this document some words are used that may need some clarification and/or definition.
+The word "we" and "me" and "I" points to the author of this license and since this is a privately written license this also means the author and or owner of the repository this license is within.
+The word "you" and "user" points to the person/legal entity reading this license or using the content this license protects.
+By "using" we mean looking at or reading through this repository as well as of course downloading any files/assets/software/software-parts or running and/or installing said parts.
+
+For a licensor to be allowed to license under this license the licensor must comply to the agreements bellow:
+
+ - The licensor/I may not include copyrighted or diffrently-licensed content bellow this license without specifying said parts/content and their original source location aswell as the license bound to that part/content.
+
+For a licensee to be allowed to use content under this license they must comply to the agreements bellow:
+
+ - You the licensee may not redistribute this software or any files/assets/software/software-parts from the content covered by this license as your own, nor claim it as your own. You may also not redistribute or claim it as property of someone else then the author.
+
+ - You the licensee may use files/assets/software/software-parts or the project in full inside your open-source projects. However you must specify which parts are from this project, credit the original author (me) aswell as include a link to the original source.
+ 
+ - You may use my code as an inspirational source for open-source projects. (Note! only open-source ones) However if so, you are obligated to include a link to this repository stating that you have taken inspiration from it. You are however not obligated to specify which part of this project, or which part of your project is inspired. Also note that you may not copy or plagiarize any content under this license, upon using content as an inspirational source you would have to rewrite assets/code and likewise.
+
+ - You may not use files/assets/software/software-parts/content or any thing convered under this license in a closed-source project or redistribution, compiled software is allowed aslong as the source code is avaliable. Note that convered content given out as source may not be diffrent then the one used in the compiled software.
+
+You may get extra and/or modified rights to this software from me personally since I remain in a situation where I may change/modify the license to this software at any time without notice.
+
+As stated above I remain the rights to modify/change/remove/relicense any part of this project without further notice to anyone.
+However, changes in license will only apply to content made after the change.
+This means if you download or snapshot or install parts covered by this license said parts are licensed by the current license at point of download and not any other licenses later added, modified, or removed.
+
+Since the nature of this project, specific parts may be licensed separately as long as I state which parts that is. This means that libraries used/included may be from third parties with other licenses. They also may be from me and allowed to be licensed separately. Also, cmdlets are allowed to have their own license. However, parts not installed by the user and that are official to this project or originally included then reinstalled are automatically covered under this license. Any parts may be added to be covered by this license by stating so in a license file or property of the part.
+
+============================================================================
+
+This license was written 2023-07-08 for the Crosshell-Modulo project and is property by Simon Kalmi Claesson.
+This license is version 1.3 and I remain in full ability to update this license however I like.
+
+By using this software or any assets/parts of it you are automatically agreeing to this license.
+
+This license also applies to software uploaded in this repository before the inclusion of this license since this project is a part of the main Crosshell project licensed separately.
+However, this only applies if the parts are used after this licenses creation and not for parts only viewed/downloaded.

@@ -16,5 +16,6 @@ $json   >> get json
 
 $list =| getColorList >> getColorList | set list 
 
-$list = (getColor | convList) >> set list '(getColor | convList)'
+$list =| getColor | convList >>  getColor | convList | set list
+
 $list § getColor | convList   >> getColor | convList | set list

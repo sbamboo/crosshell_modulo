@@ -1,0 +1,6 @@
+crsh:
+  Language:
+    Default: en-us
+    DefaultList: '{CS_BaseDir}\core\langlist.json'
+    LangFormat: json
+    ListFormat: json

@@ -42,7 +42,6 @@ class jsonYamlProviderSimpleIO():
     def get(self):
         return _fileHandler(self.mode,"get",self.file)
 
-
 class jsonYamlProvider():
     '''
     CSlib.datafiles: Json/Yaml provider, allowes you to use a file as a dictionary
@@ -91,41 +90,73 @@ def getKeyPath(dictionary, keypath):
     if len(keys) > 1:
         value = dictionary
         try:
-            for key in keys:
-                value = value[key]
+            blacklist = []
+            for i,key in enumerate(keys):
+                if i not in blacklist:
+                    try: key = int(key)
+                    except: pass
+                    value = value[key]
+            # Fix for string expectancy rather then list
+            if type(value) == list:
+                try:
+                    index = int(keys[i+1])
+                    value = value[index]
+                    blacklist.append(i+1)
+                except:
+                    value = value[0]
             return value
         except (KeyError, TypeError):
             return None
     else:
         return dictionary.get(keypath)
 
-def setKeyPath(dictionary, keypath, value):
+#TODO: Reimplement
+def setKeyPath(dictionary, keypath, value, nonAppend=False, update=False):
     '''CSlib.datafiles: Sets the value at a keypath from a dictionary (keypaths are keys sepparated by dots)'''
-    keys = keypath.split('.')
-    if len(keys) > 1:
-        nested_dict = dictionary.copy()
-        for key in keys[:-1]:
-            if key not in nested_dict:
-                nested_dict[key] = {}
-            nested_dict = nested_dict[key]
-        nested_dict[keys[-1]] = value
-        return nested_dict
-    else:
-        nested_dict = dictionary.copy()
-        nested_dict[keypath] = value
-        return nested_dict
-    
-def setKeyPath(dictionary, keypath, value):
-    '''CSlib.datafiles: Sets the value at a keypath from a dictionary (keypaths are keys sepparated by dots)'''
+    if update == True: nonAppend = True
+    ogKeypath = keypath
     # Split path by dots and put last pathPart as a part of value
     keypath = keypath.split(".")
     value = (keypath[-1], value)
     keypath.pop(-1)
     curr = dictionary
-    for key in keypath:
+    block = False
+    for i,key in enumerate(keypath):
         if key not in curr:
             curr[key] = {}
-        curr = curr[key]
+        if type(curr[key]) == str:                       # Fix for subproperty of existing string
+            curr[key] =  [curr[key],{value[0]:value[1]}] #
+        elif type(curr[key]) == list:                 # Fix for getting a list
+            try:
+                index = int(value[0])
+                curr[key][index] = value[1]
+            except:
+                if {value[0]:value[1]} not in curr[key]:  # Fix for subproperty of existing string
+                    curr[key].append({value[0]:value[1]}) #
+                    block = True
+        else:
+            curr = curr[key]
     k, v = value
-    curr[k] = v
+    if nonAppend == True:
+        if update == True and curr.get(k) != None:
+            if type(curr[k]) == list:
+                if v not in curr[k]:
+                    curr[k].extend(v)
+            else:
+                curr[k].update(v)
+        else:
+            if block == False:
+                fkp = (".".join(ogKeypath.split(".")[:-1]))
+                tv = getKeyPath(dictionary, f"{fkp}.1")
+                if tv == None:
+                    curr[k] = v
+    else:
+        if curr.get(k) == {} or curr.get(k) == None:
+            try:
+                index = int(k)
+                if type(curr) == list:
+                    curr[int(k)] = v
+            except:
+                if block == False:
+                    curr.update({k: v})
     return dictionary

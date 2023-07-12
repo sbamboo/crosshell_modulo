@@ -44,7 +44,7 @@ def crosshellParsingEngine(stringToParse) -> str:
                 if "$" in value: value = value.replace("$", "%variableOperator%")
                 return f"append {variable} {value}"
         elif "-=" in inputString:
-                parts = inputString.split("+=")
+                parts = inputString.split("-=")
                 variable = parts[0].strip()
                 variable = variable.strip("$")
                 parts.pop(0)

@@ -31,14 +31,17 @@ class filesys():
         This class contains functions to perform filessytem actions like creating and removing files/directories.
         Functions included are:
           - help: Shows this help message.
-          - errorhandler: Internal function to handle errors. (Taking "action=<str_action>", "path=<str_path>" and "noexist=<bool>"
+          - replaceSeps: Function to replace path separators using os.sep (Taking "path=<str>")
+          - errorhandler: Internal function to handle errors. (Taking "action=<str_action>", "path=<str_path>" and "noexist=<bool>")
           - renameFile: Renames a file. (Taking "filepath=<str>", "newFilepath=<str>")
           - renameDir: Renames a directory. (Taking "folderpath=<str>", "newFolderpath=<str>")
           - doesExist: Checks if a file/directory exists. (Taking "path=<str>")
           - notExist: Checks if a file/directory does not exist. (Taking "path=<str>")
           - isFile: Checks if a object is a file. (Taking "path=<str>")
           - isDir: Checks if a object is a directory. (Taking "path=<str>")
+          - ensureDirPath: Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH. (Taking "path=<str>")
           - getFileName: Returns the filename of the given file, excluding file extension. (Taking "path=<str>")
+          - getFileExtension: Gets the fileextension of a file. (Taking "path=<str>")
           - createFile: Creates a file. (Taking "filepath=<str>", "overwrite=<bool>" and "encoding=<encoding>")
           - createDir: Creates a directory. (Taking "folderpath=<str>")
           - deleteFile: Deletes a file. (Taking "filepath=<str>")
@@ -160,7 +163,7 @@ class filesys():
         else:
             try:
                 os.rename(filepath,newFilepath)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
 
     # Function to rename a folder
     def renameDir(folderpath=str(),newFolderpath=str()):
@@ -175,7 +178,7 @@ class filesys():
         else:
             try:
                 shutil.move(folderpath,newFolderpath)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
 
     # Function to create file
     def createFile(filepath=str(), overwrite=False, encoding=None):
@@ -190,13 +193,13 @@ class filesys():
                 try:
                     f = open(filepath, "x", encoding=encoding)
                     f.close()
-                except: print("\033[31mAn error occurred!\033[0m")
+                except: raise Exception("\033[31mAn error occured!\033[0m")
         # Create new file
         else:
             try:
                 f = open(filepath, "w", encoding=encoding)
                 f.close()
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
     
     # Function to create directory
     def createDir(folderpath=str()):
@@ -206,7 +209,7 @@ class filesys():
         # Make directory
         if valid == True:
             try: os.mkdir(folderpath)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
     
@@ -218,7 +221,7 @@ class filesys():
         # Delete file
         if valid == True:
             try: os.remove(filepath)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -230,7 +233,7 @@ class filesys():
         # Delete directory
         if valid == True:
             try: os.rmdir(folderpath)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -242,7 +245,7 @@ class filesys():
         # Delete directory
         if valid == True:
             try: shutil.rmtree(folderpath)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -262,14 +265,14 @@ class filesys():
                     f = open(filepath, "a", encoding=encoding)
                     f.write(inputs)
                     f.close()
-                except: print("\033[31mAn error occurred!\033[0m")
+                except: raise Exception("\033[31mAn error occured!\033[0m")
             # Overwrite existing file
             else:
                 try:
                     f = open(filepath, "w", encoding=encoding)
                     f.write(inputs)
                     f.close()
-                except: print("\033[31mAn error occurred!\033[0m")
+                except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -286,7 +289,7 @@ class filesys():
                 content = f.read()
                 f.close()
                 return content
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -307,7 +310,7 @@ class filesys():
         if valid == True:
             try:
                 shutil.copy2(sourcefile, destination)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -318,7 +321,7 @@ class filesys():
         if valid == True:
             try:
                 shutil.copytree(sourceDirectory, destinationDirectory)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -386,7 +389,7 @@ class filesys():
         if valid == True:
             try:
                 shutil.make_archive(('.'.join(destination.split(".")[:-1]).strip("'")), format=format, root_dir=sourceDirectory)
-            except:  print("\033[31mAn error occurred!\033[0m")
+            except:  raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -397,7 +400,7 @@ class filesys():
         if valid == True:
             try:
                 shutil.unpack_archive(archiveFile, destination)
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
         
@@ -413,7 +416,7 @@ class filesys():
                         yield from filesys.scantree(entry.path)
                     else:
                         yield entry
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 
@@ -440,7 +443,7 @@ class filesys():
                         return True
                     else:
                         return False
-            except: print("\033[31mAn error occurred!\033[0m")
+            except: raise Exception("\033[31mAn error occured!\033[0m")
         else:
             print(valid); exit()
 

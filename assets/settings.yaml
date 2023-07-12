@@ -1,6 +1,9 @@
 crsh:
   Language:
-    Default: en-us
+    Default:
+      '1': en-us
     DefaultList: '{CS_BaseDir}\core\langlist.json'
     LangFormat: json
     ListFormat: json
+crsh_debugger:
+  Mode: limited

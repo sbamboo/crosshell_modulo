@@ -16,9 +16,8 @@ Variables:
   CS_Settings:      ClassInstance of the settings manager.
   CS_lp:            ClassInstance of the language provider.
   CS_Langpath:      Path of langfiles.
-  CS_mPackFilePath: Path of mPackage files.
-  CS_mPackPath:     Path of mPackages
-  CS_PackageList:   The list of packages loaded into crosshell.
+  CS_packFilePath:  Path of package files.
+  CS_packageList:   A dictionary of lists of packages, in format:   {"<packageType>":[list_of_paths_to_packages]}
 
 Variables/Settings:
   CS_CoreDir_RetrivalMode: How crosshell should retrive the coredir ("inspect" or "file"), default: "inspect"
@@ -27,6 +26,8 @@ Variables/Settings:
   CS_text:                 Instance of the crosshellGlobalTextSystem
   CS_DefSessionFile:       The default session file to load from relative to the basedir
   CS_PackagesFolder:       The folder to store packages in, relative to basedir
+  CS_mPackPath:            Path of mPackages (the folder to install to)
+  CS_lPackPath:            Path of lPackages/legacyPackages (the folder to install to)
 '''
 
 # Settings
@@ -34,6 +35,8 @@ CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
 CS_PackagesFolder = f"{os.sep}packages"
+CS_mPackPath = f"{CS_BaseDir}{CS_PackagesFolder}"
+CS_lPackPath = f"{CS_BaseDir}{CS_PackagesFolder}{os.sep}.legacyPackages"
 
 # Handle mainfile argument
 CS_Args = sys.argv
@@ -60,7 +63,10 @@ CS_BaseDir = os.path.abspath(os.path.join(CS_CoreDir,".."))
 from cslib._crosshellParsingEngine import pathtagManager
 CS_Pathtags = {
    "CS_CoreDir": CS_CoreDir,
-   "CS_BaseDir": CS_BaseDir
+   "CS_BaseDir": CS_BaseDir,
+   "CS_Packages": CS_PackagesFolder,
+   "CS_mPackPath": CS_mPackPath,
+   "CS_lPackPath": CS_lPackPath
 }
 CS_PathtagMan = pathtagManager(CS_Pathtags)
 
@@ -112,16 +118,34 @@ CS_lp.populateList()
 # Create a session
 csSession = crosshellSession(defaultSessionFile=f"{CS_BaseDir}{CS_DefSessionFile}")
 
-# Create mPackageFile path
-CS_mPackFilePath = pathObject([
+# Create packageFile path, of where to get package-files from
+CS_packFilePath = pathObject([
   f"{CS_BaseDir}{CS_PackagesFolder}{os.sep}.files"
 ])
+for path in CS_packFilePath.get(): filesys.ensureDirPath(path) # Ensure al paths exists
 
-# Create mPackage path
-CS_mPackPath = pathObject([
-  f"{CS_BaseDir}{CS_PackagesFolder}"
-])
-
-# Load data from /packages
+# Retrive a list of packages in /packages and install those waiting for it, then add it to the packagesLabeledList
 from cslib._crosshellMpackageSystem import loadPackages
-CS_PackageList = loadPackages(CS_mPackFilePath,CS_mPackPath)
+CS_packageList = {
+  "modulo": loadPackages(CS_packFilePath,CS_mPackPath,["mpackage","mpack","mPackage","mPack","csmpack","csMpack","csmPack"]),
+  "legacy": loadPackages(CS_packFilePath,CS_lPackPath,["package","pack","cspack","csPack"])
+}
+
+# [Load package data] 
+def csLoadPackageData(CS_packageList):
+  # cmdlets from legacyPackages
+  pass
+
+# Registry or just path and then functions?
+cmdlets = {
+  {
+    "name": "test",
+    "path": "..\\test.py",
+    "fending": ".py",
+    "aliases": ["test2"],
+    "desc": "Testing some shi",
+    "args": ["--do","-dont <smth>"],
+    "blockCommonParameters": False,
+    "encoding": "utf-8"
+  }
+}

@@ -5,7 +5,7 @@ CSlib: CrosshellMpackageSystem contains crosshells code to handle modules.
 import os
 from .externalLibs.filesys import filesys
 
-def _getMPackageFiles(Path=str,packageExtensions=list):
+def _getPackageFiles(Path=str,packageExtensions=list):
     packageFiles = []
     objects = filesys.scantree(Path)
     for object in objects:
@@ -15,36 +15,41 @@ def _getMPackageFiles(Path=str,packageExtensions=list):
             packageFiles.append({name:object.path})
     return packageFiles
 
-def _findInstalledPackages(Path=str):
+def _findInstalledPackages(Path=str,exclusionList=list,safeMode=False):
     packages = []
     objects = filesys.scantree(Path)
     for object in objects:
-        if filesys.isDir(object.path) == True:
-            packages.append(object.name)
+        if safeMode == True:
+            dirname = os.path.dirname(object.path)
+            if os.path.dirname(dirname) == Path and dirname not in packages:
+                if dirname not in exclusionList:
+                    packages.append(dirname)
+        else:
+            if filesys.isDir(object.path) == True:
+                packages.append(object.name)
     return packages
 
-def _listUninstalledPackages(packageFiles=list,installedPackages=list):
+def _listNoninstalledPackages(packageFiles=list,installedPackages=list):
     '''not used'''
-    uninstalledPackages = []
+    NoninstalledPackages = []
     for package in packageFiles:
         if list(package.keys())[0] not in installedPackages:
-            uninstalledPackages.append(package)
-    return uninstalledPackages
+            NoninstalledPackages.append(package)
+    return NoninstalledPackages
 
-
-def loadPackages(PackageFilePathObject,PackagesPathObject,packageExtensions=["mpackage","mpack","mPackage","mPack"]):
-    '''CSlib.CMPS: finds and installs packages, finally returing a list of al installed packages on the system'''
-    # Find .mpackage files
-    filePaths = PackageFilePathObject.get()
+def loadPackages(findFilesPathObj,DestinationPathObj,packageExtensions=list):
+    '''CSlib.CMPS: finds and installs packages, finally returing a list of al installed packages.'''
+    # Find files
+    filePaths = findFilesPathObj.get()
     packageFiles = []
     for path in filePaths:
-        packageFiles.extend(_getMPackageFiles(path,packageExtensions))
-    # Look at the list of installed mpackages (folders)
-    packsPaths = PackagesPathObject.get()
+        packageFiles.extend(_getPackageFiles(path,packageExtensions))
+    # Retrive a list of al installed packages
+    packsPaths = DestinationPathObj.get()
     installedPackages = []
     for path in packsPaths:
-        installedPackages.extend(_findInstalledPackages(path))
-    # Extract uninstalled mpackages
+        installedPackages.extend(_findInstalledPackages(path,findFilesPathObj.get()))
+    # Extract uninstalled mpackages and add them to the list
     for package in packageFiles:
         if list(package.keys())[0] not in installedPackages:
             path = list(package.values())[0]
@@ -53,8 +58,13 @@ def loadPackages(PackageFilePathObject,PackagesPathObject,packageExtensions=["mp
             newPath = f"{pathOnly}{os.sep}{fileName}.zip"
             filesys.renameFile(path,newPath)
             try:
-                filesys.unArchive(newPath,packsPaths[0])
+                destinationPath = f"{packsPaths[0]}{os.sep}{fileName}"# Index 0 for default path
+                filesys.ensureDirPath(destinationPath)
+                filesys.unArchive(newPath,destinationPath)
+                filesys.renameFile(newPath,path) # Rename to mpackage from zip again
+                installedPackages.append(destinationPath)
             except:
-                print(f"Failed to load mPackage '{path}', invalid archive!")
+                print(f"Failed to load package '{path}', invalid archive!")
                 filesys.renameFile(newPath,path)
     # Return a list of paths of installed packages
+    return installedPackages

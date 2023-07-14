@@ -68,3 +68,13 @@ def loadPackages(findFilesPathObj,DestinationPathObj,packageExtensions=list):
                 filesys.renameFile(newPath,path)
     # Return a list of paths of installed packages
     return installedPackages
+
+
+# Function to create a registry entry for a legacyCmdlet.
+def loadLegacyCmdlet(PackagePath) -> dict:
+    '''CSlib.CMPS: Creates a registry entry for a legacyCmdlet'''
+    # Find files
+    # Check if they have a package.yaml file storing config for the cmdlets
+    # Look at <cmdletName>.cfg / <cmdletName>.config files
+    # Create a registry entry / dict for the cmdlet
+    # Return a dictionary with al cmdletRegistryEntries as nested dicts

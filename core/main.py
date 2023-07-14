@@ -149,3 +149,4 @@ cmdlets = {
     "encoding": "utf-8"
   }
 }
+'''Mass variable registry!'''

@@ -4,7 +4,6 @@
 #
 
 # [Imports]
-import os
 import socket
 import re
 import getpass

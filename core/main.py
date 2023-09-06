@@ -18,6 +18,7 @@ Variables:
   CS_Langpath:      Path of langfiles.
   CS_packFilePath:  Path of package files.
   CS_packageList:   A dictionary of lists of packages, in format:   {"<packageType>":[list_of_paths_to_packages]}
+  CS_Registry:      The main variable registry in crosshell.
 
 Variables/Settings:
   CS_CoreDir_RetrivalMode: How crosshell should retrive the coredir ("inspect" or "file"), default: "inspect"
@@ -35,17 +36,13 @@ CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
 CS_PackagesFolder = f"{os.sep}packages"
-CS_mPackPath = f"{CS_BaseDir}{CS_PackagesFolder}"
-CS_lPackPath = f"{CS_BaseDir}{CS_PackagesFolder}{os.sep}.legacyPackages"
 
 # Handle mainfile argument
 CS_Args = sys.argv
-CS_Startfile = None
+CS_Startfile = "Unknown"
 for arg in CS_Args:
     if "@startfile" in arg:
         CS_Startfile = (arg.split("@startfile:"))[-1]
-if CS_Startfile is None:
-    CS_Startfile = "Unknown"
 # Handle some things
 CS_Efile = CS_Args[0]
 CS_Args.pop(0)
@@ -58,6 +55,9 @@ if CS_CoreDir_RetrivalMode.lower() == "inspect":
 else:
   CS_CoreDir = os.path.abspath(os.path.dirname(__file__))
 CS_BaseDir = os.path.abspath(os.path.join(CS_CoreDir,".."))
+# Fix subdirectories/paths
+CS_mPackPath = f"{CS_BaseDir}{CS_PackagesFolder}"
+CS_lPackPath = f"{CS_BaseDir}{CS_PackagesFolder}{os.sep}.legacyPackages"
 
 # Load pathtags (First instance)
 from cslib._crosshellParsingEngine import pathtagManager
@@ -69,6 +69,7 @@ CS_Pathtags = {
    "CS_lPackPath": CS_lPackPath
 }
 CS_PathtagMan = pathtagManager(CS_Pathtags)
+CS_PathtagMan.ensureAl()
 
 # Create settings object
 CS_Settings = modularSettingsLinker(f"{CS_BaseDir}{CS_SettingsFile}")
@@ -131,14 +132,33 @@ CS_packageList = {
   "legacy": loadPackages(CS_packFilePath,CS_lPackPath,["package","pack","cspack","csPack"])
 }
 
-# [Load package data] 
-def csLoadPackageData(CS_packageList):
+
+# [Load package data]
+# Define base registry
+CS_Registry = {
+  "cmdlets": []
+}
+'''Crosshell MainVariable Registry'''
+# Add settings field for allowed fileTypes
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.Modulo",[".py"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.Legacy",[".py"])
+# Loader Function
+def csLoadPackageData(packageList=dict):
+  # cmdlets from modulo packages
+  _mPackages = packageList.get("modulo")
+  if _mPackages != None:
+    pass
   # cmdlets from legacyPackages
-  pass
+  _lPackages = packageList.get("legacy")
+  if _lPackages != None:
+    from cslib.packageReaders.legacy import getDataFromList
+    registryData = getDataFromList(_lPackages)
+# Execute loaderFunction into registry
+csLoadPackageData(CS_packageList)
 
 # Registry or just path and then functions?
 cmdlets = {
-  {
+  "test": {
     "name": "test",
     "path": "..\\test.py",
     "fending": ".py",
@@ -150,3 +170,7 @@ cmdlets = {
   }
 }
 '''Mass variable registry!'''
+
+
+
+crshDebug.print("hi",onMode="on;limited")

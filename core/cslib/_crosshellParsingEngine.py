@@ -1,5 +1,6 @@
 
 import json
+from .externalLibs.filesys import filesys
 
 '''
 CSlib: Crosshell parsing engine
@@ -136,3 +137,7 @@ class pathtagManager():
             tagString = '{' + tagName + '}'
             string = string.replace(tagString,tagValue)
         return string
+    def ensureAl(self):
+        for _,tagValue in self.pathtags.items():
+            if filesys.notExist(tagValue) == True:
+                    filesys.ensureDirPath(tagValue)

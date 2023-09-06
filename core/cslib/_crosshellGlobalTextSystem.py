@@ -197,13 +197,16 @@ class crosshellGlobalTextSystem():
             else:
                 inputText = inputText.replace(f"\033[{match}m", "")
         # ReReplace Resets
-        inputText = inputText.replace("§CSlib.CGTS.placeholder.reset§","\033[0m")
+        if self.stripAnsi == False and _stripAnsi == False:
+            inputText = inputText.replace("§CSlib.CGTS.placeholder.reset§","\033[0m")
+        else:
+            inputText = inputText.replace("§CSlib.CGTS.placeholder.reset§","")
         return inputText
 
 def croshellGlobalTextSystemQuick(inputText,pathtagInstance=None,palette=standardHexPalette,paletteMode="hex",stripAnsi=False,instance=None):
     '''CSlib.CGTS: Main formatter function taking text, parameters and then continuing, in function form.'''
     if instance == None:
-        tempInstance = crosshellGlobalTextSystem(pathtagDefinitions,crosshellDefaultPalette,stripAnsi)
+        tempInstance = crosshellGlobalTextSystem(pathtagInstance,standardHexPalette,stripAnsi)
     else:
         tempInstance = instance
     return tempInstance.parse(inputText)
@@ -228,11 +231,10 @@ def parsePrefixDirTag(inputText=str,currentDirectory=str,dirInPrefixEnabled=bool
         # Match for dir element
         pattern = r'{wdir:([^]]+)"}'
         matchresult = re.search(pattern,inputText)
-        matchraw = matchresult.group()
         # Save raw
-        matchraw = match
+        matchraw = matchresult.group()
         # Strip {wdir:} syntax
-        matchContent = match.lstrip("{")
+        matchContent = matchraw.lstrip("{")
         matchContent = matchContent.lstrip('wdir:"')
         matchContent = matchContent.rstrip('"}')
         # Turned {wdir:"<content>"} >> raw:{wdir:"<content>"} content:<content>

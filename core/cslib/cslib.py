@@ -336,7 +336,6 @@ class crosshellDebugger():
         self.stripAnsi = stripAnsi
         self.allowedModes = ["on","off","limited"]
         self.colors = {"reset":"\033[0m","on":"\033[90m","off":"\033[31m","limited":"\033[90m"}
-        #self.colors = {"reset":"\033[0m","on":"\033[90m","off":"\033[31m","limited":"\033[33m"}
         self.formatterInstance = formatterInstance
         self.defFormatterInstance = formatterInstance
     def setDebugMode(self,mode=str):
@@ -353,7 +352,11 @@ class crosshellDebugger():
     def resetFormatterInstance(self):
         self.formatterInstance = self.defFormatterInstance
     def print(self,text,onMode="limited"):
-        if self.debugMode == onMode:
+        if ";" in onMode:
+            onMode = onMode.split(";")
+        else:
+            onMode = [onMode]
+        if self.debugMode in onMode:
             reset = self.colors['reset']
             color = self.colors[self.debugMode]
             if self.stripAnsi == True:

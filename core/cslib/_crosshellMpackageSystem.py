@@ -37,7 +37,7 @@ def _listNoninstalledPackages(packageFiles=list,installedPackages=list):
             NoninstalledPackages.append(package)
     return NoninstalledPackages
 
-def loadPackages(findFilesPathObj,DestinationPathObj,packageExtensions=list):
+def loadPackages(findFilesPathObj,DestinationPath=str,packageExtensions=list):
     '''CSlib.CMPS: finds and installs packages, finally returing a list of al installed packages.'''
     # Find files
     filePaths = findFilesPathObj.get()
@@ -45,10 +45,8 @@ def loadPackages(findFilesPathObj,DestinationPathObj,packageExtensions=list):
     for path in filePaths:
         packageFiles.extend(_getPackageFiles(path,packageExtensions))
     # Retrive a list of al installed packages
-    packsPaths = DestinationPathObj.get()
     installedPackages = []
-    for path in packsPaths:
-        installedPackages.extend(_findInstalledPackages(path,findFilesPathObj.get()))
+    installedPackages.extend(_findInstalledPackages(DestinationPath,findFilesPathObj.get()))
     # Extract uninstalled mpackages and add them to the list
     for package in packageFiles:
         if list(package.keys())[0] not in installedPackages:
@@ -58,7 +56,7 @@ def loadPackages(findFilesPathObj,DestinationPathObj,packageExtensions=list):
             newPath = f"{pathOnly}{os.sep}{fileName}.zip"
             filesys.renameFile(path,newPath)
             try:
-                destinationPath = f"{packsPaths[0]}{os.sep}{fileName}"# Index 0 for default path
+                destinationPath = f"{DestinationPath}{os.sep}{fileName}"# Index 0 for default path
                 filesys.ensureDirPath(destinationPath)
                 filesys.unArchive(newPath,destinationPath)
                 filesys.renameFile(newPath,path) # Rename to mpackage from zip again

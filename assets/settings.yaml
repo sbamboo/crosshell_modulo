@@ -5,5 +5,12 @@ crsh:
     DefaultList: '{CS_BaseDir}\core\langlist.json'
     LangFormat: json
     ListFormat: json
+  Packages:
+    AllowedFileTypes:
+      Cmdlets:
+        Legacy:
+        - .py
+        Modulo:
+        - .py
 crsh_debugger:
-  Mode: limited
+  Mode: 'limited'

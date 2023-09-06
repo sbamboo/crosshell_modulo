@@ -160,3 +160,37 @@ def setKeyPath(dictionary, keypath, value, nonAppend=False, update=False):
                 if block == False:
                     curr.update({k: v})
     return dictionary
+
+# .Config
+def config_to_dict(config_file_content=str) -> dict:
+    """
+    Convert the .config or .cfg file-format to a dictionary.
+
+    Parameters:
+    config_file_content (str): The configuration file content.
+
+    Returns:
+    dict: A dictionary representing the configuration.
+    """
+    config_dict = {}
+    for line in config_file_content:
+        line = line.strip()
+        if line and not line.startswith('#'):
+            key, value = line.split('=')
+            config_dict[key.strip()] = value.strip()
+    return config_dict
+
+def dict_to_config(config_dict=dict) -> str:
+    """
+    Convert a dictionary to the .config or .cfg file-format.
+
+    Parameters:
+    config_dict (dict): The dictionary containing configuration data.
+
+    Returns:
+    str: config file content.
+    """
+    config_content = ""
+    for key, value in config_dict.items():
+        config_content += f"{key}={value}\n"
+    return config_content

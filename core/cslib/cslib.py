@@ -373,14 +373,104 @@ crshDebug = crosshellDebugger()
 
 # Session
 class crosshellSession():
+    '''CSlib: Crosshell session, class to contain session data.'''
     def __init__(self,sessionFileFormat="json",defaultSessionFile=str):
+        # Setup
         self.defSessionFile = defaultSessionFile
         self.sessionFileFormat = sessionFileFormat
         self.sessionFile = self.defSessionFile
         self.loadSessionFile(self.sessionFile)
+        # Variables
+        self.registry = {}
+        self.data = {}
+        self.data["set"] = None
+        self.data["lng"] = None
+    # SessionFiles
+    def _handleClassDataGet(self):
+        toreturn = self.data.copy()
+        if self.data.get("lng") != None:
+            toreturn["lng"] = {"languageData":self.data["lng"].languageData,"language":self.data["lng"].language,"languageList":self.data["lng"].languageList,"defLanguage":self.data["lng"].defLanguage}
+        if self.data.get("set") != None:
+            toreturn["set"] = {"file":self.data["set"].file,"modules":self.data["set"].modules}
+        return toreturn
+    def _handleClassDataSet(self,data):
+        if data == None: data = {}
+        try:
+            self.data
+        except:
+            self.data = {}
+        if self.data.get("lng") != None:
+            self.data["lng"].languageData = data["lng"]["languageData"]
+            self.data["lng"].language = data["lng"]["language"]
+            self.data["lng"].languageList = data["lng"]["languageList"]
+            self.data["lng"].defLanguage = data["lng"]["defLanguage"]
+        if self.data.get("set") != None:
+            self.data["set"].file = data["set"]["file"]
+            self.data["set"].modules = data["set"]["modules"]
     def loadSessionFile(self,sessionFile=None):
         if sessionFile == None: sessionFile = self.sessionFile
-        self.data = _fileHandler(self.sessionFileFormat, "get", sessionFile)
+        t = _fileHandler(self.sessionFileFormat, "get", sessionFile)
+        self.data = self._handleClassDataSet(t.get("dta"))
+        self.registry = t.get("reg")
     def saveSessionFile(self,sessionFile=None):
         if sessionFile == None: sessionFile = self.sessionFile
-        _fileHandler(self.sessionFileFormat, "set", sessionFile, self.data)
+        _fileHandler(self.sessionFileFormat, "set", sessionFile, {"dta":self._handleClassDataGet(self.data),"reg":self.registry})
+    # Data
+    def setSession(self,sessionData=dict):
+        '''{"dta":<data>,"reg":<reg>}'''
+        self.data = sessionData["dta"]
+        self.registry = sessionData["reg"]
+    def getSession(self):
+        return {"dta":self.data,"reg":self.registry}
+    # Registry
+    def resetRegistry(self):
+        self.registry = {}
+
+def expectedList(value) -> list:
+    '''CSlib: Smal function for ensuring lists.'''
+    if type(value) != list:
+        return [value]
+    else:
+        return value
+
+def toReaderFormat(dictFromSettings) -> list:
+    '''CSlib: Smal function for to convert the reader part of settings to the correct format.'''
+    readerData = []
+    for reader,extensions in dictFromSettings.items():
+        readerData.append( {"exec":reader,"extensions":expectedList(extensions)} )
+    return readerData
+
+def handleOSinExtensionsList(extensions=list) -> list:
+    '''CSlib: Smal function for checking os-specific extensions.'''
+    newList = []
+    for extension in extensions:
+        # single
+        if "win@" in extension:
+            if IsWindows() == True:
+                newList.append( extension.replace("win@","") )
+        elif "mac@" in extension:
+            if IsMacOS() == True:
+                newList.append( extension.replace("mac@","") )
+        elif "lnx@" in extension:
+            if IsLinux() == True:
+                newList.append( extension.replace("lnx@","") )
+        # all
+        elif "all@" in extension:
+            newList.append( extension.replace("all@","") )
+        # multi
+        elif "win;mac@" in extension:
+            if IsWindows() == True or IsMacOS() == True:
+                newList.append( extension.replace("win;mac@","") )
+        elif "win;lnx@" in extension:
+            if IsWindows() == True or IsLinux() == True:
+                newList.append( extension.replace("win;lnx@","") )
+        elif "mac;lnx@" in extension:
+            if IsMacOS() == True or IsLinux() == True:
+                newList.append( extension.replace("mac;lnx@","") )
+        elif "lnx;mac@" in extension:
+            if IsMacOS() == True or IsLinux() == True:
+                newList.append( extension.replace("lnx;mac@","") )
+        # fallback
+        else:
+            newList.append(extension)
+    return newList

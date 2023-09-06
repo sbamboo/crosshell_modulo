@@ -8,9 +8,23 @@ crsh:
   Packages:
     AllowedFileTypes:
       Cmdlets:
+        INTERNAL_PYTHON:
+        - .py
+        SYSTEM_EXECUTABLE:
+        - win@.exe
+        - lnx@MIME_EXECUTABLE
+      Packages:
         Legacy:
-        - .py
+        - package
+        - pack
+        - cspack
         Modulo:
-        - .py
+        - mpackage
+        - mpack
+        - csmpack
+    test:
+      test: hi
+    test2:
+      test: hi
 crsh_debugger:
-  Mode: 'limited'
+  Mode: limited

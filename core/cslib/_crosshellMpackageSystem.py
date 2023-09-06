@@ -11,7 +11,7 @@ def _getPackageFiles(Path=str,packageExtensions=list):
     for object in objects:
         fending = filesys.getFileExtension(object.name)
         name = filesys.getFileName(object.name)
-        if fending in packageExtensions:
+        if fending.lower() in packageExtensions:
             packageFiles.append({name:object.path})
     return packageFiles
 

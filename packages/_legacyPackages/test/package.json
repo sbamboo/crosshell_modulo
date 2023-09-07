@@ -1,0 +1,16 @@
+{
+    "test2": {
+        "desc": "fuf",
+        "aliases": ["fuf2","fuf3"],
+        "args": "<any>",
+        "options": {
+            "synopsisDesc": "true"
+        }
+    },
+    "busybox": {
+        "args": "<don't>"
+    },
+    "test3": {
+        "desc": "3"
+    }
+}

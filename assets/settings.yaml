@@ -1,18 +1,32 @@
 crsh:
+  Formats:
+    DefaultEncoding: utf-8
   Language:
     Default:
       '1': en-us
-    DefaultList: '{CS_BaseDir}\core\langlist.json'
+    DefaultList: '{CS_BaseDir}\assets\langlist.json'
     LangFormat: json
     ListFormat: json
   Packages:
     AllowedFileTypes:
+      CmdletFiles:
+        Conf:
+        - cfg
+        - config
+        - conf
+        Pack:
+        - json
+        - cfg
+        - conf
+        - config
       Cmdlets:
         INTERNAL_PYTHON:
-        - .py
-        SYSTEM_EXECUTABLE:
-        - win@.exe
-        - lnx@MIME_EXECUTABLE
+        - py
+        PLATFORM_EXECUTABLE:
+        - win@exe
+        - win@cmd
+        - win@bat
+        - lnx;mac@MIME_EXECUTABLE
       Packages:
         Legacy:
         - package
@@ -22,9 +36,7 @@ crsh:
         - mpackage
         - mpack
         - csmpack
-    test:
-      test: hi
-    test2:
-      test: hi
+    Readers:
+      ReaderFile: '{CS_BaseDir}\assets\readerfiles.json'
 crsh_debugger:
   Mode: limited

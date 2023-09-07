@@ -5,7 +5,7 @@ import sys
 startfp = os.path.abspath(__file__)
 
 # Define the path of the main script
-CSMAINFILEPATH = f"{os.path.dirname(startfp)}{os.sep}core{os.sep}main.py"
+CSMAINFILEPATH = os.path.join(os.path.dirname(startfp), 'core', 'main.py')
 
 # Prepare the formatted startfilepath string
 CSSTARTFILEPATHstring = "@startfile:{}".format(startfp)
@@ -14,7 +14,7 @@ CSSTARTFILEPATHstring = "@startfile:{}".format(startfp)
 sys.argv.pop(0)
 sys.argv.insert(0, CSSTARTFILEPATHstring)
 
-# Execute the main script
-import subprocess
-subprocess.Popen([sys.executable, CSMAINFILEPATH, *sys.argv])
-#exec(open(CSMAINFILEPATH).read())
+# Execute the main script without waiting for user input
+os.system(f"{sys.executable} {CSMAINFILEPATH} {' '.join(sys.argv)}")
+
+# The subprocess will run without waiting for user input and will close when the main script finishes.

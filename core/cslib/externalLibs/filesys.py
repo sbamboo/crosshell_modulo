@@ -1,6 +1,6 @@
 # FileSys: Library to work with filesystems.
 # Made by: Simon Kalmi Claesson and modified to work crosshell
-# Version: 1.0_crsh
+# Version: 1.1_crsh
 
 # Imports
 import os
@@ -118,12 +118,18 @@ class filesys():
     # Function to get the filename of file (Excluding file extension)
     def getFileName(path=str()):
         '''CSlib.externalLibs.filesys: Gets the filename of a file, excluding file extension.'''
-        return ('.'.join(os.path.basename(path).split(".")[:-1])).strip(".")
+        if "." in path:
+            return ('.'.join(os.path.basename(path).split(".")[:-1])).strip(".")
+        else:
+            return os.path.basename(path)
     
     # Function to get the fileextension of a file
     def getFileExtension(path=str()):
         '''CSlib.externalLibs.filesys: Gets the fileextension of a file.'''
-        return os.path.basename(path).split(".")[-1]
+        if "." in path:
+            return os.path.basename(path).split(".")[-1]
+        else:
+            return None
 
     # Error handler function where noexists flips functionality, checks for filetype and existance
     def errorHandler(action,path,noexist=False):
@@ -434,6 +440,7 @@ class filesys():
                     try: import magic
                     except:
                         intpip("install file-magic")
+                        import magic
                     detected = magic.detect_from_filename(filepath)
                     return "application" in str(detected.mime_type)
                 # Windows

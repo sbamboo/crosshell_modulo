@@ -6,6 +6,28 @@ import subprocess
 import sys
 import os
 
+# Crossplatform
+def normalizePathSep(string) -> str:
+    if "\\" in string:
+        string = string.replace("\\",os.sep)
+    elif "/" in string:
+        string = string.replace("/",os.sep)
+    return string
+
+def normalizePathSepMT(value):
+    if type(value) == str:
+        return normalizePathSep(value)
+    elif type(value) == list:
+        nlist = []
+        for item in value:
+            nlist.append(normalizePathSep(item))
+        return nlist
+    elif type(value) == dict:
+        ndict ={}
+        for key,val in value.items():
+            ndict[normalizePathSep(key)] = normalizePathSepMT(val)
+        return ndict
+
 # Python
 def getExecutingPython() -> str:
     '''CSlib: Returns the path to the python-executable used to start crosshell'''
@@ -48,15 +70,15 @@ def intpip(pip_args):
         print(f"Failed to execute pip command: {pip_args}")
 
 # crosshellVersionManager
-def crosshellVersionManager_getData(versionFile,formatVersion="1"):
+def crosshellVersionManager_getData(versionFile,formatVersion="1",encoding="utf-8"):
     '''CSlib: gets the versionData from a compatible version file.'''
     data = {}
     if ".yaml" in versionFile:
         import yaml
-        data = yaml.loads(open(versionFile,'r').read())
+        data = yaml.loads(open(versionFile,'r',encoding=encoding).read())
     elif ".json" in versionFile or ".jsonc" in versionFile:
         import json
-        data = json.loads(open(versionFile,'r').read())
+        data = json.loads(open(versionFile,'r',encoding=encoding).read())
     forData = data.get("CSverFile")
     verData = data
     if verData.get("CSverFile") != None: verData.pop("CSverFile")
@@ -67,16 +89,17 @@ def crosshellVersionManager_getData(versionFile,formatVersion="1"):
 # Passthrough external libs
 from .externalLibs.conUtils import *
 from .externalLibs.filesys import filesys
-from .datafiles import _fileHandler,getKeyPath,setKeyPath
+from .datafiles import _fileHandler,getKeyPath,setKeyPath,remKeyPath
 from ._crosshellParsingEngine import pathtagManager
 
 # Dynamic settings
 #TODO: remProperty
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
-    def __init__(self,settingsFile):
+    def __init__(self,settingsFile,encoding="utf-8"):
         self.file = settingsFile
         self.modules = []
+        self.encoding = encoding
         if ".yaml" in self.file:
             self.filetype = "yaml"
         elif ".json" in self.file or ".jsonc" in self.file or ".json5" in self.file:
@@ -84,27 +107,27 @@ class modularSettingsLinker():
     def _getContent(self) -> dict:
         data = {}
         if self.filetype == "yaml":
-            data = _fileHandler("yaml","get",self.file)
+            data = _fileHandler("yaml","get",self.file,encoding=self.encoding)
         elif self.filetype == "json":
-            data = _fileHandler("json","get",self.file)
+            data = _fileHandler("json","get",self.file,encoding=self.encoding)
         if data == None: data = {}
         return data
     def _setContent(self,content) -> None:
         if self.filetype == "yaml":
-            _fileHandler("yaml","set",self.file,content)
+            _fileHandler("yaml","set",self.file,content,encoding=self.encoding)
         elif self.filetype == "json":
-            _fileHandler("json","set",self.file,content)
+            _fileHandler("json","set",self.file,content,encoding=self.encoding)
     def _appendContent(self,content) -> None:
         if self.filetype == "yaml":
-            data = _fileHandler("yaml","get",self.file)
+            data = _fileHandler("yaml","get",self.file,encoding=self.encoding)
             if data == None: data = {}
             data.update(content)
-            _fileHandler("yaml","set",self.file,data)
+            _fileHandler("yaml","set",self.file,data,encoding=self.encoding)
         elif self.filetype == "json":
-            data = _fileHandler("json","get",self.file)
+            data = _fileHandler("json","get",self.file,encoding=self.encoding)
             if data == None: data = {}
             data.update(content)
-            _fileHandler("json","set",self.file,data)
+            _fileHandler("json","set",self.file,data,encoding=self.encoding)
     def _getModules(self) -> list:
         return list(self._getContent().items())
     def createFile(self,overwrite=False):
@@ -148,6 +171,16 @@ class modularSettingsLinker():
             data = self._getContent()
             data[module] = content
             self._setContent(data)
+    def rem(self,module,autocreate=False) -> None:
+        if module in self.modules:
+            data = self._getContent()
+            data.pop(module)
+            self._setContent(data)
+        elif autocreate == True:
+            self.addModule(module)
+            data = self._getContent()
+            data.pop(module)
+            self._setContent(data)
     def get(self,module,autocreate=False) -> dict:
         if module in self.modules:
             data = self._getContent()
@@ -181,6 +214,11 @@ class modularSettingsLinker():
         data = self.get(module,autocreate=autocreate)
         data = setKeyPath(data,keyPath,default,update=True)
         self.set(module,data,autocreate=autocreate)
+    def remProperty(self,module,keyPath,autocreate=False) -> None:
+        data = self.get(module,autocreate=autocreate)
+        data = remKeyPath(data,keyPath)
+        self.set(module,data,autocreate=autocreate)
+
 # Paths
 class pathObject():
     def __init__(self,defaults=None):
@@ -199,9 +237,9 @@ class pathObject():
         self.data.append(data)
 
 # Language
-def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False):
+def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False,encoding="utf-8"):
     '''CSlib: Function to populate a language list.'''
-    orgLangList = _fileHandler(listFormat,"get",languageListFile)
+    orgLangList = _fileHandler(listFormat,"get",languageListFile,encoding=encoding)
     LangList = orgLangList.copy()
     try:
         for path in langPath.get():
@@ -218,14 +256,14 @@ def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat=
                             LangList[name] = object.path
     except:
         LangList = orgLangList
-    _fileHandler(listFormat,"set",languageListFile,LangList)
+    _fileHandler(listFormat,"set",languageListFile,LangList,encoding=encoding)
 
-def recheckLangaugeList(languageListFile,listFormat=None,returnDontRemove=False):
+def recheckLangaugeList(languageListFile,listFormat=None,returnDontRemove=False,encoding="utf-8"):
     '''CSlib: Checks over a languagelist so al the entries exist, and removses those who don't'''
     if returnDontRemove == True:
         missing = []
     else:
-        languageList = _fileHandler(listFormat, "get", languageListFile)
+        languageList = _fileHandler(listFormat, "get", languageListFile,encoding=encoding)
         newLanguageList = languageList.copy()
     for entry,path in languageList.items():
         if filesys.notExist(path):
@@ -236,11 +274,11 @@ def recheckLangaugeList(languageListFile,listFormat=None,returnDontRemove=False)
     if returnDontRemove == True:
         return missing
     else:
-        _fileHandler(listFormat, "set", languageListFile, newLanguageList)
+        _fileHandler(listFormat, "set", languageListFile, newLanguageList,encoding=encoding)
 
 class crosshellLanguageProvider():
     '''CSlib: Crosshell language system.'''
-    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None):
+    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8"):
         # Save
         self.languageListFile = languageListFile
         self.defLanguage = self.parseSingleLanguage(defaultLanguage)
@@ -248,9 +286,10 @@ class crosshellLanguageProvider():
         self.langFormat = langFormat
         self.pathtagManInstance = pathtagManInstance
         self.langPath = langPath
+        self.encoding = encoding
         # Retrive languageList after rechecking it
-        recheckLangaugeList(self.languageListFile,self.listFormat)
-        self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile)
+        recheckLangaugeList(self.languageListFile,self.listFormat,encoding=self.encoding)
+        self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding)
         # Set default language
         self.languagePrios = defaultLanguage
         self.language = self.defLanguage
@@ -271,18 +310,18 @@ class crosshellLanguageProvider():
         return mergedLanguage
     def populateList(self,keepExisting=False):
         if self.langPath != None:
-            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting)
+            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding)
             self.relist()
             self.load()
     def relist(self):
         '''Reloads the languageList.'''
-        self.languageList = _fileHandler("json","get",self.languageListFile)
+        self.languageList = _fileHandler("json","get",self.languageListFile,encoding=self.encoding)
     def _load(self,languagelist,language,pathtagManInstance,langFormat):
         if languagelist.get(language) != None:
             if pathtagManInstance == None:
-                languageData = _fileHandler(langFormat,"get",languagelist[language])
+                languageData = _fileHandler(langFormat,"get",languagelist[language],encoding=self.encoding)
             else:
-                languageData = _fileHandler(langFormat,"get",pathtagManInstance.eval(languagelist[language]))
+                languageData = _fileHandler(langFormat,"get",pathtagManInstance.eval(languagelist[language]),encoding=self.encoding)
         else:
             languageData = {}
         return languageData
@@ -374,12 +413,13 @@ crshDebug = crosshellDebugger()
 # Session
 class crosshellSession():
     '''CSlib: Crosshell session, class to contain session data.'''
-    def __init__(self,sessionFileFormat="json",defaultSessionFile=str):
+    def __init__(self,sessionFileFormat="json",defaultSessionFile=str,encoding="utf-8"):
         # Setup
         self.defSessionFile = defaultSessionFile
         self.sessionFileFormat = sessionFileFormat
         self.sessionFile = self.defSessionFile
         self.loadSessionFile(self.sessionFile)
+        self.encoding = encoding
         # Variables
         self.registry = {}
         self.data = {}
@@ -407,14 +447,22 @@ class crosshellSession():
         if self.data.get("set") != None:
             self.data["set"].file = data["set"]["file"]
             self.data["set"].modules = data["set"]["modules"]
-    def loadSessionFile(self,sessionFile=None):
+    def loadSessionFile(self,sessionFile=None,ovEncoding="utf-8"):
         if sessionFile == None: sessionFile = self.sessionFile
-        t = _fileHandler(self.sessionFileFormat, "get", sessionFile)
+        try:
+            enc = self.encoding
+        except:
+            enc = ovEncoding
+        t = _fileHandler(self.sessionFileFormat, "get", sessionFile,encoding=enc)
         self.data = self._handleClassDataSet(t.get("dta"))
         self.registry = t.get("reg")
-    def saveSessionFile(self,sessionFile=None):
+    def saveSessionFile(self,sessionFile=None,ovEncoding="utf-8"):
+        try:
+            enc = self.encoding
+        except:
+            enc = ovEncoding
         if sessionFile == None: sessionFile = self.sessionFile
-        _fileHandler(self.sessionFileFormat, "set", sessionFile, {"dta":self._handleClassDataGet(self.data),"reg":self.registry})
+        _fileHandler(self.sessionFileFormat, "set", sessionFile, {"dta":self._handleClassDataGet(self.data),"reg":self.registry},encoding=enc)
     # Data
     def setSession(self,sessionData=dict):
         '''{"dta":<data>,"reg":<reg>}'''
@@ -433,32 +481,46 @@ def expectedList(value) -> list:
     else:
         return value
 
-def toReaderFormat(dictFromSettings) -> list:
+def getReaderExecutable(name,readerFile,encoding="utf-8") -> str:
+    '''CSlib: Smal function to get the reader-executable from using its name'''
+    # get readerFileContent
+    readers = _fileHandler("json", "get", readerFile, encoding=encoding, safeSeps=True)
+    if readers.get(name) != None:
+        return readers.get(name)
+    else:
+        return None
+
+def addReader(name,execPath,readerFile,encoding="utf-8"):
+    '''CSlib: Smal function to add a reader to the readerFile'''
+    readers = _fileHandler("json", "get", readerFile, encoding=encoding, safeSeps=True)
+    readers[name] = execPath
+    _fileHandler("json", "set", readerFile, readers, encoding=encoding)
+def remReader(name,readerFile,encoding="utf-8"):
+    '''CSlib: Smal function to remove a reader to the readerFile'''
+    readers = dict()
+    readers = _fileHandler("json", "get", readerFile, encoding=encoding, safeSeps=True)
+    readers.pop(name)
+    _fileHandler("json", "set", readerFile, readers, encoding=encoding)
+def asignReader(settingsInstance,name=str,execPath=str,extensions=list,readerFile=str,encoding="utf-8",baseDictPath="Packages.AllowedFileTypes.Cmdlets"):
+    settingsInstance.addProperty("crsh",f"{baseDictPath}.{name}",extensions)
+    addReader(name, execPath, readerFile, encoding=encoding)
+def usignReader(settingsInstance,name,readerFile,encoding="utf-8"):
+    settingsInstance.remProperty("crsh",f"{baseDictPath}.{name}")
+    remReader(name, readerFile, encoding=encoding)
+
+def toReaderFormat(dictFromSettings,readerFile,encoding="utf-8") -> list:
     '''CSlib: Smal function for to convert the reader part of settings to the correct format.'''
     readerData = []
     for reader,extensions in dictFromSettings.items():
-        readerData.append( {"exec":reader,"extensions":expectedList(extensions)} )
+        readerData.append( {"name":reader,"exec":getReaderExecutable(reader, readerFile, encoding),"extensions":expectedList(extensions)} )
     return readerData
 
 def handleOSinExtensionsList(extensions=list) -> list:
     '''CSlib: Smal function for checking os-specific extensions.'''
     newList = []
     for extension in extensions:
-        # single
-        if "win@" in extension:
-            if IsWindows() == True:
-                newList.append( extension.replace("win@","") )
-        elif "mac@" in extension:
-            if IsMacOS() == True:
-                newList.append( extension.replace("mac@","") )
-        elif "lnx@" in extension:
-            if IsLinux() == True:
-                newList.append( extension.replace("lnx@","") )
-        # all
-        elif "all@" in extension:
-            newList.append( extension.replace("all@","") )
         # multi
-        elif "win;mac@" in extension:
+        if "win;mac@" in extension:
             if IsWindows() == True or IsMacOS() == True:
                 newList.append( extension.replace("win;mac@","") )
         elif "win;lnx@" in extension:
@@ -470,6 +532,19 @@ def handleOSinExtensionsList(extensions=list) -> list:
         elif "lnx;mac@" in extension:
             if IsMacOS() == True or IsLinux() == True:
                 newList.append( extension.replace("lnx;mac@","") )
+        # single
+        elif "win@" in extension:
+            if IsWindows() == True:
+                newList.append( extension.replace("win@","") )
+        elif "mac@" in extension:
+            if IsMacOS() == True:
+                newList.append( extension.replace("mac@","") )
+        elif "lnx@" in extension:
+            if IsLinux() == True:
+                newList.append( extension.replace("lnx@","") )
+        # all
+        elif "all@" in extension:
+            newList.append( extension.replace("all@","") )
         # fallback
         else:
             newList.append(extension)

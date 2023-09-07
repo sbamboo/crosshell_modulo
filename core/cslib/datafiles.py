@@ -1,4 +1,5 @@
 import json,yaml
+from .cslib import normalizePathSepMT
 
 '''
 CSlibs: Datafiles module, contains a jsonYamlProvider class for using such files with more ease
@@ -6,20 +7,24 @@ Depends on pyyaml
 
 '''
 
-def _fileHandler(mode,operation,file,content=None):
+def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False):
     '''CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.'''
     if mode == "json":
         if operation == "get":
-            return json.loads(open(file,'r').read())
+            _dict = json.loads(open(file,'r',encoding=encoding).read())
+            if safeSeps == True: return normalizePathSepMT(_dict)
+            else: return _dict
         elif operation == "set":
-            with open(file, "w") as outfile:
+            with open(file, "w",encoding=encoding) as outfile:
                 json.dump(content, outfile)
     elif mode == "yaml":
         if operation == "get":
-            with open(file, "r") as outfile:
-                return yaml.safe_load(outfile)
+            with open(file, "r",encoding=encoding) as outfile:
+                _dict = yaml.safe_load(outfile)
+            if safeSeps == True: return normalizePathSepMT(_dict)
+            else: return _dict
         elif operation == "set":
-            with open(file, "w") as outfile:
+            with open(file, "w",encoding=encoding) as outfile:
                 yaml.dump(content, outfile)
 
 class jsonYamlProviderSimpleIO():
@@ -28,19 +33,21 @@ class jsonYamlProviderSimpleIO():
     OnInit:
       takes: mode of string, being "json" or "yaml"
       file:  string filepath/filename if applicable
+      encoding: file encoding
     '''
-    def __init__(self,mode=str,file=str):
+    def __init__(self,mode=str,file=str,encoding="utf-8"):
         self.mode = mode
         self.file = file
+        self.encoding = encoding
     def set(self,value,key=None):
         if key == None:
-            _fileHandler(self.mode,"set",self.file,value)
+            _fileHandler(self.mode,"set",self.file,value,encoding=self.encoding)
         else:
-            data = _fileHandler(self.mode,"get",self.file)
+            data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
             data[key] = value
-            _fileHandler(self.mode,"set",self.file,data)
+            _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
     def get(self):
-        return _fileHandler(self.mode,"get",self.file)
+        return _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
 
 class jsonYamlProvider():
     '''
@@ -48,43 +55,45 @@ class jsonYamlProvider():
     OnInit:
       takes: mode of string, being "json" or "yaml"
       file:  string filepath/filename if applicable
+      encoding: file encoding
     '''
-    def __init__(self,mode=str,file=str):
+    def __init__(self,mode=str,file=str,encoding="utf-8"):
         self.mode = mode
         self.file = file
+        self.encoding = encoding
     def __setitem__(self, key, value):
-        data = _fileHandler(self.mode,"get",self.file)
+        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
         data.__setitem__(key, value)
-        _fileHandler(self.mode,"set",self.file,data)
+        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
     def __ior__(self, other):
         if isinstance(other, dict):
-            data = _fileHandler(self.mode,"get",self.file)
+            data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
             data.update(other)
-            _fileHandler(self.mode,"set",self.file,data)
+            _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
         return self
     def __getitem__(self, key):
-        data = _fileHandler(self.mode,"get",self.file)
+        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
         return data.__getitem__(key)
     def append(self,data):
-        data = _fileHandler(self.mode,"get",self.file)
+        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
         data.append(data)
-        _fileHandler(self.mode,"set",self.file,data)
+        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
     def update(self,data):
-        data = _fileHandler(self.mode,"get",self.file)
+        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
         data.update(data)
-        _fileHandler(self.mode,"set",self.file,data)
+        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
     def get(self,key=None):
-        data = _fileHandler(self.mode,"get",self.file)
+        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
         if key != None:
             return data[key]
         else:
             return data
     def clear(self):
-        data = _fileHandler(self.mode,"get",self.file)
+        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
         data.clear()
-        _fileHandler(self.mode,"set",self.file,data)
+        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
 
-def getKeyPath(dictionary, keypath):
+def getKeyPath(dictionary, keypath, listAs1Elem=False):
     '''CSlib.datafiles: Gets the value at a keypath from a dictionary (keypaths are keys sepparated by dots)'''
     keys = keypath.split('.')
     if len(keys) > 1:
@@ -103,7 +112,8 @@ def getKeyPath(dictionary, keypath):
                     value = value[index]
                     blacklist.append(i+1)
                 except:
-                    value = value[0]
+                    if listAs1Elem == True:
+                        value = value[0]
             return value
         except (KeyError, TypeError):
             return None
@@ -161,6 +171,39 @@ def setKeyPath(dictionary, keypath, value, nonAppend=False, update=False):
                     curr.update({k: v})
     return dictionary
 
+#TODO: Test
+def remKeyPath(dictionary, keypath):
+    '''CSlib.datafiles: Removes the value at the specified keypath from a dictionary (keypaths are keys separated by dots)'''
+    keys = keypath.split('.')
+    if len(keys) > 1:
+        blacklist = []  # To keep track of keys that should be skipped
+        parent = dictionary
+        last_key = None
+        # Traverse the dictionary to find the parent of the last key
+        for i, key in enumerate(keys):
+            if i not in blacklist:
+                try:
+                    key = int(key)
+                except ValueError:
+                    pass
+                
+                if i < len(keys) - 1:
+                    if isinstance(parent, dict) and key in parent:
+                        parent = parent[key]
+                    elif isinstance(parent, list) and 0 <= key < len(parent):
+                        parent = parent[key]
+                    else:
+                        # Key not found, nothing to remove
+                        return dictionary  # Return the original dictionary unchanged
+                else:
+                    last_key = key
+        # Check if the parent is a list or dictionary and remove the last key
+        if isinstance(parent, list) and 0 <= last_key < len(parent):
+            parent.pop(last_key)
+        elif isinstance(parent, dict) and last_key in parent:
+            del parent[last_key]
+    return dictionary
+
 # .Config
 def config_to_dict(config_file_content=str) -> dict:
     """
@@ -173,11 +216,33 @@ def config_to_dict(config_file_content=str) -> dict:
     dict: A dictionary representing the configuration.
     """
     config_dict = {}
-    for line in config_file_content:
+    for line in config_file_content.split("\n"):
         line = line.strip()
         if line and not line.startswith('#'):
             key, value = line.split('=')
-            config_dict[key.strip()] = value.strip()
+            value = value.strip()
+            if value == '""': value = None
+            if value == '[]': value = None
+            if value != None:
+                if "[" in value and "]" in value:
+                    try:
+                        value = json.loads(value)
+                    except:
+                        value = value.replace("[","").replace("]","").split(",")
+                if type(value) == list:
+                    newValue = []
+                    for k in value:
+                        k = k.replace('"',"")
+                        newValue.append(k)
+                    value = newValue
+                else:
+                    if value.lower() == "true":
+                        value = True
+                    elif value.lower() == "false":
+                        value = False
+                if type(value) == str:
+                    value = value.replace('"',"")
+            config_dict[key.strip()] = value
     return config_dict
 
 def dict_to_config(config_dict=dict) -> str:

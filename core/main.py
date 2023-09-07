@@ -38,6 +38,7 @@ from cslib._crosshellGlobalTextSystem import crosshellGlobalTextSystem
 from cslib._crosshellMpackageSystem import loadPackages
 
 # [Settings]
+CS_DefaultEncoding = "utf-8"
 CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
@@ -45,6 +46,8 @@ CS_PackagesFolder = f"{os.sep}packages"
 
 
 # [Setup]
+# Enable ansi on windows
+os.system("")
 # Handle mainfile argument
 CS_Args = sys.argv
 CS_Startfile = "Unknown"
@@ -68,7 +71,7 @@ CS_BaseDir = os.path.abspath(os.path.join(CS_CoreDir,".."))
 
 # Fix subdirectories/paths
 CS_mPackPath = f"{CS_BaseDir}{CS_PackagesFolder}"
-CS_lPackPath = f"{CS_BaseDir}{CS_PackagesFolder}{os.sep}.legacyPackages"
+CS_lPackPath = f"{CS_BaseDir}{CS_PackagesFolder}{os.sep}_legacyPackages"
 
 # Load pathtags (First instance)
 CS_Pathtags = {
@@ -82,20 +85,31 @@ CS_PathtagMan = pathtagManager(CS_Pathtags)
 CS_PathtagMan.ensureAl()
 
 # Create settings object
-CS_Settings = modularSettingsLinker(f"{CS_BaseDir}{CS_SettingsFile}")
+CS_Settings = modularSettingsLinker(f"{CS_BaseDir}{CS_SettingsFile}",encoding=CS_DefaultEncoding)
 CS_Settings.createFile()
 
 # Add settings main module
 CS_Settings.addModule("crsh")
 
 # Add language settings
+CS_Settings.addProperty("crsh","Formats.DefaultEncoding",CS_DefaultEncoding)
+CS_Settings.encoding = CS_Settings.getProperty("crsh", "Formats.DefaultEncoding")
 CS_Settings.addProperty("crsh","Language.Default",{"1":"en-us"})
-CS_Settings.addProperty("crsh","Language.DefaultList",f"{'{CS_BaseDir}'}{os.sep}core{os.sep}langlist.json")
+CS_Settings.addProperty("crsh","Language.DefaultList",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}langlist.json")
 CS_Settings.addProperty("crsh","Language.ListFormat","json")
 CS_Settings.addProperty("crsh","Language.LangFormat","json")
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo",["mpackage","mpack","csmpack"])
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy",["package","pack","cspack"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets",[".py"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON",["py"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.PLATFORM_EXECUTABLE",["win@exe","win@cmd","win@bat","lnx;mac@MIME_EXECUTABLE"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Conf", ["cfg","config","conf"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Pack", ["json","cfg","conf","config"])
+CS_Settings.addProperty("crsh","Packages.Readers.ReaderFile",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}readerfiles.json")
+
+# Add function to quickly get encoding
+def CS_GetEncoding():
+  #global CS_Settings
+  return CS_Settings.getProperty("crsh", "Formats.DefaultEncoding")
 
 # Add a debug settings and config the debugger
 CS_Settings.addModule("crsh_debugger")
@@ -126,14 +140,15 @@ CS_lp = crosshellLanguageProvider(
   listFormat=          CS_Settings.getProperty("crsh","Language.ListFormat"),
   langFormat=          CS_Settings.getProperty("crsh","Language.LangFormat"),
   pathtagManInstance = CS_PathtagMan,
-  langPath=            CS_LangpathObj
+  langPath=            CS_LangpathObj,
+  encoding=            CS_GetEncoding()
 )
 
 # Populate language file
 CS_lp.populateList()
 
 # Create a session
-csSession = crosshellSession(defaultSessionFile=f"{CS_BaseDir}{CS_DefSessionFile}")
+csSession = crosshellSession(defaultSessionFile=f"{CS_BaseDir}{CS_DefSessionFile}",encoding=CS_GetEncoding())
 
 
 # [Handle Packages]
@@ -145,52 +160,68 @@ for path in CS_packFilePathObj.get(): filesys.ensureDirPath(path) # Ensure al pa
 
 # Retrive a list of packages in /packages and install those waiting for it, then add it to the packagesLabeledList
 CS_packageList = {
-  "modulo": loadPackages(CS_packFilePathObj,CS_mPackPath,CS_Settings.getProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo")),
-  "legacy": loadPackages(CS_packFilePathObj,CS_lPackPath,CS_Settings.getProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy"))
+  "modulo": loadPackages(
+    findFilesPathObj=CS_packFilePathObj,
+    DestinationPath=CS_mPackPath,
+    packageExtensions=handleOSinExtensionsList(CS_Settings.getProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo"))
+  ),
+  "legacy": loadPackages(
+    findFilesPathObj=CS_packFilePathObj,
+    DestinationPath=CS_lPackPath,
+    packageExtensions=handleOSinExtensionsList(CS_Settings.getProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy"))
+  )
 }
 
 # [Populate session]
 # Link
 CS_Registry = csSession.registry
 # Populate
-CS_Registry["cmdlets"] = []
+CS_Registry["cmdlets"] = {}
 csSession.data["set"] = CS_Settings
 csSession.data["lng"] = CS_lp
 
 # [Load package data]
 # Find readerData
-CS_Registry["readerData"] = toReaderFormat(CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.Cmdlets"))
-print(CS_Registry["readerData"])
+CS_Registry["readerData"] = toReaderFormat(
+  dictFromSettings=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.Cmdlets"),
+  readerFile=CS_PathtagMan.eval(CS_Settings.getProperty("crsh", "Packages.Readers.ReaderFile")),
+  encoding=CS_GetEncoding()
+)
+
 # Loader Function
 def csLoadPackageData(packageList=dict,CS_Registry=dict):
   # cmdlets from modulo packages
   _mPackages = packageList.get("modulo")
   if _mPackages != None:
     from cslib.packageReaders.modulo import getDataFromList
-    CS_Registry = getDataFromList(_mPackages,CS_Registry)
+    _data = getDataFromList(
+      #langpck
+      langpck_provider=CS_lp,
+      langpck_pathObj=CS_LangpathObj,
+      #cmdlets
+      cmdlets_confFileExts=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.CmdletFiles.Conf"),
+      cmdlets_rootFileExts=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.CmdletFiles.Pack"),
+      # others
+      crshparentPath=CS_BaseDir,
+      packages=_mPackages,
+      registry=CS_Registry,
+      encoding=CS_GetEncoding()
+    )
+    CS_Registry["cmdlets"] = _data["cmdlets"]
+    CS_Registry["readerData"] = _data["readerData"]
   # cmdlets from legacyPackages
   _lPackages = packageList.get("legacy")
   if _lPackages != None:
     from cslib.packageReaders.legacy import getDataFromList
-    CS_Registry = getDataFromList(_lPackages,CS_Registry)
+    CS_Registry["cmdlets"] = getDataFromList(
+      crshparentPath=CS_BaseDir,
+      packages=_lPackages,
+      registry=CS_Registry,
+      encoding=CS_GetEncoding(),
+      confFileExts=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.CmdletFiles.Conf"),
+      rootFileExts=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.CmdletFiles.Pack")
+    )
 # Execute loaderFunction into registry
 csLoadPackageData(CS_packageList,CS_Registry)
 
-# Registry or just path and then functions?
-cmdlets = {
-  "test": {
-    "name": "test",
-    "path": "..\\test.py",
-    "fending": ".py",
-    "aliases": ["test2"],
-    "desc": "Testing some shi",
-    "args": ["--do","-dont <smth>"],
-    "blockCommonParameters": False,
-    "encoding": "utf-8"
-  }
-}
-'''Mass variable registry!'''
-
-
-
-crshDebug.print("hi",onMode="on;limited")
+crshDebug.print(CS_Registry["cmdlets"],onMode="on;limited")

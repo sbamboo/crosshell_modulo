@@ -74,7 +74,7 @@ CS_BaseDir = os.path.abspath(os.path.join(CS_CoreDir,".."))
 # Apply presetting to moduleReplaceables
 CS_ModuleReplacebles = {}
 for repl in CS_ModuleReplacebleNames:
-  CS_ModuleReplacebles[repl] = {"path":f"{CS_CoreDir}{os.sep}{repl}","obj":None}
+  CS_ModuleReplacebles[repl] = {"path":f"{CS_CoreDir}{os.sep}modules{os.sep}{repl}","obj":None}
 
 # Fix subdirectories/paths
 CS_mPackPath = f"{CS_BaseDir}{CS_PackagesFolder}"

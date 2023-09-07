@@ -10,7 +10,7 @@ class linkedFileModularise():
         self.base = baseFile
         self.file = self.base
     def execute_internally(self):
-        exec(open(self.base).read())
+        exec(open(self.file).read())
     def execute_externally(self,newwindow=False):
         if self.file != None:
             if newwindow == True:

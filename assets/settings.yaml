@@ -7,6 +7,14 @@ crsh:
     DefaultList: '{CS_BaseDir}\assets\langlist.json'
     LangFormat: json
     ListFormat: json
+  Modules:
+    Files:
+      console:
+        py:
+          _choices:
+          - test
+          - test2
+          selection: null
   Packages:
     AllowedFileTypes:
       CmdletFiles:

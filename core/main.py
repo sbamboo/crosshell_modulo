@@ -36,8 +36,10 @@ from cslib import *
 from cslib._crosshellParsingEngine import pathtagManager
 from cslib._crosshellGlobalTextSystem import crosshellGlobalTextSystem
 from cslib._crosshellMpackageSystem import loadPackages
+from cslib._crosshellModularityEngine import linkedFileModularise
 
 # [Settings]
+CS_ModuleReplacebleNames = ["console.py"]
 CS_DefaultEncoding = "utf-8"
 CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
@@ -68,6 +70,11 @@ if CS_CoreDir_RetrivalMode.lower() == "inspect":
 else:
   CS_CoreDir = os.path.abspath(os.path.dirname(__file__))
 CS_BaseDir = os.path.abspath(os.path.join(CS_CoreDir,".."))
+
+# Apply presetting to moduleReplaceables
+CS_ModuleReplacebles = {}
+for repl in CS_ModuleReplacebleNames:
+  CS_ModuleReplacebles[repl] = {"path":f"{CS_CoreDir}{os.sep}{repl}","obj":None}
 
 # Fix subdirectories/paths
 CS_mPackPath = f"{CS_BaseDir}{CS_PackagesFolder}"
@@ -180,6 +187,13 @@ CS_Registry["cmdlets"] = {}
 csSession.data["set"] = CS_Settings
 csSession.data["lng"] = CS_lp
 
+# [Setup Module Linkers]
+# Create objs
+for name in CS_ModuleReplacebles.keys():
+  CS_ModuleReplacebles[name]["obj"] = linkedFileModularise(CS_ModuleReplacebles[name]["path"])
+# Vars
+CS_Console = CS_ModuleReplacebles["console.py"]["obj"]
+
 # [Load package data]
 # Find readerData
 CS_Registry["readerData"] = toReaderFormat(
@@ -195,6 +209,10 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
   if _mPackages != None:
     from cslib.packageReaders.modulo import getDataFromList
     _data = getDataFromList(
+      CS_Settings=CS_Settings,
+      CS_PathtagMan=CS_PathtagMan,
+      #modules
+      CS_ModuleReplacebles=CS_ModuleReplacebles,
       #langpck
       langpck_provider=CS_lp,
       langpck_pathObj=CS_LangpathObj,
@@ -224,4 +242,7 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
 # Execute loaderFunction into registry
 csLoadPackageData(CS_packageList,CS_Registry)
 
-crshDebug.print(CS_Registry["cmdlets"],onMode="on;limited")
+#crshDebug.print(CS_ModuleReplacebles,onMode="on;limited")
+
+# [Execute console]
+CS_Console.execute_internally()

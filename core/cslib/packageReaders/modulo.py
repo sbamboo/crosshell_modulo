@@ -1,9 +1,12 @@
 import os
 from ..externalLibs.filesys import filesys as fs
-from ..cslib import handleOSinExtensionsList,_fileHandler
+from ..cslib import handleOSinExtensionsList,_fileHandler,normalizePathSep
 from .legacy import getDataFromList as legacy_getDataFromList
 
 def getDataFromList(
+    CS_Settings,
+    CS_PathtagMan,
+    CS_ModuleReplacebles,
     langpck_pathObj,
     langpck_provider,
     cmdlets_confFileExts=["cfg","config","conf"],
@@ -12,13 +15,44 @@ def getDataFromList(
 ):
     # Load readerdata
     readerData = registry["readerData"]
+    # add selected replace-file presets to settings
+    replaceables = CS_ModuleReplacebles.keys()
+    for replaceable in replaceables:
+        CS_Settings.addProperty("crsh", f"Modules.Files.{replaceable}.selection", None)
+        CS_Settings.chnProperty("crsh", f"Modules.Files.{replaceable}._choices", None)
     # Iterate over packages
     for package in packages:
         source = None
         # Modules
         source = f"{package}{os.sep}Modules"
         if os.path.exists(source):
-            pass
+            replaceJSONpath = f"{source}{os.sep}replace.json"
+            if os.path.exists(replaceJSONpath):
+                replaceJSON = _fileHandler("json","get",replaceJSONpath,encoding=encoding,safeSeps=False)
+                avsToReplace = {}
+                for name,value in replaceJSON.items():
+                    key = value["toReplace"]
+                    value = value["replaceWith"]
+                    value = value.replace("{parent}",source)
+                    value = normalizePathSep(value)
+                    # does it replace a replaceable?
+                    if key in replaceables:
+                        if avsToReplace.get(key) == None: avsToReplace[key] = {}
+                        avsToReplace[key][name] = value
+                # add choices to settings
+                for toreplace,replaceable in avsToReplace.items():
+                    choices = CS_Settings.getProperty("crsh", f"Modules.Files.{toreplace}._choices")
+                    if choices == None: choices = []
+                    choices.extend(list(replaceable.keys()))
+                    CS_Settings.chnProperty("crsh", f"Modules.Files.{toreplace}._choices", choices)
+                # get selected
+                for repl in replaceables:
+                    selection = CS_Settings.getProperty("crsh", f"Modules.Files.{toreplace}.selection")
+                    nonAllowed = [None,"None","none","Null","null","","int","INT","internal","INTERNAL","def","DEF","default","DEFAULT"]
+                    if selection not in nonAllowed:
+                        toReplaceWidth = avsToReplace[repl][selection]
+                        CS_ModuleReplacebles[repl]["obj"].load(toReplaceWidth)
+
         # Injects
         source = f"{package}{os.sep}Injects"
         if os.path.exists(source):

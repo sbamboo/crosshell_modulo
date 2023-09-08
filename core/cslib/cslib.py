@@ -362,7 +362,8 @@ class crosshellLanguageProvider():
         elif reloadMode == "both":
             self.relist()
             self.load()
-        print(self.languageData.get(textId))
+        return self.languageData.get(textId)
+
 
 
 

@@ -33,13 +33,13 @@ Variables/Settings:
 
 # [Imports from cslib]
 from cslib import *
-from cslib._crosshellParsingEngine import pathtagManager
+from cslib._crosshellParsingEngine import pathtagManager,crosshellParsingEngine
 from cslib._crosshellGlobalTextSystem import crosshellGlobalTextSystem
 from cslib._crosshellMpackageSystem import loadPackages
 from cslib._crosshellModularityEngine import linkedFileModularise
 
 # [Settings]
-CS_ModuleReplacebleNames = ["console.py"]
+CS_ModuleReplacebleNames = ["console.py","inpparse.py"]
 CS_DefaultEncoding = "utf-8"
 CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
@@ -193,6 +193,7 @@ for name in CS_ModuleReplacebles.keys():
   CS_ModuleReplacebles[name]["obj"] = linkedFileModularise(CS_ModuleReplacebles[name]["path"])
 # Vars
 CS_Console = CS_ModuleReplacebles["console.py"]["obj"]
+CS_Inpparse = CS_ModuleReplacebles["inpparse.py"]["obj"]
 
 # [Load package data]
 # Find readerData
@@ -210,7 +211,6 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
     from cslib.packageReaders.modulo import getDataFromList
     _data = getDataFromList(
       CS_Settings=CS_Settings,
-      CS_PathtagMan=CS_PathtagMan,
       #modules
       CS_ModuleReplacebles=CS_ModuleReplacebles,
       #langpck
@@ -245,4 +245,4 @@ csLoadPackageData(CS_packageList,CS_Registry)
 #crshDebug.print(CS_ModuleReplacebles,onMode="on;limited")
 
 # [Execute console]
-CS_Console.execute_internally()
+CS_Console.execute_internally(globals())

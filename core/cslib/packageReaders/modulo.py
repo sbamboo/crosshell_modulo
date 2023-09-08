@@ -1,11 +1,16 @@
 import os
 from ..externalLibs.filesys import filesys as fs
-from ..cslib import handleOSinExtensionsList,_fileHandler,normalizePathSep
+from ..cslib import _fileHandler,normalizePathSep
 from .legacy import getDataFromList as legacy_getDataFromList
+
+def _formatReplNameTo(name=str) -> str:
+    return name.replace(".","-")
+
+def _formatReplNameFrom(name=str) -> str:
+    return name.replace("-",".")
 
 def getDataFromList(
     CS_Settings,
-    CS_PathtagMan,
     CS_ModuleReplacebles,
     langpck_pathObj,
     langpck_provider,
@@ -18,8 +23,8 @@ def getDataFromList(
     # add selected replace-file presets to settings
     replaceables = CS_ModuleReplacebles.keys()
     for replaceable in replaceables:
-        CS_Settings.addProperty("crsh", f"Modules.Files.{replaceable}.selection", None)
-        CS_Settings.chnProperty("crsh", f"Modules.Files.{replaceable}._choices", None)
+        CS_Settings.addProperty("crsh", f"Modules.Files.{_formatReplNameTo(replaceable)}.selection", None)
+        CS_Settings.chnProperty("crsh", f"Modules.Files.{_formatReplNameTo(replaceable)}._choices", None)
     # Iterate over packages
     for package in packages:
         source = None
@@ -41,13 +46,13 @@ def getDataFromList(
                         avsToReplace[key][name] = value
                 # add choices to settings
                 for toreplace,replaceable in avsToReplace.items():
-                    choices = CS_Settings.getProperty("crsh", f"Modules.Files.{toreplace}._choices")
+                    choices = CS_Settings.getProperty("crsh", f"Modules.Files.{_formatReplNameTo(toreplace)}._choices")
                     if choices == None: choices = []
                     choices.extend(list(replaceable.keys()))
-                    CS_Settings.chnProperty("crsh", f"Modules.Files.{toreplace}._choices", choices)
+                    CS_Settings.chnProperty("crsh", f"Modules.Files.{_formatReplNameTo(toreplace)}._choices", choices)
                 # get selected
                 for repl in replaceables:
-                    selection = CS_Settings.getProperty("crsh", f"Modules.Files.{toreplace}.selection")
+                    selection = CS_Settings.getProperty("crsh", f"Modules.Files.{_formatReplNameTo(toreplace)}.selection")
                     nonAllowed = [None,"None","none","Null","null","","int","INT","internal","INTERNAL","def","DEF","default","DEFAULT"]
                     if selection not in nonAllowed:
                         toReplaceWidth = avsToReplace[repl][selection]

@@ -8,9 +8,9 @@ from ..cslib import handleOSinExtensionsList,_fileHandler
 def _toBool(value) -> bool:
     if type(value) == bool:
         return value
-    if string.lower() == "true":
+    if value.lower() == "true":
         return True
-    elif string.lower() == "false":
+    elif value.lower() == "false":
         return False
 
 def _getConfContent(conf_path=str,encoding="utf-8") -> dict:

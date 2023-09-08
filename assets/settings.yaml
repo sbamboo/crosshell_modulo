@@ -9,12 +9,14 @@ crsh:
     ListFormat: json
   Modules:
     Files:
-      console:
-        py:
-          _choices:
-          - test
-          - test2
-          selection: null
+      console-py:
+        _choices:
+        - test
+        - test2
+        selection: null
+      inpparse-py:
+        _choices: null
+        selection: null
   Packages:
     AllowedFileTypes:
       CmdletFiles:

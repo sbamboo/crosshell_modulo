@@ -172,15 +172,18 @@ class crosshellGlobalTextSystem():
         self.customTags.update(data)
     def addToCustomTags(self,key,value):
         self.customTags[key] = value
-    def parse(self,inputText,_stripAnsi=False):
+    def parse(self,inputText,_stripAnsi=False,addCustomTags=None):
+        customTags = self.customTags
+        if addCustomTags != None:
+            customTags.update(addCustomTags)
         # WebcolorTags
         if self.parseWebcolor == True:
-            self.customTags.update(_getWebcolorMappings())
+            customTags.update(_getWebcolorMappings())
         # Pathtags
         if self.pathtagInstance != None:
             inputText = self.pathtagInstance.eval(inputText)
         # Standard Tags
-        inputText = formatStringTags(inputText,self.allowedVariables,self.customTags)
+        inputText = formatStringTags(inputText,self.allowedVariables,customTags)
         # Palette / Strip ANSI
         ## placeholder for reset
         inputText = inputText.replace("\033[0m","§CSlib.CGTS.placeholder.reset§")

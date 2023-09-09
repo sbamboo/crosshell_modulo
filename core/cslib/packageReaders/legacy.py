@@ -13,6 +13,16 @@ def _toBool(value) -> bool:
     elif value.lower() == "false":
         return False
 
+def is_text_file(file_path):
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            file.read()
+        return True
+    except UnicodeDecodeError:
+        return False
+    except Exception as e:
+        return False
+
 def _getConfContent(conf_path=str,encoding="utf-8") -> dict:
     fending = fs.getFileExtension(conf_path)
     if fending == "json":
@@ -47,7 +57,7 @@ def _getSynopsisDesc(defa=str,path=str,encoding="utf-8") -> str:
             pass
     return newDesc
 
-def getDataFromList(crshparentPath=str,packages=list,registry=list,encoding="utf-8",confFileExts=["cfg","config","conf"],rootFileExts=["json","cfg","conf","config"]):
+def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,encoding="utf-8",confFileExts=["cfg","config","conf"],rootFileExts=["json","cfg","conf","config"]):
     # OPT
     confFileExts = handleOSinExtensionsList(confFileExts)
     rootFileExts = handleOSinExtensionsList(rootFileExts)
@@ -196,6 +206,62 @@ def getDataFromList(crshparentPath=str,packages=list,registry=list,encoding="utf
                             regEntry["path"] = data.get("pathoverwrite")
                             if chck_fending != "MIME_EXECUTABLE":
                                 regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
+                    # Check for header-data if enabled in settings
+                    if settings.getProperty("crsh","Packages.Options.LoadInFileHeader") == True:
+                        # check if file supports this even
+                        if is_text_file(entry.path) == True:
+                            content = open(entry.path,'r',encoding=regEntry["encoding"]).read()
+                            if "\n" in content:
+                                lines = content.split("\n")
+                            else:
+                                lines = [content]
+                            if "[CStags]" in content and "[TagEnd]" in content:
+                                headFound = False
+                                tailFound = False
+                                configLines = []
+                                for line in lines:
+                                    sline = line.strip()
+                                    if sline.startswith("#") == True or sline.startswith("::") == True or sline.startswith("//") == True:
+                                        if "[CStags]" in sline:
+                                            headFound = True
+                                        if "[TagEnd]" in sline:
+                                            tailFound = True
+                                        # Config line
+                                        if headFound == True and tailFound != True:
+                                            if "[CStags]" not in sline:
+                                                sline = sline.replace("#","",1)
+                                                sline = sline.replace("::","",1)
+                                                sline = sline.replace("//","",1)
+                                                sline = sline.strip()
+                                                configLines.append(sline)
+                                data = config_to_dict("\n".join(configLines).rstrip("\n"))
+                                # Get data
+                                if data.get("description") != None:
+                                    regEntry["desc"] = data.get("description")
+                                if data.get("aliases") != None:
+                                    regEntry["aliases"] = data.get("aliases")
+                                if data.get("paramhelp") != None:
+                                    regEntry["args"] = data.get("paramhelp")
+                                if data.get("blockCommonparams") != None:
+                                    regEntry["blockCommonParameters"] = bool(data.get("blockCommonparams"))
+                                if data.get("ArgparseHelp") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    if regEntry["options"].get("argparseHelp") != None:
+                                        regEntry["options"]["argparseHelp"] = bool(data.get("ArgparseHelp"))
+                                        if _toBool(regEntry["options"]["argparseHelp"]) == True:
+                                            regEntry["args"] = _getArgparseHelp(regEntry["args"],regEntry["path"])
+                                if data.get("synopsisDesc") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    if regEntry["options"].get("synopsisDesc") != None:
+                                        regEntry["options"]["synopsisDesc"] = bool(data.get("synopsisDesc"))
+                                        if _toBool(regEntry["options"]["synopsisDesc"]) == True:
+                                            regEntry["desc"] = _getSynopsisDesc(regEntry["desc"],regEntry["path"],regEntry["encoding"])
+                                if data.get("nameoverwrite") != None:
+                                    regEntry["name"] = data.get("nameoverwrite")
+                                if data.get("pathoverwrite") != None:
+                                    regEntry["path"] = data.get("pathoverwrite")
+                                    if chck_fending != "MIME_EXECUTABLE":
+                                        regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
                     # Add regEntry to registry
                     regEntry_name = str(regEntry["name"])
                     regEntry.pop("name")

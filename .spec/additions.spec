@@ -46,4 +46,12 @@ Expand Pipe:
 Expand Pipe:
   <| / |>
  Var:
-  func <| $list            : -      func $list[0] $list[1] (...Xlen(list))
+  func <| $list            :        func $list[0] $list[1] (...Xlen(list))
+
+Multi Equals:
+  =
+ Var:
+  $var1 = $var2 = <value>  :        set $var2 <value>; get var2 | set var1
+  $var1 = $var2 = $var3    :        get var3 | set var2; get var2 | set var1
+ Func:
+  $var1 = $var2 =| func    :        func | set var2; get var2 | set var1

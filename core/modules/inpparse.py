@@ -1,3 +1,2 @@
-parsed = crosshellParsingEngine(CS_LastInput)
-
+parsed = csSession.data["par"](CS_LastInput)
 print(parsed)

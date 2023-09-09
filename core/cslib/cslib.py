@@ -5,6 +5,7 @@ CSlib functions, can be imported with "import cslib" instead of "from cslib.csli
 import subprocess
 import sys
 import os
+import re
 
 # Crossplatform
 def normalizePathSep(string) -> str:
@@ -336,7 +337,15 @@ class crosshellLanguageProvider():
         '''Reset the language.'''
         self.language = self.defLanguage.copy()
         self.load()
-    def print(self,textId,defaultText=None,reloadMode="None"):
+    def _handleAnsi(self,text):
+        return re.sub(r'&(\d+)m', r'\033[\1m', text)
+    def _handlePathTags(self,text,extraPathTags=None):
+        return self.pathtagManInstance.eval(text,extraPathTags)
+    def _handle(self,text,extraPathTags=None):
+        if text != None:
+            text = self._handleAnsi(text)
+            text = self._handlePathTags(text,extraPathTags)
+    def print(self,textId,defaultText=None,reloadMode="None",ept=None):
         '''Prints a text from the current language, and if needed reloads the language. reloadMode can be 'lang', 'list' or 'both' '''
         if reloadMode == "lang":
             self.load()
@@ -347,13 +356,14 @@ class crosshellLanguageProvider():
             self.load()
         try:
             text = self.languageData.get(textId)
-            if text == None:
-                print(defaultText)
+            text = self._handle(text,ept)
+            if text == None and type(text) == str:
+                print(self._handle(defaultText,ept))
             else:
                 print(text)
         except:
-            print(defaultText)
-    def get(self,textId,reloadMode="None"):
+            print(self._handle(defaultText,ept))
+    def get(self,textId,reloadMode="None",ept=None):
         '''Gets a text from the current language, and if needed reloads the language. reloadMode can be 'lang', 'list' or 'both' '''
         if reloadMode == "lang":
             self.load()
@@ -362,52 +372,152 @@ class crosshellLanguageProvider():
         elif reloadMode == "both":
             self.relist()
             self.load()
-        return self.languageData.get(textId)
+        text = self.languageData.get(textId)
+        text = self._handle(text,ept)
+        return text
+    def getLangaugeData(self) -> dict:
+        _ld = {}
+        _ld["name"] = self.get("lang_name")
+        _ld["author"] = self.get("lang_author")
+        _ld["code"] = self.get("lang_code")
+        _ld["format"] = self.get("lang_format")
+        return _ld
 
+def _returnPrio(orderdItems,items):
+    '''CSlib: Function to return prio list given alternatives and items.'''
+    # split to includes and excludes
+    includes = []
+    excludes = []
+    for item in items:
+        if not item.startswith("!"):
+            includes.append(item)
+        else:
+            excludes.append(item.replace("!",""))
+    # create prio list
+    prio = []
+    for item in includes:
+        if item in orderdItems:
+            if item not in excludes:
+                index = orderdItems.index(item)
+                prio.extend(orderdItems[:index+1])
+    # return 
+    return prio
 
+def listItemInList(sublist,toplist):
+    found = False
+    for item in sublist:
+        if item in toplist:
+            found = True
+            break
+    return found
+
+def listInList(sublist,topList):
+    founds = {}
+    for item in sublist:
+        founds[item] = False
+    for item in sublist:
+        if item in topList:
+            founds[item] = True
+    founds = list(founds.values())
+    if False in founds:
+        return False
+    else:
+        return True
+
+def topPrio(listOfItems,topList):
+    indexes = {}
+    for item in listOfItems:
+        if item in topList:
+            indexes[item] = topList.index(item)
+    _max = max(list(indexes.values()))
+    for item,ind in indexes.items():
+        if ind == _max:
+            return item
 
 
 # Class debugger
 class crosshellDebugger():
-    '''CSlib: Crosshell debugger, this is a text-print based debuggin system.'''
-    def __init__(self,defaultDebugMode="limited",stripAnsi=False,formatterInstance=None):
-        self.defDebugMode = defaultDebugMode
-        self.debugMode = defaultDebugMode
+    '''CSlib: Crosshell debugger, this is a text-print based debugging system.'''
+    def __init__(self,defaultScope="msg",stripAnsi=False,formatterInstance=None,languageProvider=None):
+        self.defScope = defaultScope
+        self.scope = defaultScope
         self.stripAnsi = stripAnsi
-        self.allowedModes = ["on","off","limited"]
-        self.colors = {"reset":"\033[0m","on":"\033[90m","off":"\033[31m","limited":"\033[90m"}
+        # The scopes are are prio listed so if set to 'warn' info and msg will also be shown, to now show set !<mode>
+        self.allowedScopes = ["msg","info","warn","error","debug","off"]
+        self.colors = {
+            "reset":"\033[0m",
+            "msg":"",
+            "info":"\033[90m",
+            "warn":"\033[33m",
+            "error":"\033[91m",
+            "debug":"\033[90m",
+            "off":"\033[31m"
+        }
+        self.titles = {
+            "msg":"[Crsh]: ",
+            "info":"[Crsh]: ",
+            "warn":"[Crsh<Warn>]: ",
+            "error":"[Crsh<Error>]: ",
+            "debug":"[CSDebug]: ",
+            "off":"[CSDebug<forcedOutput>]: "
+        }
+        self.languageProvider = languageProvider
+        self.defLanguageProvider = None
         self.formatterInstance = formatterInstance
         self.defFormatterInstance = formatterInstance
-    def setDebugMode(self,mode=str):
-        if mode not in self.allowedModes:
-            raise Exception(f"Mode {mode} is not a debuggerMode, use one of {self.allowedModes}!")
+    def setScope(self,scope=str):
+        if scope not in self.allowedScopes:
+            raise Exception(f"Scope {scope} is not allowed, use one of {self.allowedScopes}!")
         else:
-            self.debugMode = mode
-    def resetDebugMode(self):
-        self.debugMode = self.defDebugMode
+            self.scope = scope
+    def resetScope(self):
+        self.scope = self.defScope
     def setStripAnsi(self,state=bool):
         self.stripAnsi = state
     def setFormatterInstance(self,instance):
         self.formatterInstance = instance
     def resetFormatterInstance(self):
         self.formatterInstance = self.defFormatterInstance
-    def print(self,text,onMode="limited"):
-        if ";" in onMode:
-            onMode = onMode.split(";")
+    def setLanguageProvider(self,provider):
+        self.languageProvider = provider
+    def resetLanguageProvider(self):
+        self.languageProvider = self.defLanguageProvider
+    def get(self,text,onScope="msg",lpReloadMode=None,ct=None):
+        if ct != None:
+            for key,value in ct.items():
+                ct[key] = str(value)
+        if ";" in onScope:
+            onScope = onScope.split(";")
         else:
-            onMode = [onMode]
-        if self.debugMode in onMode:
+            onScope = [onScope]
+        scope = self.scope
+        if ";" in scope:
+            scope = scope.split(";")
+        else:
+            scope = [scope]
+        # list scopes and scopes bellow
+        scopes = _returnPrio(self.allowedScopes,scope)
+        # any in onScope inside scopes?
+        if listItemInList(onScope, scopes) == True:
+            #topScope = topPrio(onScope,self.allowedScopes)
+            topScope = onScope[0]
             reset = self.colors['reset']
-            color = self.colors[self.debugMode]
+            color = self.colors[topScope]
             if self.stripAnsi == True:
                 reset = ""
                 color = ""
-            title = "[CSDebug]: "
-            if self.debugMode == "on": title = "[CSDebug<allOutput>]: "
-            if self.debugMode == "off": title = "[CSDebug<forcedOutput>]: "
+            title = self.titles[topScope]
+            if self.languageProvider != None:
+                _text = self.languageProvider.get(text,lpReloadMode)
+                if _text != None:
+                    text = _text
             text = f"{color}{title}{reset}{text}{reset}"
             if self.formatterInstance != None:
-                text = self.formatterInstance.parse(text,_stripAnsi=self.stripAnsi)
+                text = self.formatterInstance.parse(text,_stripAnsi=self.stripAnsi,addCustomTags=ct)
+            return text
+    def print(self,text,onScope="msg",lpReloadMode=None,ct=None):
+        text = self.get(text,onScope,lpReloadMode,ct)
+        if text != None:
             print(text)
 crshDebug = crosshellDebugger()
 

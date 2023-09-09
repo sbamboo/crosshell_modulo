@@ -1,4 +1,8 @@
 {
-    "test": "INCLUDED.en-us",
-    "testi": "INCLUDED.en-us"
+    "lang_name":"English",
+    "lang_author":"Crosshell",
+    "lang_code": "en-us",
+    "lang_format": "1",
+    "cs.cmdletexec.traceback":"&31m{traceback}&0m",
+    "cs.cmdletexec.error": "&33mCmdlet '{name}' didn't execute fully, might be an error in the cmdet code! &0m"
 }

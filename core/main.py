@@ -99,16 +99,19 @@ CS_Settings.createFile()
 CS_Settings.addModule("crsh")
 
 # Add language settings
+CS_Settings.addProperty("crsh","Execution.HandleCmdletError", True)
+CS_Settings.addProperty("crsh","Execution.PrintCmdletDebug", True)
 CS_Settings.addProperty("crsh","Formats.DefaultEncoding",CS_DefaultEncoding)
 CS_Settings.encoding = CS_Settings.getProperty("crsh", "Formats.DefaultEncoding")
 CS_Settings.addProperty("crsh","Language.Default",{"1":"en-us"})
 CS_Settings.addProperty("crsh","Language.DefaultList",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}langlist.json")
 CS_Settings.addProperty("crsh","Language.ListFormat","json")
 CS_Settings.addProperty("crsh","Language.LangFormat","json")
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo",["mpackage","mpack","csmpack"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy",["package","pack","cspack"])
+CS_Settings.addProperty("crsh","Packages.Options.LoadInFileHeader",False)
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON",["py"])
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.PLATFORM_EXECUTABLE",["win@exe","win@cmd","win@bat","lnx;mac@MIME_EXECUTABLE"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo",["mpackage","mpack","csmpack"])
+CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy",["package","pack","cspack"])
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Conf", ["cfg","config","conf"])
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Pack", ["json","cfg","conf","config"])
 CS_Settings.addProperty("crsh","Packages.Readers.ReaderFile",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}readerfiles.json")
@@ -120,10 +123,10 @@ def CS_GetEncoding():
 
 # Add a debug settings and config the debugger
 CS_Settings.addModule("crsh_debugger")
-CS_Settings.addProperty("crsh_debugger", "Mode", "limited")
+CS_Settings.addProperty("crsh_debugger", "Scope", "msg")
 
 # Load debug mode from settings
-crshDebug.setDebugMode(CS_Settings.getProperty("crsh_debugger", "Mode"))
+crshDebug.setScope(CS_Settings.getProperty("crsh_debugger", "Scope"))
 
 # Initate a formatter instance
 CS_text = crosshellGlobalTextSystem( pathtagInstance = CS_PathtagMan )
@@ -186,6 +189,8 @@ CS_Registry = csSession.registry
 CS_Registry["cmdlets"] = {}
 csSession.data["set"] = CS_Settings
 csSession.data["lng"] = CS_lp
+csSession.data["par"] = crosshellParsingEngine
+csSession.data["ptm"] = CS_PathtagMan
 
 # [Setup Module Linkers]
 # Create objs
@@ -232,6 +237,7 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
   if _lPackages != None:
     from cslib.packageReaders.legacy import getDataFromList
     CS_Registry["cmdlets"] = getDataFromList(
+      settings=CS_Settings,
       crshparentPath=CS_BaseDir,
       packages=_lPackages,
       registry=CS_Registry,
@@ -242,7 +248,13 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
 # Execute loaderFunction into registry
 csLoadPackageData(CS_packageList,CS_Registry)
 
-#crshDebug.print(CS_ModuleReplacebles,onMode="on;limited")
+crshDebug.setLanguageProvider(CS_lp)
+crshDebug.print("Starting...",onScope="msg")
+crshDebug.print("Loaded {count} entries to registry.",onScope="info",ct={"count":457})
+crshDebug.print("Cmdlet file not found, won't run!",onScope="warn")
+crshDebug.print("Console.py not found, exiting!",onScope="error")
+crshDebug.print("Regstry.cmdlet length: {regCmdletLen}",onScope="debug",ct={"regCmdletLen":len(CS_Registry["cmdlets"])})
+crshDebug.print("SUPER IMPORTANT",onScope="off")
 
 # [Execute console]
 CS_Console.execute_internally(globals())

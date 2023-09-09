@@ -130,10 +130,19 @@ class pathtagManager():
     def remTag(self,tag):
         if self.pathtags.get(tag) != None:
             self.pathtags.pop(tag)
+    def getTag(self,tag):
+        return self.pathtags[tag]
+    def getTags(self):
+        return self.pathtags
     def updateTag(self,tagDict=dict):
         self.pathtags.update(tagDict)
-    def eval(self,string):
-        for tagName,tagValue in self.pathtags.items():
+    def eval(self,string,extraPathTags=None) -> str:
+        toParse = self.pathtags.copy()
+        if extraPathTags != None:
+            if type(extraPathTags) != dict:
+                raise Exception("If defined, extraPathTags must be of type dict!")
+            toParse.update(extraPathTags)
+        for tagName,tagValue in toParse.items():
             tagString = '{' + tagName + '}'
             string = string.replace(tagString,tagValue)
         return string

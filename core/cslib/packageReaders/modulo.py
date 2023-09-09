@@ -90,6 +90,7 @@ def getDataFromList(
         source = f"{package}{os.sep}Cmdlets"
         if os.path.exists(source):
             registry["cmdlets"] = legacy_getDataFromList(
+                settings=CS_Settings,
                 crshparentPath=crshparentPath,
                 packages=[source],
                 registry=registry,

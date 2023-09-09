@@ -1,10 +1,14 @@
 crsh:
+  Execution:
+    CatchSystemExit: true
+    HandleCmdletError: true
+    PrintCmdletDebug: true
   Formats:
     DefaultEncoding: utf-8
   Language:
     Default:
       '1': en-us
-    DefaultList: '{CS_BaseDir}\assets\langlist.json'
+    DefaultList: '{CS_BaseDir}/assets/langlist.json'
     LangFormat: json
     ListFormat: json
   Modules:
@@ -17,6 +21,8 @@ crsh:
       inpparse-py:
         _choices: null
         selection: null
+    Readers:
+      ReaderFile: '{CS_BaseDir}/assets/readerfiles.json'
   Packages:
     AllowedFileTypes:
       CmdletFiles:
@@ -46,7 +52,9 @@ crsh:
         - mpackage
         - mpack
         - csmpack
+    Options:
+      LoadInFileHeader: falses
     Readers:
-      ReaderFile: '{CS_BaseDir}\assets\readerfiles.json'
+      ReaderFile: '{CS_BaseDir}/assets/readerfiles.json'
 crsh_debugger:
-  Mode: limited
+  Scope: 'off'

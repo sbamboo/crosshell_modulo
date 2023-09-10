@@ -1,4 +1,4 @@
-import json,yaml
+import json,yaml,re
 from .cslib import normalizePathSepMT
 
 '''
@@ -7,11 +7,17 @@ Depends on pyyaml
 
 '''
 
+def _stripJsonComments(jsonString):
+    commentPattern = r'(\/\/[^\n]*|\/\*[\s\S]*?\*\/)'
+    jsonWithoutComments = re.sub(commentPattern, '', jsonString)
+    return jsonWithoutComments
+
 def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False):
     '''CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.'''
     if mode == "json":
         if operation == "get":
-            _dict = json.loads(open(file,'r',encoding=encoding).read())
+            content = _stripJsonComments(open(file,'r',encoding=encoding).read())
+            _dict = json.loads(content)
             if safeSeps == True: return normalizePathSepMT(_dict)
             else: return _dict
         elif operation == "set":

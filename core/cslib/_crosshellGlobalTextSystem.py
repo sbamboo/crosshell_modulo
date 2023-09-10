@@ -55,11 +55,14 @@ standardHexPalette = {
     "107": "b#FFFFFF",  # White
 }
 
-def parsePalettedColor(key,palette,paletteMode,parseWebcolor=True,safeParseWebcolorWhenDisabled=True):
+def parsePalettedColor(key,palette,paletteMode,parseWebcolor=True,safeParseWebcolorWhenDisabled=True,returnWithEsc=False):
     if palette.get(key) == None:
-        if ";" in key:
-            key = _multipleAnsiKeyWrapper(key, palette, paletteMode,parseWebcolor, safeParseWebcolorWhenDisabled)
-        return key
+        if "&" in key:
+            key = _multipleAnsiKeyWrapper(key, palette, paletteMode,parseWebcolor, safeParseWebcolorWhenDisabled,returnWithEsc)
+        if returnWithEsc == True:
+            return f"\033[{key}m"
+        else:
+            return key
     else:
         # ansi
         if paletteMode.lower() == "ansi":
@@ -106,12 +109,12 @@ def parsePalettedColor(key,palette,paletteMode,parseWebcolor=True,safeParseWebco
                 else:
                     return value
 
-def _multipleAnsiKeyWrapper(key,palette,paletteMode,parseWebcolor=True,safeParseWebcolorWhenDisabled=True):
-    keyList = key.split(";")
+def _multipleAnsiKeyWrapper(key,palette,paletteMode,parseWebcolor=True,safeParseWebcolorWhenDisabled=True,returnWithEsc=False):
+    keyList = key.split("&")
     parsedString = ""
     for k in keyList:
-        parsedString += parsePalettedColor(k,palette,paletteMode,parseWebcolor,safeParseWebcolorWhenDisabled)
-    if parsedString == key.replace(";",""):
+        parsedString += parsePalettedColor(k,palette,paletteMode,parseWebcolor,safeParseWebcolorWhenDisabled,returnWithEsc)
+    if parsedString == key.replace("&",""):
         parsedString = f"\033[{key}m"
     return parsedString
 
@@ -193,7 +196,7 @@ class crosshellGlobalTextSystem():
         ## replace with paletteValue
         for match in matches:
             if self.stripAnsi == False and _stripAnsi == False:
-                palettedValue = parsePalettedColor(match,self.palette,self.paletteMode,self.parseWebcolor,self.safeParseWebcolorWhenDisabled)
+                palettedValue = parsePalettedColor(match,self.palette,self.paletteMode,self.parseWebcolor,self.safeParseWebcolorWhenDisabled,True)
                 #palettedValue = _multipleAnsiKeyWrapper(match,self.palette,self.paletteMode,self.parseWebcolor)
                 inputText = inputText.replace(f"\033[{match}m", palettedValue)
             # Strip ANSI

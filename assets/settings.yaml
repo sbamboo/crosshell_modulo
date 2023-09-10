@@ -2,7 +2,10 @@ crsh:
   Execution:
     CatchSystemExit: true
     HandleCmdletError: true
+    OnlyAllowCmdlets: true
     PrintCmdletDebug: true
+    SafelyHandleExit: true
+    SplitByNewline: false
   Formats:
     DefaultEncoding: utf-8
   Language:
@@ -17,6 +20,9 @@ crsh:
         _choices:
         - test
         - test2
+        selection: null
+      exec-py:
+        _choices: null
         selection: null
       inpparse-py:
         _choices: null
@@ -53,8 +59,11 @@ crsh:
         - mpack
         - csmpack
     Options:
-      LoadInFileHeader: falses
+      LoadInFileHeader: true
     Readers:
       ReaderFile: '{CS_BaseDir}/assets/readerfiles.json'
+  Parse:
+    Text:
+      Webcolors: true
 crsh_debugger:
-  Scope: 'off'
+  Scope: error

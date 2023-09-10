@@ -46,7 +46,7 @@ def loadPackages(findFilesPathObj,DestinationPath=str,packageExtensions=list):
         packageFiles.extend(_getPackageFiles(path,packageExtensions))
     # Retrive a list of al installed packages
     installedPackages = []
-    installedPackages.extend(_findInstalledPackages(DestinationPath,findFilesPathObj.get()))
+    installedPackages.extend(_findInstalledPackages(DestinationPath,findFilesPathObj.get(),True))
     # Extract uninstalled mpackages and add them to the list
     for package in packageFiles:
         if list(package.keys())[0] not in installedPackages:

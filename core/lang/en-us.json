@@ -3,6 +3,14 @@
     "lang_author":"Crosshell",
     "lang_code": "en-us",
     "lang_format": "1",
+
     "cs.cmdletexec.traceback":"&31m{traceback}&0m",
-    "cs.cmdletexec.error": "&33mCmdlet '{name}' didn't execute fully, might be an error in the cmdet code! &0m"
+    "cs.cmdletexec.error": "&33mCmdlet '{name}' didn't execute fully, might be an error in the cmdet code! &0m",
+    "cs.cmdletexec.longpath.disabled": "&31mCommand execution-string was to long! (Win32 LongPath support is disabled)&0m",
+    "cs.cmdletexec.reader.nomainfunc": "&31mReader {reader} has no main function, can't call with command!&0m",
+    "cs.cmdletexec.reader.errornotfound": "&31mReader {reader} not found!&0m",
+    "cs.cmdletexec.reader.errorinexec": "&31mThere was an error executing {reader}!\n{traceback}&0m",
+    "cs.cmdletexec.reader.errorincall": "&31mThere was an error calling the reader main function for {reader}!\n{traceback}&0m",
+    "cs.cmdletexec.notfound": "&31mCmdlet '{command}' not found!&0m",
+    "cs.cmdletexec.invalidinput": "&31mInvalid input: {input}&0m"
 }

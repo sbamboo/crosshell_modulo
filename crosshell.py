@@ -16,5 +16,4 @@ sys.argv.insert(0, CSSTARTFILEPATHstring)
 
 # Execute the main script without waiting for user input
 os.system(f"{sys.executable} {CSMAINFILEPATH} {' '.join(sys.argv)}")
-
 # The subprocess will run without waiting for user input and will close when the main script finishes.

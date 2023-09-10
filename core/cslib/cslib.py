@@ -259,7 +259,7 @@ def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat=
         LangList = orgLangList
     _fileHandler(listFormat,"set",languageListFile,LangList,encoding=encoding)
 
-def recheckLangaugeList(languageListFile,listFormat=None,returnDontRemove=False,encoding="utf-8"):
+def recheckLanguageList(languageListFile,listFormat=None,returnDontRemove=False,encoding="utf-8"):
     '''CSlib: Checks over a languagelist so al the entries exist, and removses those who don't'''
     if returnDontRemove == True:
         missing = []
@@ -289,7 +289,7 @@ class crosshellLanguageProvider():
         self.langPath = langPath
         self.encoding = encoding
         # Retrive languageList after rechecking it
-        recheckLangaugeList(self.languageListFile,self.listFormat,encoding=self.encoding)
+        recheckLanguageList(self.languageListFile,self.listFormat,encoding=self.encoding)
         self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding)
         # Set default language
         self.languagePrios = defaultLanguage
@@ -345,6 +345,7 @@ class crosshellLanguageProvider():
         if text != None:
             text = self._handleAnsi(text)
             text = self._handlePathTags(text,extraPathTags)
+        return text
     def print(self,textId,defaultText=None,reloadMode="None",ept=None):
         '''Prints a text from the current language, and if needed reloads the language. reloadMode can be 'lang', 'list' or 'both' '''
         if reloadMode == "lang":
@@ -375,7 +376,7 @@ class crosshellLanguageProvider():
         text = self.languageData.get(textId)
         text = self._handle(text,ept)
         return text
-    def getLangaugeData(self) -> dict:
+    def getLanguageData(self) -> dict:
         _ld = {}
         _ld["name"] = self.get("lang_name")
         _ld["author"] = self.get("lang_author")
@@ -435,6 +436,21 @@ def topPrio(listOfItems,topList):
             return item
 
 
+class CrosshellDebErr(Exception):
+    def __init__(self, message="The crosshell debugger raised an exception!"):
+        self.message = message
+        super().__init__(self.message)
+
+class CrosshellExit(Exception):
+    def __init__(self, message="Crosshell Exit Exception Raised!"):
+        self.message = message
+        super().__init__(self.message)
+
+class CrosshellDummy(Exception):
+    def __init__(self, message=""):
+        self.message = message
+        super().__init__("")
+
 # Class debugger
 class crosshellDebugger():
     '''CSlib: Crosshell debugger, this is a text-print based debugging system.'''
@@ -482,7 +498,7 @@ class crosshellDebugger():
         self.languageProvider = provider
     def resetLanguageProvider(self):
         self.languageProvider = self.defLanguageProvider
-    def get(self,text,onScope="msg",lpReloadMode=None,ct=None):
+    def get(self,text,onScope="msg",ct=None,lpReloadMode=None,noPrefix=False):
         if ct != None:
             for key,value in ct.items():
                 ct[key] = str(value)
@@ -507,18 +523,47 @@ class crosshellDebugger():
                 reset = ""
                 color = ""
             title = self.titles[topScope]
-            if self.languageProvider != None:
-                _text = self.languageProvider.get(text,lpReloadMode)
-                if _text != None:
-                    text = _text
+            if type(text) == str:
+                text = text.replace(", txt:",",txt:")
+                if text.startswith("lng:"):
+                    text = text.replace("lng:","")
+                    if self.languageProvider != None:
+                        _text = self.languageProvider.get(text,lpReloadMode,ct)
+                        if _text != None:
+                            text = _text
+                        else:
+                            if ",txt:" in text:
+                                text = text.split(",txt:")[1]
+                else:
+                    if ",txt:" in text:
+                        text = text.split(",txt:")[1]
+                    else:
+                        text = text.replace("lng:","")
+            else:
+                text = str(text)
             text = f"{color}{title}{reset}{text}{reset}"
             if self.formatterInstance != None:
                 text = self.formatterInstance.parse(text,_stripAnsi=self.stripAnsi,addCustomTags=ct)
             return text
-    def print(self,text,onScope="msg",lpReloadMode=None,ct=None):
-        text = self.get(text,onScope,lpReloadMode,ct)
+    def print(self,text,onScope="msg",ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        text = self.get(text,onScope,ct,lpReloadMode,noPrefix)
         if text != None:
-            print(text)
+            if raiseEx == True:
+                raise CrosshellDebErr(text)
+            else:
+                print(text)
+    def pmsg(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"msg",ct,lpReloadMode,raiseEx,noPrefix)
+    def pinfo(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"info",ct,lpReloadMode,raiseEx,noPrefix)
+    def pwarn(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"warn",ct,lpReloadMode,raiseEx,noPrefix)
+    def perror(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"error",ct,lpReloadMode,raiseEx,noPrefix)
+    def pdebug(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"debug",ct,lpReloadMode,raiseEx,noPrefix)
+    def poff(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"off",ct,lpReloadMode,raiseEx,noPrefix)
 crshDebug = crosshellDebugger()
 
 # Session
@@ -536,6 +581,7 @@ class crosshellSession():
         self.data = {}
         self.data["set"] = None
         self.data["lng"] = None
+        self.deb = None
     # SessionFiles
     def _handleClassDataGet(self):
         toreturn = self.data.copy()

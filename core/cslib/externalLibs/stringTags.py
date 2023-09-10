@@ -164,6 +164,9 @@ def formatStringTags(inputText,allowedVariables={},customTags={}): # AllowedVari
         if matchString[0] == "!":
             matchString = matchString.lstrip("!")
             background = True
+        elif matchString[0] == ".":
+            matchString = matchString.lstrip(".")
+            background = False
         else:
             background = False
         matchString = matchString.rstrip("}")

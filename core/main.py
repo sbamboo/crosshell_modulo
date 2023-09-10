@@ -24,7 +24,7 @@ Variables/Settings:
   CS_CoreDir_RetrivalMode: How crosshell should retrive the coredir ("inspect" or "file"), default: "inspect"
   CS_SettingsFile:         The path to the settings file relative to the basedir
   crshDebug:               The default instance of the crosshell debugger
-  CS_text:                 Instance of the crosshellGlobalTextSystem
+  CS_Text:                 Instance of the crosshellGlobalTextSystem
   CS_DefSessionFile:       The default session file to load from relative to the basedir
   CS_PackagesFolder:       The folder to store packages in, relative to basedir
   CS_mPackPath:            Path of mPackages (the folder to install to)
@@ -39,12 +39,13 @@ from cslib._crosshellMpackageSystem import loadPackages
 from cslib._crosshellModularityEngine import linkedFileModularise
 
 # [Settings]
-CS_ModuleReplacebleNames = ["console.py","inpparse.py"]
+CS_ModuleReplacebleNames = ["console.py","inpparse.py","exec.py"]
 CS_DefaultEncoding = "utf-8"
 CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
 CS_PackagesFolder = f"{os.sep}packages"
+CS_BuiltInReaders = {"PLATFORM_EXECUTABLE":f"{'{CS_CoreDir}'}{os.sep}readers{os.sep}platexecs.py"}
 
 
 # [Setup]
@@ -99,8 +100,12 @@ CS_Settings.createFile()
 CS_Settings.addModule("crsh")
 
 # Add language settings
+CS_Settings.addProperty("crsh","Parse.Text.Webcolors", True)
 CS_Settings.addProperty("crsh","Execution.HandleCmdletError", True)
-CS_Settings.addProperty("crsh","Execution.PrintCmdletDebug", True)
+CS_Settings.addProperty("crsh","Execution.PrintCmdletDebug", False)
+CS_Settings.addProperty("crsh","Execution.SplitByNewline", True)
+CS_Settings.addProperty("crsh","Execution.SafelyHandleExit",True)
+CS_Settings.addProperty("crsh","Execution.OnlyAllowCmdlets",False)
 CS_Settings.addProperty("crsh","Formats.DefaultEncoding",CS_DefaultEncoding)
 CS_Settings.encoding = CS_Settings.getProperty("crsh", "Formats.DefaultEncoding")
 CS_Settings.addProperty("crsh","Language.Default",{"1":"en-us"})
@@ -123,18 +128,19 @@ def CS_GetEncoding():
 
 # Add a debug settings and config the debugger
 CS_Settings.addModule("crsh_debugger")
-CS_Settings.addProperty("crsh_debugger", "Scope", "msg")
+CS_Settings.addProperty("crsh_debugger", "Scope", "error")
+CS_Settings.addProperty("crsh_debugger","Execution.AllowRunAsInternal", True)
 
 # Load debug mode from settings
 crshDebug.setScope(CS_Settings.getProperty("crsh_debugger", "Scope"))
 
 # Initate a formatter instance
-CS_text = crosshellGlobalTextSystem( pathtagInstance = CS_PathtagMan )
-crshDebug.setFormatterInstance(CS_text) # Attatch the formatter to the Debugger
+CS_Text = crosshellGlobalTextSystem( pathtagInstance = CS_PathtagMan, parseWebcolor=CS_Settings.getProperty("crsh", "Parse.Text.Webcolors") )
+crshDebug.setFormatterInstance(CS_Text) # Attatch the formatter to the Debugger
 
 # Define a formattedPrint function using the formatter instance
 def fprint(text):
-  text = CS_text.parse(text)
+  text = CS_Text.parse(text)
   print(text)
 
 # Create language path
@@ -153,6 +159,7 @@ CS_lp = crosshellLanguageProvider(
   langPath=            CS_LangpathObj,
   encoding=            CS_GetEncoding()
 )
+crshDebug.setLanguageProvider(CS_lp) # Attach the language provider to the Debugger
 
 # Populate language file
 CS_lp.populateList()
@@ -191,6 +198,8 @@ csSession.data["set"] = CS_Settings
 csSession.data["lng"] = CS_lp
 csSession.data["par"] = crosshellParsingEngine
 csSession.data["ptm"] = CS_PathtagMan
+csSession.data["txt"] = CS_Text
+csSession.deb = crshDebug
 
 # [Setup Module Linkers]
 # Create objs
@@ -199,6 +208,7 @@ for name in CS_ModuleReplacebles.keys():
 # Vars
 CS_Console = CS_ModuleReplacebles["console.py"]["obj"]
 CS_Inpparse = CS_ModuleReplacebles["inpparse.py"]["obj"]
+CS_Exec = CS_ModuleReplacebles["exec.py"]["obj"]
 
 # [Load package data]
 # Find readerData
@@ -207,6 +217,9 @@ CS_Registry["readerData"] = toReaderFormat(
   readerFile=CS_PathtagMan.eval(CS_Settings.getProperty("crsh", "Packages.Readers.ReaderFile")),
   encoding=CS_GetEncoding()
 )
+# Add builtins
+for name,path in CS_BuiltInReaders.items():
+  addReader(name, CS_PathtagMan.eval(path), CS_PathtagMan.eval(CS_Settings.getProperty("crsh", "Packages.Readers.ReaderFile")))
 
 # Loader Function
 def csLoadPackageData(packageList=dict,CS_Registry=dict):
@@ -247,14 +260,6 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
     )
 # Execute loaderFunction into registry
 csLoadPackageData(CS_packageList,CS_Registry)
-
-crshDebug.setLanguageProvider(CS_lp)
-crshDebug.print("Starting...",onScope="msg")
-crshDebug.print("Loaded {count} entries to registry.",onScope="info",ct={"count":457})
-crshDebug.print("Cmdlet file not found, won't run!",onScope="warn")
-crshDebug.print("Console.py not found, exiting!",onScope="error")
-crshDebug.print("Regstry.cmdlet length: {regCmdletLen}",onScope="debug",ct={"regCmdletLen":len(CS_Registry["cmdlets"])})
-crshDebug.print("SUPER IMPORTANT",onScope="off")
 
 # [Execute console]
 CS_Console.execute_internally(globals())

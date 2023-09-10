@@ -116,7 +116,8 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                         "encoding": encoding,
                         "options": {
                             "argparseHelp": False,
-                            "synopsisDesc": False
+                            "synopsisDesc": False,
+                            "runAsInternal": False
                         }
                     }
                     # Check for confs
@@ -166,12 +167,14 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     regEntry["options"]["argparseHelp"] = bool(rootEntry["options"].get("argparseHelp"))
                                     if _toBool(regEntry["options"]["argparseHelp"]) == True:
                                         regEntry["args"] = _getArgparseHelp(regEntry["args"],regEntry["path"])
-                            if rootEntry.get("options") != None:
                                 if rootEntry["options"].get("synopsisDesc") != None:
                                     if regEntry.get("options") == None: regEntry["options"] = {}
                                     regEntry["options"]["synopsisDesc"] = bool(rootEntry["options"].get("synopsisDesc"))
                                     if _toBool(regEntry["options"]["synopsisDesc"]) == True:
                                         regEntry["desc"] = _getSynopsisDesc(regEntry["desc"],regEntry["path"],regEntry["encoding"])
+                                if rootEntry["options"].get("runAsInternal") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    regEntry["options"]["runAsInternal"] = bool(rootEntry["options"].get("runAsInternal"))
                     # Check for conf file
                     for ext in confFileExts:
                         possibleConf = f"{parent}{os.sep}{fname}.{ext}"
@@ -206,6 +209,10 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                             regEntry["path"] = data.get("pathoverwrite")
                             if chck_fending != "MIME_EXECUTABLE":
                                 regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
+                        if data.get("runAsInternal") != None:
+                            if regEntry.get("options") == None: regEntry["options"] = {}
+                            if regEntry["options"].get("runAsInternal") != None:
+                                regEntry["options"]["runAsInternal"] = bool(data.get("runAsInternal"))
                     # Check for header-data if enabled in settings
                     if settings.getProperty("crsh","Packages.Options.LoadInFileHeader") == True:
                         # check if file supports this even
@@ -262,6 +269,10 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     regEntry["path"] = data.get("pathoverwrite")
                                     if chck_fending != "MIME_EXECUTABLE":
                                         regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
+                                if data.get("runAsInternal") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    if regEntry["options"].get("runAsInternal") != None:
+                                        regEntry["options"]["runAsInternal"] = bool(data.get("runAsInternal"))
                     # Add regEntry to registry
                     regEntry_name = str(regEntry["name"])
                     regEntry.pop("name")

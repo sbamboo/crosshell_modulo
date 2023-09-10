@@ -1,5 +1,6 @@
 
 import json
+import re
 from .externalLibs.filesys import filesys
 
 '''
@@ -121,7 +122,7 @@ def crosshellParsingEngine(stringToParse) -> str:
 
 
 class pathtagManager():
-    '''CSlib.CSPA: Pathtagmanager class'''
+    '''CSlib.CSPE: Pathtagmanager class'''
     def __init__(self,defaultPathtags=dict):
         self.defPathtags = defaultPathtags
         self.pathtags = self.defPathtags.copy()
@@ -150,3 +151,139 @@ class pathtagManager():
         for _,tagValue in self.pathtags.items():
             if filesys.notExist(tagValue) == True:
                     filesys.ensureDirPath(tagValue)
+
+
+# Parenthesis
+def _get_innermost_parenthesis(string):
+    '''CSlib.CSPE: Function to get the innermost parenthesis.'''
+    match = re.search(r'\([^()]*\)', string)
+    if match:
+        return match.group()
+    else:
+        return ""
+
+def _parse_parenthesis(sinput) -> list:
+    '''CSlib.CSPE: Function to order parenthesis by order (Note! dosen't strip or split by any other rule).'''
+    text = "(" + sinput + ")"
+    colist = []
+    while re.search(r'\([^()]*\)', text):
+        innermost_parenthesis = _get_innermost_parenthesis(text)
+        content = innermost_parenthesis.replace("(","")
+        content = content.replace(")","")
+        colist.append(content)
+        text = text.replace(innermost_parenthesis,"§delim§")
+    newColist = []
+    for co in colist:
+        newColist.extend(co.split("§delim§"))
+    colist = []
+    for co in newColist:
+        if co != "":
+            colist.append(co)
+    return colist
+
+def _parse_p_order_with_split(p_order=list) -> str:
+    '''CSlib.CSPE: Function to semi separate a parenthesis list.'''
+    semiorder_str = ""
+    for elem in p_order:
+        elem = elem.strip()
+        if elem.startswith("||"):
+            elem = elem.replace("||","")
+            elem = elem.strip()
+        if not elem.endswith("||"):
+            elem = elem + "||"
+        semiorder_str += elem
+    semiorder_str = semiorder_str.rstrip("||")
+    return semiorder_str
+
+def orderParse_parenthesis(sInput) -> str:
+    '''CSlib.CSPE: Function to parse parenthesis in order to a semicolon-sepparated list.'''
+    return _parse_p_order_with_split( _parse_parenthesis(sInput) )
+
+
+def split_string_by_spaces(input_string) -> list:
+    '''CSlib.CSPE: Function to split a string by spaces not inside qoutes.'''
+    substrings = []
+    current_substring = []
+    inside_quotes = False
+    quote_char = None
+    for char in input_string:
+        if char == ' ' and not inside_quotes:
+            # If we encounter a space and we're not inside quotes, consider it as a delimiter
+            if current_substring:
+                substrings.append(''.join(current_substring))
+                current_substring = []
+        elif char in ('"', "'"):
+            # Toggle the inside_quotes flag and set the quote_char when encountering a quote
+            inside_quotes = not inside_quotes
+            if inside_quotes:
+                quote_char = char
+            else:
+                quote_char = None
+        else:
+            # Add the character to the current substring
+            current_substring.append(char)
+    # Add the last substring if it exists
+    if current_substring:
+        substrings.append(''.join(current_substring))
+    return substrings
+
+def splitByDelimiters_re(inputString, delimiters):
+    '''CSlib.CSPE: Split a string by multiple delimiters.
+    Split the input string by any of the specified delimiters.
+
+    Args:
+    input_string (str): The string to be split.
+    delimiters (list): A list of delimiter strings.
+
+    Returns:
+    list: A list of substrings obtained by splitting the input string by any of the delimiters.
+    '''
+    # Combine all delimiters into a single regular expression pattern
+    delimiterPattern = '|'.join(map(re.escape, delimiters))
+    
+    # Use the re.split() function to split the string by the combined delimiter pattern
+    substrings = re.split(delimiterPattern, inputString)
+    
+    return substrings
+
+def splitByDelimiters(inputString, delimiters):
+    '''CSlib.CSPE: Split a string by multiple delimiters.
+    Split the input string by any of the specified delimiters.
+
+    Args:
+    input_string (str): The string to be split.
+    delimiters (list): A list of delimiter strings.
+
+    Returns:
+    list: A list of substrings obtained by splitting the input string by any of the delimiters.
+    '''
+    substrings = [inputString]
+    for delimiter in delimiters:
+        newSubstrings = []
+        for substring in substrings:
+            newSubstrings.extend(substring.split(delimiter))
+        substrings = newSubstrings
+    return substrings
+
+def splitSafe_parse(text,delims=["||"]):
+    '''CSlib.CSPE: Safely parse splits.'''
+    segments = splitByDelimiters(text, delims)
+    for i,segment in enumerate(segments):
+        segments[i] = crosshellParsingEngine(segment)
+    _str = "||".join(segments)
+    return _str.strip("||")
+
+def useOnlyDoublePipeSplit(text) -> str:
+    '''CSlib.CSPE: Function to replace ; with ||.'''
+    result = []
+    inside_braces = False
+    for char in text:
+        if char == '{':
+            inside_braces = True
+        elif char == '}':
+            inside_braces = False
+        if char == ';' and not inside_braces:
+            result.append('||')
+        else:
+            result.append(char)
+    return ''.join(result)

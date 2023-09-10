@@ -97,7 +97,7 @@ from ._crosshellParsingEngine import pathtagManager
 #TODO: remProperty
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
-    def __init__(self,settingsFile,encoding="utf-8"):
+    def __init__(self,settingsFile,encoding="utf-8",ensure=False):
         self.file = settingsFile
         self.modules = []
         self.encoding = encoding
@@ -105,6 +105,12 @@ class modularSettingsLinker():
             self.filetype = "yaml"
         elif ".json" in self.file or ".jsonc" in self.file or ".json5" in self.file:
             self.filetype = "json"
+        if ensure == True:
+            if os.path.exists(self.file) != True:
+                toc = ""
+                if self.filetype == "json":
+                    toc = "{}"
+                open(self.file,'w',encoding=encoding).write(toc)
     def _getContent(self) -> dict:
         data = {}
         if self.filetype == "yaml":
@@ -711,10 +717,14 @@ def getPrefix(csSession,stdPrefix=""):
     # import
     from cslib._crosshellGlobalTextSystem import parsePrefixDirTag
     # Get values
-    prefix = csSession.data["set"].getProperty("crsh","Console.Prefix")
+    defprefix = csSession.data["set"].getProperty("crsh","Console.DefPrefix")
+    prefix = csSession.data["per"].getProperty("crsh","Prefix")
     prefixEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixEnabled")
     dirEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixShowDir")
     curdir = csSession.data["dir"]
+    # Use defprefix if prefix if nto defined
+    if prefix == None:
+        prefix = defprefix
     # if prefix enabled
     if prefixEnabled != True:
         return stdPrefix

@@ -43,6 +43,7 @@ CS_ModuleReplacebleNames = ["console.py","inpparse.py","exec.py"]
 CS_DefaultEncoding = "utf-8"
 CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
+CS_PersistanceFile = f"{os.sep}core{os.sep}persistance.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
 CS_PackagesFolder = f"{os.sep}packages"
 CS_BuiltInReaders = {"PLATFORM_EXECUTABLE":f"{'{CS_CoreDir}'}{os.sep}readers{os.sep}platexecs.py"}
@@ -93,13 +94,17 @@ CS_PathtagMan = pathtagManager(CS_Pathtags)
 CS_PathtagMan.ensureAl()
 
 # Create settings object
-CS_Settings = modularSettingsLinker(f"{CS_BaseDir}{CS_SettingsFile}",encoding=CS_DefaultEncoding)
+CS_Settings = modularSettingsLinker(f"{CS_BaseDir}{CS_SettingsFile}",encoding=CS_DefaultEncoding,ensure=True)
 CS_Settings.createFile()
+
+# Create Persistance object
+CS_Persistance = modularSettingsLinker(f"{CS_BaseDir}{CS_PersistanceFile}",encoding=CS_DefaultEncoding,ensure=True)
+CS_Persistance.addModule("crsh")
 
 # Add settings main module
 CS_Settings.addModule("crsh")
 
-# Add language settings
+# Add settings
 CS_Settings.addProperty("crsh","Parse.Text.Webcolors", True)
 CS_Settings.addProperty("crsh","Execution.HandleCmdletError", True)
 CS_Settings.addProperty("crsh","Execution.PrintCmdletDebug", False)
@@ -120,9 +125,14 @@ CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy",["pac
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Conf", ["cfg","config","conf"])
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Pack", ["json","cfg","conf","config"])
 CS_Settings.addProperty("crsh","Packages.Readers.ReaderFile",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}readerfiles.json")
-CS_Settings.addProperty("crsh","Console.Prefix","> ")
+CS_Settings.addProperty("crsh","Console.DefPrefix","> ")
+CS_Settings.addProperty("crsh","Console.DefTitle","Crosshell Modulo")
 CS_Settings.addProperty("crsh","Console.PrefixEnabled",True)
 CS_Settings.addProperty("crsh","Console.PrefixShowDir",True)
+
+# Default persistance
+CS_Persistance.addProperty("crsh","Prefix",CS_Settings.getProperty("crsh","Console.DefPrefix"))
+CS_Persistance.addProperty("crsh","Title",CS_Settings.getProperty("crsh","Console.DefTitle"))
 
 # Add function to quickly get encoding
 def CS_GetEncoding():
@@ -202,6 +212,7 @@ csSession.data["lng"] = CS_lp
 csSession.data["par"] = crosshellParsingEngine
 csSession.data["ptm"] = CS_PathtagMan
 csSession.data["txt"] = CS_Text
+csSession.data["per"] = CS_Persistance
 csSession.deb = crshDebug
 
 # [Setup Module Linkers]

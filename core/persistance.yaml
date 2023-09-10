@@ -1,0 +1,4 @@
+crsh:
+  Prefix: '{f.magenta}{user}{f.darkgray}@{f.blue}{hostname}{f.darkgray}{f.darkgray}{dir:":
+    {dir:ensureSlash}"}> '
+  Title: wa ma

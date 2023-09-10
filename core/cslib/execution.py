@@ -66,17 +66,17 @@ def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,i
     try:
         exec(open(readerPath,'r',encoding=readerEncoding).read(),globalsToReader)
     except FileNotFoundError:
-        csSession.deb.perror("lng:cs.cmdletexec.reader.errornotfound",{"reader":os.path.dirname(readerPath)})
+        csSession.deb.perror("lng:cs.cmdletexec.reader.errornotfound",{"reader":os.path.basename(readerPath),"readerPath":readerPath})
     except Exception as e:
-        csSession.deb.perror("lng:cs.cmdletexec.reader.errorinexec",{"reader":os.path.dirname(readerPath),"traceback":e})
+        csSession.deb.perror("lng:cs.cmdletexec.reader.errorinexec",{"reader":os.path.basename(readerPath),"readerPath":readerPath,"traceback":e})
     # execute reader-defined main command
     try:
-        main(csSession,cmd=command,args=cmdargs,encoding=encoding,defencoding=readerEncoding,isCaptured=isCaptured,globalValues=globalValues)
+        main(csSession,cmddata=command,args=cmdargs,encoding=encoding,defencoding=readerEncoding,isCaptured=isCaptured,globalValues=globalValues)
     except Exception as e:
         if 'main' not in locals() or not callable(locals()['main']):
-            csSession.deb.perror("lng:cs.cmdletexec.reader.nomainfunc",{"reader":os.path.dirname(readerPath)})
+            csSession.deb.perror("lng:cs.cmdletexec.reader.nomainfunc",{"reader":os.path.basename(readerPath),"readerPath":readerPath})
         else:
-            csSession.deb.perror("lng:cs.cmdletexec.reader.errorincall",{"reader":os.path.dirname(readerPath),"traceback":e})
+            csSession.deb.perror("lng:cs.cmdletexec.reader.errorincall",{"reader":os.path.basename(readerPath),"readerPath":readerPath,"traceback":e})
 
 def getPackdir(basedir,scriptroot,index=0):
     bpackdir = f'{basedir}{os.sep}packages'
@@ -96,7 +96,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
     reader = determine_reader(cmdletData["fending"],csSession.registry)
     # Fix global values to use
-    if cmdletData["options"]["runAsInternal"] != True or csSession.data["set"].getProperty("crsh","Execution.AllowRunAsInternal") != True:
+    if cmdletData["options"]["runAsInternal"] != True or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
         globalValues = prep_globals(globalValues,entries)
     # Add standard values
     scriptroot = os.path.abspath(os.path.dirname(cmdletData["path"]))
@@ -105,6 +105,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     globalValues["CSScriptRoot"] = scriptroot
     globalValues["CSScriptData"] = cmdletData["reader"] = reader
     globalValues["CSPackDir"] = getPackdir( csSession.data["ptm"].getTag("CS_BaseDir"),scriptroot,0 )
+    globalValues["CSCurDir"] = csSession.data["dir"]
     # Safe exit handling
     if csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit"):
         globalValues["exit"] = safe_exit # overwrite exit
@@ -127,7 +128,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
                 exec(open(cmdletData["path"],'r',encoding=cmdletData["encoding"]).read(), globalValues)
             # Other reader
             else:
-                exec_reader(csSession,reader["path"],command,args,cmdletData["encoding"],captured,globalValues,globals())
+                exec_reader(csSession,reader["exec"],cmdletData,args,cmdletData["encoding"],capture,globalValues,globals())
         # CrosshellExit
         except CrosshellExit as CS_CmdletExitcode:
             if CatchSystemExit:
@@ -156,7 +157,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
                 exec(open(cmdletData["path"],'r',encoding=cmdletData["encoding"]).read(), globalValues)
             # Other reader
             else:
-                exec_reader(csSession,reader["path"],command,args,cmdletData["encoding"],captured,globalValues,globals())
+                exec_reader(csSession,reader["path"],cmdletData,args,cmdletData["encoding"],captured,globalValues,globals())
         # CrosshellExit
         except CrosshellExit as CS_CmdletExitcode:
             if CatchSystemExit:

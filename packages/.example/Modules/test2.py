@@ -1,1 +1,0 @@
-print("Hi from replaced console.py (test2)")

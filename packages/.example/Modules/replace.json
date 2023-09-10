@@ -2,9 +2,5 @@
     "test": {
         "toReplace": "console.py",
         "replaceWith": "{parent}\\test.py"
-    },
-    "test2": {
-        "toReplace": "console.py",
-        "replaceWith": "{parent}\\test2.py"
     }
 }

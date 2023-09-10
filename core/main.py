@@ -120,6 +120,9 @@ CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy",["pac
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Conf", ["cfg","config","conf"])
 CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Pack", ["json","cfg","conf","config"])
 CS_Settings.addProperty("crsh","Packages.Readers.ReaderFile",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}readerfiles.json")
+CS_Settings.addProperty("crsh","Console.Prefix","> ")
+CS_Settings.addProperty("crsh","Console.PrefixEnabled",True)
+CS_Settings.addProperty("crsh","Console.PrefixShowDir",True)
 
 # Add function to quickly get encoding
 def CS_GetEncoding():
@@ -262,4 +265,6 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
 csLoadPackageData(CS_packageList,CS_Registry)
 
 # [Execute console]
+csSession.data["dir"] = CS_BaseDir
+
 CS_Console.execute_internally(globals())

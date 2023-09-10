@@ -1,4 +1,9 @@
 crsh:
+  Console:
+    Prefix: '{f.magenta}{user}{f.darkgray}@{f.blue}{hostname}{f.darkgray}{f.darkgray}{dir:":
+      {dir:ensureSlash}"}> '
+    PrefixEnabled: true
+    PrefixShowDir: true
   Execution:
     CatchSystemExit: true
     HandleCmdletError: true
@@ -19,7 +24,6 @@ crsh:
       console-py:
         _choices:
         - test
-        - test2
         selection: null
       exec-py:
         _choices: null
@@ -66,4 +70,6 @@ crsh:
     Text:
       Webcolors: true
 crsh_debugger:
+  Execution:
+    AllowRunAsInternal: true
   Scope: error

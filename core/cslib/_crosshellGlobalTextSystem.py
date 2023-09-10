@@ -223,6 +223,10 @@ def parsePrefixDirTag(inputText=str,currentDirectory=str,dirInPrefixEnabled=bool
     if fallbackPrefix != None:
         if inputText == None or inputText == "":
             inputText = fallbackPrefix
+    # ensure slash
+    if "{dir:ensureSlash}" in inputText:
+        inputText = inputText.replace("{dir:ensureSlash}","{dir}")
+        if currentDirectory.endswith("\\") != True: currentDirectory += "\\"
     # Fix {dir} syntax into {wdir}
     simpleSyntax  = "{dir}"
     complexSyntax = "{dir:"
@@ -241,8 +245,10 @@ def parsePrefixDirTag(inputText=str,currentDirectory=str,dirInPrefixEnabled=bool
         matchraw = matchresult.group()
         # Strip {wdir:} syntax
         matchContent = matchraw.lstrip("{")
-        matchContent = matchContent.lstrip('wdir:"')
-        matchContent = matchContent.rstrip('"}')
+        matchContent = matchContent.replace('wdir:"',"",1)
+        matchContent = matchContent[::-1]
+        matchContent = matchContent.replace('}"',"",1)
+        matchContent = matchContent[::-1]
         # Turned {wdir:"<content>"} >> raw:{wdir:"<content>"} content:<content>
         # Remove the placeholder character that was put in as a fix
         inputText = inputText.replace("␀", "")

@@ -706,3 +706,25 @@ def handleOSinExtensionsList(extensions=list) -> list:
         else:
             newList.append(extension)
     return newList
+
+def getPrefix(csSession,stdPrefix=""):
+    # import
+    from cslib._crosshellGlobalTextSystem import parsePrefixDirTag
+    # Get values
+    prefix = csSession.data["set"].getProperty("crsh","Console.Prefix")
+    prefixEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixEnabled")
+    dirEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixShowDir")
+    curdir = csSession.data["dir"]
+    # if prefix enabled
+    if prefixEnabled != True:
+        return stdPrefix
+    else:
+        # prefix valid?
+        if prefix == None:
+            return stdPrefix
+        # Handle prefix
+        else:
+            prefix = parsePrefixDirTag(prefix,curdir,dirEnabled,stdPrefix)
+            prefix = csSession.data["txt"].parse(prefix)
+            prefix = prefix + "\033[0m"
+            return prefix

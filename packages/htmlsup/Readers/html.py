@@ -1,7 +1,7 @@
 import webbrowser
 import urllib.parse
 
-def main(session, cmddata=dict, args=list, encoding=str, defencoding=str, isCaptured=bool, globalValues=dict):
+def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=bool,globalValues=dict):
     # Construct the URL parameters
     query_parameters = {}
     for i in range(0, len(args), 2):

@@ -15,7 +15,7 @@ def _getPackageFiles(Path=str,packageExtensions=list):
             packageFiles.append({name:object.path})
     return packageFiles
 
-def _findInstalledPackages(Path=str,exclusionList=list,safeMode=False):
+def _findInstalledPackages_depricated(Path=str,exclusionList=list,safeMode=False):
     packages = []
     objects = filesys.scantree(Path)
     for object in objects:
@@ -29,6 +29,27 @@ def _findInstalledPackages(Path=str,exclusionList=list,safeMode=False):
                 packages.append(object.name)
     return packages
 
+def list_non_hidden_folders(path, max_depth=None):
+    non_hidden_folders = []
+    for root, dirs, _ in os.walk(path):
+        if max_depth is not None and root.count(os.path.sep) - path.count(os.path.sep) >= max_depth:
+            continue
+        for dir_name in dirs:
+            full_path = os.path.join(root, dir_name)
+            if not any(part.startswith('.') for part in full_path.split(os.path.sep)):
+                non_hidden_folders.append(full_path)
+
+    return non_hidden_folders
+
+def _findInstalledPackages(Path=str,exclusionList=list,traverseDepth=None):
+    packages = []
+    paths = list_non_hidden_folders(Path,traverseDepth)
+    for dir in paths:
+        if dir not in exclusionList and dir != Path:
+            if dir not in packages:
+                packages.append(dir)
+    return packages
+
 def _listNoninstalledPackages(packageFiles=list,installedPackages=list):
     '''not used'''
     NoninstalledPackages = []
@@ -37,7 +58,7 @@ def _listNoninstalledPackages(packageFiles=list,installedPackages=list):
             NoninstalledPackages.append(package)
     return NoninstalledPackages
 
-def loadPackages(findFilesPathObj,DestinationPath=str,packageExtensions=list):
+def loadPackages(findFilesPathObj,DestinationPath=str,packageExtensions=list,findTraverseDepth=1,extraExclusions=None):
     '''CSlib.CMPS: finds and installs packages, finally returing a list of al installed packages.'''
     # Find files
     filePaths = findFilesPathObj.get()
@@ -46,7 +67,10 @@ def loadPackages(findFilesPathObj,DestinationPath=str,packageExtensions=list):
         packageFiles.extend(_getPackageFiles(path,packageExtensions))
     # Retrive a list of al installed packages
     installedPackages = []
-    installedPackages.extend(_findInstalledPackages(DestinationPath,findFilesPathObj.get(),True))
+    exclusions = filePaths.copy()
+    if extraExclusions is not None:
+        exclusions.extend(extraExclusions)
+    installedPackages.extend(_findInstalledPackages(DestinationPath,exclusions,findTraverseDepth))
     # Extract uninstalled mpackages and add them to the list
     for package in packageFiles:
         if list(package.keys())[0] not in installedPackages:

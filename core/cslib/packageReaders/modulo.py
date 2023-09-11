@@ -84,8 +84,16 @@ def getDataFromList(
                 for key,extensions in readerJSON.items():
                     readerFile = f"{source}{os.sep}{key}.py"
                     if os.path.exists(readerFile):
-                        readerData = {"name":key,"exec":readerFile,"extensions":extensions}
-                        registry["readerData"].append(readerData)
+                        exists = False
+                        for i,reader in enumerate(registry["readerData"]):
+                            if reader["name"] == key:
+                                exists = True
+                                break
+                        if exists == False:
+                            readerData = {"name":key,"exec":readerFile,"extensions":extensions}
+                            registry["readerData"].append(readerData)
+                        else:
+                            registry["readerData"][i].update({"name":key,"exec":readerFile,"extensions":extensions})
         # Cmdlets
         source = f"{package}{os.sep}Cmdlets"
         if os.path.exists(source):

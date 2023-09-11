@@ -22,8 +22,7 @@ crsh:
   Modules:
     Files:
       console-py:
-        _choices:
-        - test
+        _choices: null
         selection: null
       exec-py:
         _choices: null
@@ -53,6 +52,8 @@ crsh:
         - win@cmd
         - win@bat
         - lnx;mac@MIME_EXECUTABLE
+        html:
+        - html
       Packages:
         Legacy:
         - package

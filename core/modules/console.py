@@ -10,7 +10,7 @@ while True:
     CS_LastOutput = None
     CS_Inpparse.execute_internally(globals())
     CS_Exec.execute_internally(globals())
-    if CS_LastOutput != None and CS_LastOutput != "":
+    if CS_LastOutput != None and CS_LastOutput != "" and type(CS_LastOutput) == str:
         # Global Text System
         pre,subs = exclude_nonToFormat(CS_LastOutput)
         mid = csSession.data["txt"].parse(pre)

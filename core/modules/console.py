@@ -1,5 +1,6 @@
 from cslib.execution import execline
 from cslib.externalLibs.conUtils import setConTitle
+from cslib._crosshellParsingEngine import exclude_nonToFormat,include_nonToFormat
 
 CS_PipeLine = execline()
 while True:
@@ -11,4 +12,7 @@ while True:
     CS_Exec.execute_internally(globals())
     if CS_LastOutput != None and CS_LastOutput != "":
         # Global Text System
-        print( csSession.data["txt"].parse(CS_LastOutput) )
+        pre,subs = exclude_nonToFormat(CS_LastOutput)
+        mid = csSession.data["txt"].parse(pre)
+        end = include_nonToFormat(mid,subs)
+        print(end)

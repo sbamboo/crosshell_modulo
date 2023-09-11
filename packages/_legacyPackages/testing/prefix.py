@@ -49,6 +49,6 @@ if operation == "-get" or operation == "-g":
     pref = str(csSession.data["per"].getProperty("crsh","Prefix"))
     dirEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixEnabled")
     stdPrefix = csSession.data["set"].getProperty("crsh","Console.DefPrefix")
-    print("\033[36mCurrent Prefix:            \033[0m'" + pref + "'")
+    print("\033[36mCurrent Prefix:            \033[0m'//" + pref + "//'")
     print("\033[36mRendered prefix:           \033[0m'" + formatPrefix(csSession,prefix,csSession.data["dir"],dirEnabled,stdPrefix) + "'")
     print("\033[36mRendered prefix: \033[104m(Showdir)\033[0m \033[0m'" + formatPrefix(csSession,prefix,csSession.data["dir"],dirEnabled,stdPrefix) + "'")

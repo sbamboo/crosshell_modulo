@@ -1,7 +1,6 @@
 crsh:
   Console:
-    DefPrefix: '{f.magenta}{user}{f.darkgray}@{f.blue}{hostname}{f.darkgray}{f.darkgray}{dir:":
-      {dir:ensureSlash}"}> '
+    DefPrefix: '> '
     DefTitle: Crosshell Modulo
     PrefixEnabled: true
     PrefixShowDir: true

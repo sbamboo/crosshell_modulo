@@ -287,3 +287,27 @@ def useOnlyDoublePipeSplit(text) -> str:
         else:
             result.append(char)
     return ''.join(result)
+
+
+def exclude_nonToFormat(input_string):
+    # Find all substrings inside innermost double slashes
+    pattern = r'//([^/]+)//'
+    matches = re.findall(pattern, input_string)
+
+    if not matches:
+        # If no innermost double slashes found, return the input string as is
+        return (input_string, [])
+
+    # Replace all innermost double slashes with §cs.toNotFormat§
+    replaced_string = re.sub(pattern, '§cs.toNotFormat§', input_string)
+
+    return (replaced_string, matches)
+
+
+def include_nonToFormat(input_string, substrings):
+    for substring in substrings:
+        # Remove // from the beginning and end of the substring
+        clean_substring = substring.strip('/')
+        # Replace "§cs.toNotFormat§" with the cleaned substring
+        input_string = input_string.replace("§cs.toNotFormat§", clean_substring, 1)
+    return input_string

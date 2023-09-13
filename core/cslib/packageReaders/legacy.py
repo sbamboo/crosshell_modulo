@@ -117,14 +117,17 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                         "options": {
                             "argparseHelp": False,
                             "synopsisDesc": False,
-                            "runAsInternal": False
-                        }
+                            "restrictionMode": "normal", #normal, internal, limited
+                            "readerReturnVars": False
+                        },
+                        "extras" : {}
                     }
                     # Check for confs
                     parent = os.path.dirname(entry.path)
                     name   = entry.name
                     fname  = fs.getFileName(entry.name)
                     # Check for root file entry
+                    hardCodedEntries = ["overwrites","options", "nameoverwrite","pathoverwrite","desc","aliases","args","blockCommonParameters","encoding","argparseHelp","synopsisDesc","restrictionMode","readerReturnVars"]
                     ## check for file
                     if parent not in knownRootFiles.keys():
                         for ext in rootFileExts:
@@ -172,9 +175,15 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     regEntry["options"]["synopsisDesc"] = bool(rootEntry["options"].get("synopsisDesc"))
                                     if _toBool(regEntry["options"]["synopsisDesc"]) == True:
                                         regEntry["desc"] = _getSynopsisDesc(regEntry["desc"],regEntry["path"],regEntry["encoding"])
-                                if rootEntry["options"].get("runAsInternal") != None:
+                                if rootEntry["options"].get("restrictionMode") != None:
                                     if regEntry.get("options") == None: regEntry["options"] = {}
-                                    regEntry["options"]["runAsInternal"] = bool(rootEntry["options"].get("runAsInternal"))
+                                    regEntry["options"]["restrictionMode"] = rootEntry["options"].get("restrictionMode")
+                                if rootEntry["options"].get("readerReturnVars") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    regEntry["options"]["readerReturnVars"] = bool(rootEntry["options"].get("readerReturnVars"))
+                            for key in rootEntry.keys():
+                                if key not in hardCodedEntries:
+                                    regEntry["extras"][key] = rootEntry[key]
                     # Check for conf file
                     for ext in confFileExts:
                         possibleConf = f"{parent}{os.sep}{fname}.{ext}"
@@ -209,10 +218,17 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                             regEntry["path"] = data.get("pathoverwrite")
                             if chck_fending != "MIME_EXECUTABLE":
                                 regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
-                        if data.get("runAsInternal") != None:
+                        if data.get("restrictionMode") != None:
                             if regEntry.get("options") == None: regEntry["options"] = {}
-                            if regEntry["options"].get("runAsInternal") != None:
-                                regEntry["options"]["runAsInternal"] = bool(data.get("runAsInternal"))
+                            if regEntry["options"].get("restrictionMode") != None:
+                                regEntry["options"]["restrictionMode"] = data.get("restrictionMode")
+                        if data.get("readerReturnVars") != None:
+                            if regEntry.get("options") == None: regEntry["options"] = {}
+                            if regEntry["options"].get("readerReturnVars") != None:
+                                regEntry["options"]["readerReturnVars"] = bool(data.get("readerReturnVars"))
+                        for key in data.keys():
+                            if key not in hardCodedEntries:
+                                regEntry["extras"][key] = data[key]
                     # Check for header-data if enabled in settings
                     if settings.getProperty("crsh","Packages.Options.LoadInFileHeader") == True:
                         # check if file supports this even
@@ -269,10 +285,18 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     regEntry["path"] = data.get("pathoverwrite")
                                     if chck_fending != "MIME_EXECUTABLE":
                                         regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
-                                if data.get("runAsInternal") != None:
+                                if data.get("restrictionMode") != None:
                                     if regEntry.get("options") == None: regEntry["options"] = {}
-                                    if regEntry["options"].get("runAsInternal") != None:
-                                        regEntry["options"]["runAsInternal"] = bool(data.get("runAsInternal"))
+                                    if regEntry["options"].get("restrictionMode") != None:
+                                        regEntry["options"]["restrictionMode"] = data.get("restrictionMode")
+                                if data.get("readerReturnVars") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    if regEntry["options"].get("readerReturnVars") != None:
+                                        regEntry["options"]["readerReturnVars"] = bool(data.get("readerReturnVars"))
+                                for key in data.keys():
+                                    if key not in hardCodedEntries:
+                                        if str(data[key]).lower() == "true" or str(data[key]).lower() == "false": data[key] = bool(data[key])
+                                        regEntry["extras"][key] = data[key]
                     # Add regEntry to registry
                     regEntry_name = str(regEntry["name"])
                     regEntry.pop("name")

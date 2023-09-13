@@ -588,6 +588,30 @@ class crosshellSession():
         self.data["set"] = None
         self.data["lng"] = None
         self.deb = None
+        self.varScope = {}
+    # Cmdletvariables
+    def resetVarScope(self):
+        self.varScope = {}
+    def setVarScope(self,dict):
+        self.varScope = dict
+    def uppVarScope(self,dict):
+        self.varScope = dict
+    def addVarScope(self,key,value):
+        self.varScope[key] = value
+    def popVarScope(self,key):
+        self.varScope.pop(key)
+    def getVarScope(self,key=None):
+        if key != None:
+            return self.varScope[key]
+        else:
+            return self.varScope
+    def joinVarScope(self,scope=dict):
+        for key,value in self.varScope.items():
+            scope[key] = value
+    def uppVarDict(self,scopeDict=dict):
+        for key,value in self.varScope.items():
+            scopeDict[key] = value
+        return scopeDict
     # SessionFiles
     def _handleClassDataGet(self):
         toreturn = self.data.copy()
@@ -738,3 +762,26 @@ def getPrefix(csSession,stdPrefix=""):
             prefix = csSession.data["txt"].parse(prefix)
             prefix = prefix + "\033[0m"
             return prefix
+
+class CmdletVarManager():
+    def __init__(self,persistanceInstance,moduleName="CmdletVars"):
+        self.vars = {}
+        self.persistance = persistanceInstance
+        self.moduleName=moduleName
+        self._autocr()
+    def _autocr(self):
+        if self.moduleName not in self.persistance._getModules():
+            self.persistance.addModule(self.moduleName)
+    def resper(self):
+        self.persistance.remModule(self.moduleName)
+        self._autocr()
+    def setvar(self,key,value):
+        self.persistance.addProperty(self.moduleName,key,value)
+    def getvar(self,key):
+        return self.persistance.getProperty(self.moduleName,key)
+    def delvar(self,key):
+        return self.persistance.remProperty(self.moduleName,key)
+    def uppvar(self,key,value):
+        return self.persistance.uppProperty(self.moduleName,key,value)
+    def chnvar(self,key,value):
+        return self.persistance.chnProperty(self.moduleName,key,value)

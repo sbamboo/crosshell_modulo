@@ -214,6 +214,8 @@ csSession.data["par"] = crosshellParsingEngine
 csSession.data["ptm"] = CS_PathtagMan
 csSession.data["txt"] = CS_Text
 csSession.data["per"] = CS_Persistance
+csSession.data["cdr"] = CS_CoreDir
+csSession.data["bdr"] = CS_BaseDir
 csSession.deb = crshDebug
 
 # [Setup Module Linkers]
@@ -275,6 +277,10 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
     )
 # Execute loaderFunction into registry
 csLoadPackageData(CS_packageList,CS_Registry)
+
+# [Setup cmdlet variable manager and link to registry]
+CS_CmdletVarMan = CmdletVarManager(CS_Persistance)
+csSession.data["cvm"] = CS_CmdletVarMan
 
 # [Execute console]
 csSession.data["dir"] = CS_BaseDir

@@ -51,6 +51,6 @@ if IsWindows() == True:
             enabled = _longPathEnabled()
         # Check allowence
         if enabled == True:
-            return len(file_path) <= 32767 # Maximum allowed path length
+            return len(pathstr) <= 32767 # Maximum allowed path length
         else:
-            return len(file_path) <= 260 # Maximum allowed path length in Windows
+            return len(pathstr) <= 260 # Maximum allowed path length in Windows

@@ -1,5 +1,5 @@
 # [CStags]
-# runAsInternal = true
+# restrictionMode = internal
 # [TagEnd]
 
 CS_packageList = {

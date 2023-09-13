@@ -2,9 +2,10 @@ from io import StringIO
 import traceback
 import os
 import sys
+import subprocess
 
 from cslib.externalLibs.filesys import filesys as fs
-from cslib import handleOSinExtensionsList,CrosshellExit
+from cslib import handleOSinExtensionsList,CrosshellExit,CrosshellDebErr
 from cslib._crosshellParsingEngine import splitByDelimiters
 from cslib.longPathHandler import lph_isAllowed
 from cslib._crosshellParsingEngine import split_string_by_spaces
@@ -55,13 +56,16 @@ def runShell(csSession,shellExecPath=str,shellExecArgs=[],capture=False,cmdletpa
         out = safe_decode_utf8_cp437(out,defencoding)
         return out
 
-def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,isCaptured=bool,globalValues=dict,globalsToReader=dict):
+def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,isCaptured=bool,globalValues=dict,globalsToReader=dict,retVars=False):
     '''CSlib: Function to execute a command using a reader.'''
     # get def encoding
     readerEncoding = csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")
     # setup globals
     globalsToReader["cs_isCaptured"] = isCaptured
     globalsToReader["cs_defEncoding"] = readerEncoding
+    globalsToReader["cs_readerPath"] = readerPath
+    globalsToReader["cs_lph_isAllowed"] = lph_isAllowed
+    globalsToReader["cs_runShell"] = runShell
     # create and exec command
     try:
         exec(open(readerPath,'r',encoding=readerEncoding).read(),globalsToReader)
@@ -71,12 +75,17 @@ def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,i
         csSession.deb.perror("lng:cs.cmdletexec.reader.errorinexec",{"reader":os.path.basename(readerPath),"readerPath":readerPath,"traceback":e})
     # execute reader-defined main command
     try:
-        main(csSession,cmddata=command,args=cmdargs,encoding=encoding,defencoding=readerEncoding,isCaptured=isCaptured,globalValues=globalValues)
+        retVars = main(csSession,cmddata=command,args=cmdargs,encoding=encoding,defencoding=readerEncoding,isCaptured=isCaptured,globalValues=globalValues)
+    except CrosshellDebErr as e:
+        raise
     except Exception as e:
+        raise # << DEBUG
         if 'main' not in locals() or not callable(locals()['main']):
-            csSession.deb.perror("lng:cs.cmdletexec.reader.nomainfunc",{"reader":os.path.basename(readerPath),"readerPath":readerPath})
+            csSession.deb.perror("lng:cs.cmdletexec.reader.nomainfunc",{"reader":os.path.basename(readerPath),"readerPath":readerPath,"traceback":e})
         else:
             csSession.deb.perror("lng:cs.cmdletexec.reader.errorincall",{"reader":os.path.basename(readerPath),"readerPath":readerPath,"traceback":e})
+    if retVars != False:
+        return retVars
 
 def getPackdir(basedir,scriptroot,index=0):
     bpackdir = f'{basedir}{os.sep}packages'
@@ -91,12 +100,13 @@ def safe_exit(code=None):
 def execute_expression(csSession,command=str,args=list,capture=False,globalValues=dict,entries=list):
     '''CSlib: Main expression executer.
     Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!'''
+    # Some setting up
     cmdletData = get_command_data(command,csSession.registry)
     if cmdletData == None:
         csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
     reader = determine_reader(cmdletData["fending"],csSession.registry)
     # Fix global values to use
-    if cmdletData["options"]["runAsInternal"] != True or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
+    if cmdletData["options"]["restrictionMode"].lower() != "internal" or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
         globalValues = prep_globals(globalValues,entries)
     # Add standard values
     scriptroot = os.path.abspath(os.path.dirname(cmdletData["path"]))
@@ -104,8 +114,10 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     globalValues["sargv"] = (" ".join(args)).strip(" ")
     globalValues["CSScriptRoot"] = scriptroot
     globalValues["CSScriptData"] = cmdletData["reader"] = reader
-    globalValues["CSPackDir"] = getPackdir( csSession.data["ptm"].getTag("CS_BaseDir"),scriptroot,0 )
-    globalValues["CSCurDir"] = csSession.data["dir"]
+    globalValues["CS_PackDir"] = getPackdir( csSession.data["ptm"].getTag("CS_BaseDir"),scriptroot,0 )
+    globalValues["CS_CurDir"] = csSession.data["dir"]
+    globalValues["CS_BaseDir"] = csSession.data["bdr"]
+    globalValues["CS_CoreDir"] = csSession.data["cdr"]
     # Safe exit handling
     if csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit"):
         globalValues["exit"] = safe_exit # overwrite exit
@@ -125,10 +137,15 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         try:
             # INTERNAL_PYTHON
             if reader["name"] == "INTERNAL_PYTHON":
-                exec(open(cmdletData["path"],'r',encoding=cmdletData["encoding"]).read(), globalValues)
+                exec(open(cmdletData["path"],encoding=cmdletData["encoding"]).read(), globalValues)
             # Other reader
             else:
-                exec_reader(csSession,reader["exec"],cmdletData,args,cmdletData["encoding"],capture,globalValues,globals())
+                _retVars = cmdletData["options"]["readerReturnVars"]
+                # Check if should sendback vars
+                _readerReturn = exec_reader(csSession,reader["exec"],cmdletData,args,cmdletData["encoding"],capture,globalValues,globals(),retVars=_retVars)
+                if _retVars == True and _readerReturn != None:
+                    csSession.uppVarScope(_readerReturn)
+
         # CrosshellExit
         except CrosshellExit as CS_CmdletExitcode:
             if CatchSystemExit:
@@ -147,6 +164,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
                 ept["traceback"] = traceback.format_exc()
                 # MAKE THEESE USE crshDebug
                 csSession.deb.perror("lng:cs.cmdletexec.traceback",ept)
+
             else:
                 csSession.deb.perror("lng:cs.cmdletexec.error",ept)
     # Don't handle cmdleterror
@@ -154,10 +172,13 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         try:
             # INTERNAL_PYTHON
             if reader["name"] == "INTERNAL_PYTHON":
-                exec(open(cmdletData["path"],'r',encoding=cmdletData["encoding"]).read(), globalValues)
+                exec(open(cmdletData["path"],encoding=cmdletData["encoding"]).read(), globalValues)
             # Other reader
             else:
-                exec_reader(csSession,reader["path"],cmdletData,args,cmdletData["encoding"],captured,globalValues,globals())
+                # Check if should sendback vars
+                _readerReturn = exec_reader(csSession,reader["exec"],cmdletData,args,cmdletData["encoding"],capture,globalValues,globals(),retVars=cmdletData["options"]["readerReturnVars"])
+                if _readerReturn != None:
+                    csSession.uppVarScope(_readerReturn)
         # CrosshellExit
         except CrosshellExit as CS_CmdletExitcode:
             if CatchSystemExit:
@@ -174,6 +195,10 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     if capture == True:
         sys.stdout = old_stdout
         captured_output = redirected_stdout.getvalue()
+    # Set ANS
+    if captured_output != None and captured_output != "" and captured_output.replace(" ","") != "":
+        if captured_output.strip() != csSession.data["cvm"].getvar("ans").strip():
+            csSession.data["cvm"].chnvar("ans",captured_output)
     # Return
     if captured_output != None:
         return captured_output
@@ -185,6 +210,7 @@ class execline():
     '''CSlib: Main crosshell exec-line class.'''
     def __init__(self):
         self._reset_execline()
+        self.session = None
     def _reset_execline(self):
         self.execline = {
             "segments": [],
@@ -210,7 +236,10 @@ class execline():
                                 element["args"][i] = self.execline["current_content"]
                     else:
                         element["args"] = [self.execline["current_content"],*element["args"]]
-                # Check if last element
+                # Add modified globals to globalValues so that they are available to the next expression
+                if self.session != None:
+                    globalValues.update(self.session.getVarScope())
+                # Execute expression
                 self.execline["current_content"] = execute_expression(
                     csSession    = csSession,
                     command      = element["cmd"],

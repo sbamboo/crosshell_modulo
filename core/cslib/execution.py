@@ -9,6 +9,7 @@ from cslib import handleOSinExtensionsList,CrosshellExit,CrosshellDebErr
 from cslib._crosshellParsingEngine import splitByDelimiters
 from cslib.longPathHandler import lph_isAllowed
 from cslib._crosshellParsingEngine import split_string_by_spaces
+from cslib.externalLibs.limitExec import DummyObject,ReturningDummyObject,RaisingDummyObject
 
 def prep_globals(globalValue=dict,entries=list):
     '''CSlib: Function to filter globals by entries.'''
@@ -108,6 +109,16 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # Fix global values to use
     if cmdletData["options"]["restrictionMode"].lower() != "internal" or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
         globalValues = prep_globals(globalValues,entries)
+    # Restricted Mode
+    if cmdletData["options"]["restrictionMode"].lower() == "restricted":
+        globalValues["__builtins__"] = DummyObject()
+        globalValues["__import__"] = DummyObject()
+    if cmdletData["options"]["restrictionMode"].lower() == "restricted:strict":
+        globalValues["__builtins__"] = RaisingDummyObject()
+        globalValues["__import__"] = RaisingDummyObject()
+    if cmdletData["options"]["restrictionMode"].lower() == "restricted:returning":
+        globalValues["__builtins__"] = ReturningDummyObject()
+        globalValues["__import__"] = ReturningDummyObject()
     # Add standard values
     scriptroot = os.path.abspath(os.path.dirname(cmdletData["path"]))
     globalValues["argv"] = args

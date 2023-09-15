@@ -1,5 +1,6 @@
 import sys
 
+# Custom stdout-buffer class
 class BufferedStdout:
     def __init__(self, original_stdout, orgInput=None):
         self.original_stdout = original_stdout
@@ -7,6 +8,17 @@ class BufferedStdout:
         self.saveToBuffer = True
         self.printToConsole = True
         self.orgInput = orgInput
+
+    def _getBools(self):
+        '''returns: (stb,ptc)'''
+        return self.saveToBuffer,self.printToConsole
+    
+    def _setBools(self,stb=None,ptc=None):
+        '''takes stb,ptc'''
+        if stb != None and type(stb) == bool:
+            self.saveToBuffer = stb
+        if ptc != None and type(ptc) == bool:
+            self.printToConsole = ptc
 
     def write(self, text):
         # add to buffer
@@ -22,13 +34,10 @@ class BufferedStdout:
     def safe_input(self, prompt=None):
         if prompt == None:
             prompt = ""
-        old_stb = self.saveToBuffer
-        old_ptc = self.printToConsole
-        self.saveToBuffer = False
-        self.printToConsole = True
+        old_stb, old_ptc = self._getBools()      # get old
+        self._setBools(stb=False,ptc=True)       # set new
         out = self.orgInput(prompt)
-        self.saveToBuffer = old_stb
-        self.printToConsole = old_ptc
+        self._setBools(stb=old_stb,ptc=old_ptc) # set new
         return out
         
     def getBuffer(self):
@@ -46,3 +55,11 @@ class BufferedStdout:
         lst = self.getBuffer()
         st = '\n'.join(lst)
         return st.strip("\n")
+
+    def bwrite(self,text):
+        '''buffer-only write'''
+        self.buffer.append(text)
+    
+    def cwrite(self,text):
+        '''console-only write'''
+        self.original_stdout.write(text)

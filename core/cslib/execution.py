@@ -12,14 +12,14 @@ from cslib._crosshellParsingEngine import split_string_by_spaces
 from cslib.externalLibs.limitExec import DummyObject,ReturningDummyObject,RaisingDummyObject
 
 def prep_globals(globalValue=dict,entries=list):
-    '''CSlib: Function to filter globals by entries.'''
+    '''CSlib.execution: Function to filter globals by entries.'''
     newGlobals = {}
     for entry in entries:
         newGlobals[entry] = globalValue[entry]
     return newGlobals
 
 def determine_reader(fending=str,registry=dict) -> str:
-    '''CSlib: Function to determine the reader from the registry using fending.'''
+    '''CSlib.execution: Function to determine the reader from the registry using fending.'''
     if fending == None:
         fending = "MIME_EXECUTABLE"
     # Match
@@ -29,13 +29,13 @@ def determine_reader(fending=str,registry=dict) -> str:
             return reader
 
 def get_command_data(command=str,registry=dict) -> str:
-    '''CSlib: Function to get command data from the registry.'''
+    '''CSlib.execution: Function to get command data from the registry.'''
     for cmdlet,cmdletData in registry["cmdlets"].items():
         if cmdlet.lower() == command.lower():
             return cmdletData
 
 def safe_decode_utf8_cp437(bytestring,defencoding="utf-8"):
-    '''CSlib: Function safely handle unicode and/or cp437.'''
+    '''CSlib.execution: Function safely handle unicode and/or cp437.'''
     try:
         decoded_string = bytestring.decode(defencoding)
     except:
@@ -43,7 +43,7 @@ def safe_decode_utf8_cp437(bytestring,defencoding="utf-8"):
     return decoded_string
 
 def runShell(csSession,shellExecPath=str,shellExecArgs=[],capture=False,cmdletpath=str,cmdletargs=[],defencoding="utf-8"):
-    '''CSlib: Function to execute a command using a shell program.'''
+    '''CSlib.execution: Function to execute a command using a shell program.'''
     execList = [f'{shellExecPath}', *shellExecArgs, cmdletpath, *cmdletargs]
     # check long path safety
     if lph_isAllowed(' '.join(execList)) == False:
@@ -58,7 +58,7 @@ def runShell(csSession,shellExecPath=str,shellExecArgs=[],capture=False,cmdletpa
         return out
 
 def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,isCaptured=bool,globalValues=dict,globalsToReader=dict,retVars=False):
-    '''CSlib: Function to execute a command using a reader.'''
+    '''CSlib.execution: Function to execute a command using a reader.'''
     # get def encoding
     readerEncoding = csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")
     # setup globals
@@ -99,13 +99,32 @@ def safe_exit(code=None):
     raise CrosshellExit(code)
 
 def execute_expression(csSession,command=str,args=list,capture=False,globalValues=dict,entries=list):
-    '''CSlib: Main expression executer.
-    Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!'''
+    '''CSlib.execution: Main expression executer.
+
+    Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!
+    ^ Except the ones added by this function:
+     - argv/sargv:   arguments sent to cmdlet
+     - CSScriptRoot: path to parent of cmdlet
+     - CSScriptData: dictionary containing cmdlet data, inkl. reader
+     - CS_PackDir:   The /packages path
+     - CS_CurDir:    The current dictionary from the sesison (shortcut)
+     - CS_BaseDir:   The base directory of crosshell (/) from session (shortcut)
+     - CS_CoreDir:   The core directory of crosshell (/core) from session (shortcut)
+     - input:        if capture is set to true a custom "safe" input function will be set ("safe" = buffer safe)
+     - exit:         crosshell will replace the standard exit function with a "safe" one ("safe" = non-crosshell terminating)
+     - CS_oinput:    the standard input function
+     - CS_oexit:     the standard exit function
+
+    '''
     # Some setting up
     captured_output = None
-    cmdletData = get_command_data(command,csSession.registry).copy()
-    if cmdletData == None:
+    ## use tmp var incase nontype return
+    _cmdletData = get_command_data(command,csSession.registry)
+    ## handle no cmdlet found
+    if _cmdletData == None:
         csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
+    ## copy to var that can be used (copy needed to not f with registry)
+    cmdletData = _cmdletData.copy()
     reader = determine_reader(cmdletData["fending"],csSession.registry)
     # Fix global values to use
     if cmdletData["options"]["restrictionMode"].lower() != "internal" or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
@@ -133,6 +152,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # Safe exit handling
     if csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit"):
         globalValues["exit"] = safe_exit # overwrite exit
+        globalValues["CS_oexit"] = exit # give orgexit
     # Fix pathtags for error printing
     cmdletData["name"] = command
     ept = cmdletData
@@ -143,6 +163,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         old_stdout = sys.stdout
         sys.stdout = buffer
         globalValues["input"] = buffer.safe_input
+        globalValues["CS_oinput"] = input
     # Execute script
     CatchSystemExit   = csSession.data["set"].getProperty("crsh","Execution.CatchSystemExit")
     HandleCmdletError = csSession.data["set"].getProperty("crsh","Execution.HandleCmdletError")
@@ -227,7 +248,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
 
 # Execline class
 class execline():
-    '''CSlib: Main crosshell exec-line class.'''
+    '''CSlib.execution: Main crosshell exec-line class.'''
     def __init__(self):
         self._reset_execline()
         self.session = None
@@ -276,13 +297,13 @@ class execline():
         return out.strip("\n")
 
 def determine_delims(csSession,baseDelims=["||"]) -> list:
-    '''CSlib: Function to determine delims to use by settings.'''
+    '''CSlib.execution: Function to determine delims to use by settings.'''
     splitByNewline = csSession.data["set"].getProperty("crsh","Execution.SplitByNewline")
     if splitByNewline == True: baseDelims.append("\n")
     return baseDelims
 
 def input_to_pipelineStructure(csSession,sinput=str,basicExecutionDelimiters=["||"]) -> list:
-    '''CSlib: Function to convert input to the pipeline structure.'''
+    '''CSlib.execution: Function to convert input to the pipeline structure.'''
     # Split to execution order
     execution_order = splitByDelimiters(sinput,basicExecutionDelimiters)
     # Split into pipeline (Note! this function should only ever be called with simple pipeline syntax: " | ")
@@ -308,3 +329,18 @@ def input_to_pipelineStructure(csSession,sinput=str,basicExecutionDelimiters=["|
         pipelineSplit_executionOrder.append(spartial)
     # return
     return pipelineSplit_executionOrder
+
+from .datafiles import _fileHandler
+
+def execute_string(string,csSession,capture=False,globalVals={},entries=None):
+    _entries = _fileHandler("json","get",csSession.data["gef"])
+    if entries != [] and entries != None:
+        entries.extend(_entries)
+    else:
+        entries = _entries
+    split_expression = split_string_by_spaces(string.strip())
+    # sort
+    if len(split_expression) > 0:
+        cmd = split_expression[0]
+        split_expression.pop(0)
+    return execute_expression(csSession,cmd,split_expression,capture,globalVals,entries)

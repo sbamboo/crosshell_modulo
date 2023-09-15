@@ -36,7 +36,7 @@ def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=
         # Iterage over globals
         for key,value in globalValues.items():
             # Remove function and object elements
-            if not "<function" in str(value) and not "__" in str(value) and not " object at " in str(value) and not str(value) == "":
+            if not "<function" in str(value) and not "<module" in str(value) and not "__" in str(value) and not " object at " in str(value) and not str(value) == "":
                 # Handle double slash
                 if "\\\\" in str(value):
                     value = str(value).replace("\\\\","\\")

@@ -1,4 +1,4 @@
-import builtins
+from execution import execute_string
 
 '''
 CSlib: conditions, contains condition logic
@@ -29,3 +29,13 @@ def pyCondition(condition):
     except:
         print("PyCondition: Invalid condition string, returning False.")
         return False
+    
+def crshCondition(condition,csSession,globalvals):
+    str_bool = execute_string(condition,csSession,True,globalvals)
+    cond = None
+    if str_bool != None:
+        if str_bool.lower() == "true":
+            cond = True
+    if cond != True:
+        cond == False
+    return cond

@@ -1,11 +1,11 @@
+# Imports
 from cslib import CrosshellDebErr
+from cslib.datafiles import _fileHandler
 
-entries = [
-    "csSession",
-    "fprint",
-    "csLoadPackageData"
-]
+# Entries to include in the cmdletScope (Excluding variables added by exec)
+entries = _fileHandler("json","get",csSession.data["gef"])
 
+# Execute
 try:
     CS_LastOutput = CS_PipeLine.execute(csSession,globals(),entries)
 except CrosshellDebErr as e:

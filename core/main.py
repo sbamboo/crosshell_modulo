@@ -46,6 +46,7 @@ CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
 CS_PersistanceFile = f"{os.sep}core{os.sep}persistance.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
 CS_PackagesFolder = f"{os.sep}packages"
+CS_GlobalEntriesFile = f"{os.sep}globalEntries.json"
 CS_BuiltInReaders = {"PLATFORM_EXECUTABLE":f"{'{CS_CoreDir}'}{os.sep}readers{os.sep}platexecs.py"}
 
 
@@ -216,6 +217,7 @@ csSession.data["txt"] = CS_Text
 csSession.data["per"] = CS_Persistance
 csSession.data["cdr"] = CS_CoreDir
 csSession.data["bdr"] = CS_BaseDir
+csSession.data["gef"] = f"{CS_CoreDir}{CS_GlobalEntriesFile}"
 csSession.deb = crshDebug
 
 # [Setup Module Linkers]
@@ -281,6 +283,16 @@ csLoadPackageData(CS_packageList,CS_Registry)
 # [Setup cmdlet variable manager and link to registry]
 CS_CmdletVarMan = CmdletVarManager(CS_Persistance)
 csSession.data["cvm"] = CS_CmdletVarMan
+
+# [Setup builtin variables]
+CS_StdVars = {
+  "True": True,
+  "False": False,
+  "Basedir": CS_BaseDir,
+  "Coredir": CS_CoreDir
+}
+for key,value in CS_StdVars.items():
+  CS_CmdletVarMan.setvar(key,value)
 
 # [Execute console]
 csSession.data["dir"] = CS_BaseDir

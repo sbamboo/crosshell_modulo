@@ -1,9 +1,9 @@
-from io import StringIO
 import traceback
 import os
 import sys
 import subprocess
 
+from cslib.buffering import BufferedStdout
 from cslib.externalLibs.filesys import filesys as fs
 from cslib import handleOSinExtensionsList,CrosshellExit,CrosshellDebErr
 from cslib._crosshellParsingEngine import splitByDelimiters
@@ -102,6 +102,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     '''CSlib: Main expression executer.
     Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!'''
     # Some setting up
+    captured_output = None
     cmdletData = get_command_data(command,csSession.registry)
     if cmdletData == None:
         csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
@@ -137,8 +138,11 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     ept = cmdletData
     # If capture is true, redirect stdout
     if capture == True:
+        buffer = BufferedStdout(sys.stdout,input)
+        buffer.printToConsole = False
         old_stdout = sys.stdout
-        redirected_stdout = sys.stdout = StringIO()
+        sys.stdout = buffer
+        globalValues["input"] = buffer.safe_input
     # Execute script
     CatchSystemExit   = csSession.data["set"].getProperty("crsh","Execution.CatchSystemExit")
     HandleCmdletError = csSession.data["set"].getProperty("crsh","Execution.HandleCmdletError")
@@ -205,11 +209,16 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # If capture output is true, restore stdout settings and save the captured output
     if capture == True:
         sys.stdout = old_stdout
-        captured_output = redirected_stdout.getvalue()
+        captured_output = buffer.getBufferS()
+        buffer.clearBuffer()
     # Set ANS
     if captured_output != None and captured_output != "" and captured_output.replace(" ","") != "":
-        if captured_output.strip() != csSession.data["cvm"].getvar("ans").strip():
-            csSession.data["cvm"].chnvar("ans",captured_output)
+        curVal = csSession.data["cvm"].getvar("ans")
+        if curVal != None:
+            if captured_output.strip() != curVal.strip():
+                csSession.data["cvm"].chnvar("ans",captured_output)
+        else:
+            csSession.data["cvm"].setvar("ans",captured_output)
     # Return
     if captured_output != None:
         return captured_output
@@ -238,7 +247,7 @@ class execline():
             # Reset content for next segment
             self.execline["current_content"] = None
             # Loop elements
-            for element in segment:
+            for elemIndex,element in enumerate(segment):
                 # If content != None add to args
                 if self.execline["current_content"] != None:
                     if "%" in element["args"]:
@@ -251,14 +260,17 @@ class execline():
                 if self.session != None:
                     globalValues.update(self.session.getVarScope())
                 # Execute expression
-                self.execline["current_content"] = execute_expression(
+                _cont = execute_expression(
                     csSession    = csSession,
                     command      = element["cmd"],
                     args         = element["args"],
+                    #capture      = elemIndex < len(segment)-1,
                     capture      = True,
                     globalValues = globalValues,
                     entries= globalEntries
                 )
+                if _cont != None:
+                    self.execline["current_content"] = _cont
         out = self.execline["current_content"]
         self._reset_execline()
         return out.strip("\n")

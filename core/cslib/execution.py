@@ -103,7 +103,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!'''
     # Some setting up
     captured_output = None
-    cmdletData = get_command_data(command,csSession.registry)
+    cmdletData = get_command_data(command,csSession.registry).copy()
     if cmdletData == None:
         csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
     reader = determine_reader(cmdletData["fending"],csSession.registry)

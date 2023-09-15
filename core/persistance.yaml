@@ -1,5 +1,150 @@
 CmdletVars:
-  ans: '{f.red}lolbs{r}'
+  ans: "{f.magenta}Loaded cmdlets:\n{f.yellow}\n  pwshsup_example:{r}\n{f.darkgray}\
+    \     desc:{f.green} \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}\
+    \     args{f.green} \"\"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}  \
+    \   encoding{f.green} utf-8\n{f.darkgray}     fending{f.green} ps1\n{f.darkgray}\
+    \     options:\n{f.darkgray}        argparseHelp{f.green} False\n{f.darkgray}\
+    \        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} True\n{f.darkgray}   \
+    \  path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\pwshsup\\Cmdlets\\pwshsup_example.ps1\n{f.darkgray}     extras{f.green}\
+    \ {}\n{f.yellow}\n  websup_example:{r}\n{f.darkgray}     desc:{f.green} \"\"\n\
+    {f.darkgray}     aliases{f.green} []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray}\
+    \     bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n{f.darkgray}\
+    \     fending{f.green} html\n{f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green}\
+    \ False\n{f.darkgray}        synopsisDesc{f.green} False\n{f.darkgray}       \
+    \ restrictionMode{f.green} normal\n{f.darkgray}        readerReturnVars{f.green}\
+    \ False\n{f.darkgray}     path{f.green} c:\\users\\simonkalmi.claesson\\documents\\\
+    github\\crosshell_modulo\\packages\\websup\\Cmdlets\\websup_example.html\n{f.darkgray}\
+    \     extras{f.green} {}\n{f.yellow}\n  bat:{r}\n{f.darkgray}     desc:{f.green}\
+    \ \"A cat(1) clone with syntax highlighting and Git integration.\"\n{f.darkgray}\
+    \     aliases{f.green} []\n{f.darkgray}     args{f.green} \"<argument/path>\"\n\
+    {f.darkgray}     bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n\
+    {f.darkgray}     fending{f.green} exe\n{f.darkgray}     options:\n{f.darkgray}\
+    \        argparseHelp{f.green} False\n{f.darkgray}        synopsisDesc{f.green}\
+    \ False\n{f.darkgray}        restrictionMode{f.green} normal\n{f.darkgray}   \
+    \     readerReturnVars{f.green} False\n{f.darkgray}     path{f.green} c:\\users\\\
+    simonkalmi.claesson\\documents\\github\\crosshell_modulo\\packages\\_legacyPackages\\\
+    bat\\bat.exe\n{f.darkgray}     extras{f.green} {'description': 'A cat(1) clone\
+    \ with syntax highlighting and Git integration.', 'paramhelp': '<argument/path>'}\n\
+    {f.yellow}\n  exa:{r}\n{f.darkgray}     desc:{f.green} \"A modern replacement\
+    \ for ls.\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}     args{f.green}\
+    \ \"<arguments>\"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}     encoding{f.green}\
+    \ utf-8\n{f.darkgray}     fending{f.green} exe\n{f.darkgray}     options:\n{f.darkgray}\
+    \        argparseHelp{f.green} False\n{f.darkgray}        synopsisDesc{f.green}\
+    \ False\n{f.darkgray}        restrictionMode{f.green} normal\n{f.darkgray}   \
+    \     readerReturnVars{f.green} False\n{f.darkgray}     path{f.green} c:\\users\\\
+    simonkalmi.claesson\\documents\\github\\crosshell_modulo\\packages\\_legacyPackages\\\
+    exa\\exa.exe\n{f.darkgray}     extras{f.green} {'description': 'A modern replacement\
+    \ for ls.', 'paramhelp': '<arguments>'}\n{f.yellow}\n  ask:{r}\n{f.darkgray} \
+    \    desc:{f.green} \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray} \
+    \    args{f.green} \"\"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}   \
+    \  encoding{f.green} utf-8\n{f.darkgray}     fending{f.green} py\n{f.darkgray}\
+    \     options:\n{f.darkgray}        argparseHelp{f.green} False\n{f.darkgray}\
+    \        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\ask.py\n{f.darkgray}     extras{f.green} {}\n\
+    {f.yellow}\n  cd:{r}\n{f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}     aliases{f.green}\
+    \ []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray}     bcp{f.green} False\n\
+    {f.darkgray}     encoding{f.green} utf-8\n{f.darkgray}     fending{f.green} py\n\
+    {f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green} False\n{f.darkgray}\
+    \        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\cd.py\n{f.darkgray}     extras{f.green} {}\n\
+    {f.yellow}\n  clr:{r}\n{f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}    \
+    \ aliases{f.green} []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray}     bcp{f.green}\
+    \ False\n{f.darkgray}     encoding{f.green} utf-8\n{f.darkgray}     fending{f.green}\
+    \ py\n{f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green} False\n\
+    {f.darkgray}        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\clr.py\n{f.darkgray}     extras{f.green} {}\n\
+    {f.yellow}\n  cls:{r}\n{f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}    \
+    \ aliases{f.green} []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray}     bcp{f.green}\
+    \ False\n{f.darkgray}     encoding{f.green} utf-8\n{f.darkgray}     fending{f.green}\
+    \ py\n{f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green} False\n\
+    {f.darkgray}        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\cls.py\n{f.darkgray}     extras{f.green} {}\n\
+    {f.yellow}\n  exit:{r}\n{f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}   \
+    \  aliases{f.green} []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray}    \
+    \ bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n{f.darkgray} \
+    \    fending{f.green} py\n{f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green}\
+    \ False\n{f.darkgray}        synopsisDesc{f.green} False\n{f.darkgray}       \
+    \ restrictionMode{f.green} normal\n{f.darkgray}        readerReturnVars{f.green}\
+    \ False\n{f.darkgray}     path{f.green} c:\\users\\simonkalmi.claesson\\documents\\\
+    github\\crosshell_modulo\\packages\\_legacyPackages\\testing\\exit.py\n{f.darkgray}\
+    \     extras{f.green} {}\n{f.yellow}\n  get:{r}\n{f.darkgray}     desc:{f.green}\
+    \ \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}     args{f.green} \"\
+    \"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n\
+    {f.darkgray}     fending{f.green} py\n{f.darkgray}     options:\n{f.darkgray}\
+    \        argparseHelp{f.green} False\n{f.darkgray}        synopsisDesc{f.green}\
+    \ False\n{f.darkgray}        restrictionMode{f.green} normal\n{f.darkgray}   \
+    \     readerReturnVars{f.green} False\n{f.darkgray}     path{f.green} c:\\users\\\
+    simonkalmi.claesson\\documents\\github\\crosshell_modulo\\packages\\_legacyPackages\\\
+    testing\\get.py\n{f.darkgray}     extras{f.green} {}\n{f.yellow}\n  list:{r}\n\
+    {f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}\
+    \     args{f.green} \"\"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}  \
+    \   encoding{f.green} utf-8\n{f.darkgray}     fending{f.green} py\n{f.darkgray}\
+    \     options:\n{f.darkgray}        argparseHelp{f.green} False\n{f.darkgray}\
+    \        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\list.py\n{f.darkgray}     extras{f.green}\
+    \ {}\n{f.yellow}\n  p:{r}\n{f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}\
+    \     aliases{f.green} []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray} \
+    \    bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n{f.darkgray}\
+    \     fending{f.green} py\n{f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green}\
+    \ False\n{f.darkgray}        synopsisDesc{f.green} False\n{f.darkgray}       \
+    \ restrictionMode{f.green} normal\n{f.darkgray}        readerReturnVars{f.green}\
+    \ False\n{f.darkgray}     path{f.green} c:\\users\\simonkalmi.claesson\\documents\\\
+    github\\crosshell_modulo\\packages\\_legacyPackages\\testing\\p.py\n{f.darkgray}\
+    \     extras{f.green} {}\n{f.yellow}\n  prefix:{r}\n{f.darkgray}     desc:{f.green}\
+    \ \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}     args{f.green} \"\
+    \"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n\
+    {f.darkgray}     fending{f.green} py\n{f.darkgray}     options:\n{f.darkgray}\
+    \        argparseHelp{f.green} False\n{f.darkgray}        synopsisDesc{f.green}\
+    \ False\n{f.darkgray}        restrictionMode{f.green} normal\n{f.darkgray}   \
+    \     readerReturnVars{f.green} False\n{f.darkgray}     path{f.green} c:\\users\\\
+    simonkalmi.claesson\\documents\\github\\crosshell_modulo\\packages\\_legacyPackages\\\
+    testing\\prefix.py\n{f.darkgray}     extras{f.green} {}\n{f.yellow}\n  red:{r}\n\
+    {f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}\
+    \     args{f.green} \"\"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}  \
+    \   encoding{f.green} utf-8\n{f.darkgray}     fending{f.green} py\n{f.darkgray}\
+    \     options:\n{f.darkgray}        argparseHelp{f.green} False\n{f.darkgray}\
+    \        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\red.py\n{f.darkgray}     extras{f.green} {}\n\
+    {f.yellow}\n  reload:{r}\n{f.darkgray}     desc:{f.green} \"\"\n{f.darkgray} \
+    \    aliases{f.green} []\n{f.darkgray}     args{f.green} \"\"\n{f.darkgray}  \
+    \   bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n{f.darkgray}\
+    \     fending{f.green} py\n{f.darkgray}     options:\n{f.darkgray}        argparseHelp{f.green}\
+    \ False\n{f.darkgray}        synopsisDesc{f.green} False\n{f.darkgray}       \
+    \ restrictionMode{f.green} internal\n{f.darkgray}        readerReturnVars{f.green}\
+    \ False\n{f.darkgray}     path{f.green} c:\\users\\simonkalmi.claesson\\documents\\\
+    github\\crosshell_modulo\\packages\\_legacyPackages\\testing\\reload.py\n{f.darkgray}\
+    \     extras{f.green} {}\n{f.yellow}\n  set:{r}\n{f.darkgray}     desc:{f.green}\
+    \ \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}     args{f.green} \"\
+    \"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}     encoding{f.green} utf-8\n\
+    {f.darkgray}     fending{f.green} py\n{f.darkgray}     options:\n{f.darkgray}\
+    \        argparseHelp{f.green} False\n{f.darkgray}        synopsisDesc{f.green}\
+    \ False\n{f.darkgray}        restrictionMode{f.green} normal\n{f.darkgray}   \
+    \     readerReturnVars{f.green} False\n{f.darkgray}     path{f.green} c:\\users\\\
+    simonkalmi.claesson\\documents\\github\\crosshell_modulo\\packages\\_legacyPackages\\\
+    testing\\set.py\n{f.darkgray}     extras{f.green} {}\n{f.yellow}\n  title:{r}\n\
+    {f.darkgray}     desc:{f.green} \"\"\n{f.darkgray}     aliases{f.green} []\n{f.darkgray}\
+    \     args{f.green} \"\"\n{f.darkgray}     bcp{f.green} False\n{f.darkgray}  \
+    \   encoding{f.green} utf-8\n{f.darkgray}     fending{f.green} py\n{f.darkgray}\
+    \     options:\n{f.darkgray}        argparseHelp{f.green} False\n{f.darkgray}\
+    \        synopsisDesc{f.green} False\n{f.darkgray}        restrictionMode{f.green}\
+    \ normal\n{f.darkgray}        readerReturnVars{f.green} False\n{f.darkgray}  \
+    \   path{f.green} c:\\users\\simonkalmi.claesson\\documents\\github\\crosshell_modulo\\\
+    packages\\_legacyPackages\\testing\\title.py\n{f.darkgray}     extras{f.green}\
+    \ {}\n{r}"
   ask: bob
 crsh:
   Prefix: '{f.magenta}{user}{f.darkgray}@{f.blue}{hostname}{f.darkgray}{f.darkgray}{dir:":

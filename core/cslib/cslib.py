@@ -764,24 +764,52 @@ def getPrefix(csSession,stdPrefix=""):
             return prefix
 
 class CmdletVarManager():
-    def __init__(self,persistanceInstance,moduleName="CmdletVars"):
+    def __init__(self,persistanceInstance,moduleName="CmdletVars",persistent=False):
         self.vars = {}
         self.persistance = persistanceInstance
         self.moduleName=moduleName
+        self.persistent = persistent
         self._autocr()
     def _autocr(self):
-        if self.moduleName not in self.persistance._getModules():
+        if self.moduleName not in self.persistance._getModules() and self.persistent == True:
             self.persistance.addModule(self.moduleName)
     def resper(self):
-        self.persistance.remModule(self.moduleName)
-        self._autocr()
+        if self.persistent == True:
+            self.persistance.remModule(self.moduleName)
+            self._autocr()
+        else:
+            self.vars = {}
     def setvar(self,key,value):
-        self.persistance.addProperty(self.moduleName,key,value)
+        if self.persistent == True:
+            self.persistance.addProperty(self.moduleName,key,value)
+        else:
+            self.vars[key] = value
     def getvar(self,key):
-        return self.persistance.getProperty(self.moduleName,key)
+        if self.persistent == True:
+            return self.persistance.getProperty(self.moduleName,key)
+        else:
+            return self.vars.get(key)
     def delvar(self,key):
-        return self.persistance.remProperty(self.moduleName,key)
+        if self.persistent == True:
+            self.persistance.remProperty(self.moduleName,key)
+        else:
+            self.vars.pop(key)
     def uppvar(self,key,value):
-        return self.persistance.uppProperty(self.moduleName,key,value)
+        if self.persistent == True:
+            self.persistance.uppProperty(self.moduleName,key,value)
+        else:
+            val = self.vars.get(key)
+            if type(val) == dict:
+                self.vars[key].update(value)
+            elif type(val) == list:
+                if type(value) == list:
+                    self.vars[key].extend(value)
+                else:
+                    self.vars[key].append(value)
+            else:
+                self.vars[key] = value
     def chnvar(self,key,value):
-        return self.persistance.chnProperty(self.moduleName,key,value)
+        if self.persistent == True:
+            self.persistance.chnProperty(self.moduleName,key,value)
+        else:
+            self.vars[key] = value

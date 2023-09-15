@@ -27,8 +27,8 @@ class BufferedStdout:
         self.saveToBuffer = False
         self.printToConsole = True
         out = self.orgInput(prompt)
-        self.printToConsole = old_stb
-        self.saveToBuffer = old_ptc
+        self.saveToBuffer = old_stb
+        self.printToConsole = old_ptc
         return out
         
     def getBuffer(self):

@@ -29,9 +29,9 @@ class netwa:
 		try:
 			req = requests.get(override_url)
 			req.raise_for_status()
-			print( f"\033[32m[cs.lib.Netwa]: Connected: {req.ok}" )
+			print( f"\033[32m[cslib.Netwa]: Connected: {req.ok}" )
 		except Exception:
-			return f"\033[31m[cs.lib.Netwa]: { traceback.format_exc() }\033[0m"
+			return f"\033[31m[cslib.Netwa]: { traceback.format_exc() }\033[0m"
 
 
 # [Functions]

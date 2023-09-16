@@ -106,5 +106,16 @@ def getDataFromList(
                 confFileExts=cmdlets_confFileExts,
                 rootFileExts=cmdlets_rootFileExts
             )
+        # DynPrefixes
+        source = f"{package}{os.sep}DynPrefix"
+        if os.path.exists(source):
+            if registry.get("dynPrefix") == None:
+                registry["dynPrefix"] = {}
+            prefixesJSONpath = f"{source}{os.sep}prefixes.json"
+            if os.path.exists(prefixesJSONpath):
+                prefixesJSON = _fileHandler("json","get",prefixesJSONpath,encoding=encoding,safeSeps=True)
+                for key,value in prefixesJSON.items():
+                    value = value.replace("{parent}",source)
+                    registry["dynPrefix"][key] = value
     # Return
     return registry

@@ -15,5 +15,8 @@ sys.argv.pop(0)
 sys.argv.insert(0, CSSTARTFILEPATHstring)
 
 # Execute the main script without waiting for user input
-os.system(f"{sys.executable} {CSMAINFILEPATH} {' '.join(sys.argv)}")
+try:
+    os.system(f"{sys.executable} {CSMAINFILEPATH} {' '.join(sys.argv)}")
+except KeyboardInterrupt:
+    print("\n\n[Crosshell]: Ended by keyboard iterupt. Bya <3")
 # The subprocess will run without waiting for user input and will close when the main script finishes.

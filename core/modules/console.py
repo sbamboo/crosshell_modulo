@@ -2,6 +2,7 @@
 from cslib.execution import execline
 from cslib.externalLibs.conUtils import setConTitle
 from cslib._crosshellParsingEngine import exclude_nonToFormat,include_nonToFormat
+from cslib._crosshellGlobalTextSystem import removeAnsiSequences
 from cslib import CrosshellDebErr
 
 # Create a pipeline object
@@ -26,9 +27,16 @@ while True:
     if CS_LastOutput != None and CS_LastOutput != "":
         if type(CS_LastOutput) == str:
             # Global Text System
-            pre,subs = exclude_nonToFormat(CS_LastOutput)
-            mid = csSession.data["txt"].parse(pre)
-            end = include_nonToFormat(mid,subs)
-            print(end)
+            formatMode = csSession.data["set"].getProperty("crsh","Console.FormatOutMode")
+            if formatMode == False: formatMode = "off"
+            formatMode = formatMode.lower()
+            if formatMode != "off":
+                toformat,excludes = exclude_nonToFormat(CS_LastOutput)
+                formatted = csSession.data["txt"].parse(toformat)
+                final = include_nonToFormat(formatted,excludes)
+                if formatMode == "strip":
+                    final = removeAnsiSequences(final)
+            else: final = CS_LastOutput
+            print(final)
         elif type(CS_LastOutput) == CrosshellDebErr:
             print(CS_LastOutput)

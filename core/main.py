@@ -2,6 +2,7 @@ import os
 import sys
 import inspect
 from cslib import crshDebug
+from cslib._crosshellParsingEngine import exclude_nonToFormat,include_nonToFormat
 
 '''
 Variables:
@@ -130,6 +131,10 @@ CS_Settings.addProperty("crsh","Console.DefPrefix","> ")
 CS_Settings.addProperty("crsh","Console.DefTitle","Crosshell Modulo")
 CS_Settings.addProperty("crsh","Console.PrefixEnabled",True)
 CS_Settings.addProperty("crsh","Console.PrefixShowDir",True)
+CS_Settings.addProperty("crsh","Console.DynamicPrefixes",True)
+CS_Settings.addProperty("crsh","Console.RestrictDynPrefixes", False)
+CS_Settings.addProperty("crsh","Console.StripAnsi", False)
+CS_Settings.addProperty("crsh","Console.FormatOutMode", "format")
 
 # Default persistance
 CS_Persistance.addProperty("crsh","Prefix",CS_Settings.getProperty("crsh","Console.DefPrefix"))
@@ -152,9 +157,14 @@ crshDebug.setScope(CS_Settings.getProperty("crsh_debugger", "Scope"))
 CS_Text = crosshellGlobalTextSystem( pathtagInstance = CS_PathtagMan, parseWebcolor=CS_Settings.getProperty("crsh", "Parse.Text.Webcolors") )
 crshDebug.setFormatterInstance(CS_Text) # Attatch the formatter to the Debugger
 
+# Set stripansi
+CS_Text.stripAnsi = CS_Settings.getProperty("crsh","Console.StripAnsi")
+
 # Define a formattedPrint function using the formatter instance
 def fprint(text):
-  text = CS_Text.parse(text)
+  toformat,excludes = exclude_nonToFormat(text)
+  formatted = csSession.data["txt"].parse(toformat)
+  text = include_nonToFormat(formatted,excludes)
   print(text)
 
 # Create language path
@@ -230,6 +240,7 @@ CS_Inpparse = CS_ModuleReplacebles["inpparse.py"]["obj"]
 CS_Exec = CS_ModuleReplacebles["exec.py"]["obj"]
 
 # [Load package data]
+CS_Registry["dynPrefix"] = {}
 # Find readerData
 CS_Registry["readerData"] = toReaderFormat(
   dictFromSettings=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.Cmdlets"),

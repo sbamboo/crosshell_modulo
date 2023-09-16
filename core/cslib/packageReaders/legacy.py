@@ -155,6 +155,8 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                         regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
                             if rootEntry.get("desc") != None:
                                 regEntry["desc"] = rootEntry.get("desc")
+                            if rootEntry.get("description") != None:
+                                regEntry["desc"] = rootEntry.get("desc")
                             if rootEntry.get("aliases") != None:
                                 if type(rootEntry.get("aliases")) == list:
                                     regEntry["aliases"] = rootEntry.get("aliases")
@@ -297,6 +299,21 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     if key not in hardCodedEntries:
                                         if str(data[key]).lower() == "true" or str(data[key]).lower() == "false": data[key] = bool(data[key])
                                         regEntry["extras"][key] = data[key]
+                    # Fix duplicates
+                    if regEntry["extras"].get("description") != None and regEntry.get("desc") != None:
+                        regEntry["extras"].pop("description")
+                    if regEntry["extras"].get("paramhelp") != None and regEntry.get("args") != None:
+                        regEntry["extras"].pop("paramhelp")
+                    if regEntry["extras"].get("blockCommonparams") != None and regEntry.get("blockCommonParameters") != None:
+                        regEntry["extras"].pop("blockCommonparams")
+                    if regEntry["extras"].get("ArgparseHelp") != None and regEntry["options"].get("argparseHelp") != None:
+                        regEntry["extras"].pop("ArgparseHelp")
+                    if regEntry["extras"].get("synopsisDesc") != None and regEntry["options"].get("synopsisDesc") != None:
+                        regEntry["extras"].pop("synopsisDesc")
+                    if regEntry["extras"].get("restrictionMode") != None and regEntry["options"].get("restrictionMode") != None:
+                        regEntry["extras"].pop("restrictionMode")
+                    if regEntry["extras"].get("readerReturnVars") != None and regEntry["options"].get("readerReturnVars") != None:
+                        regEntry["extras"].pop("readerReturnVars")
                     # Add regEntry to registry
                     regEntry_name = str(regEntry["name"])
                     regEntry.pop("name")

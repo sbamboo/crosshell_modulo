@@ -7,6 +7,8 @@ import sys
 import os
 import re
 
+from cslib.externalLibs.limitExec import DummyObject
+
 # Crossplatform
 def normalizePathSep(string) -> str:
     if "\\" in string:
@@ -737,7 +739,14 @@ def handleOSinExtensionsList(extensions=list) -> list:
             newList.append(extension)
     return newList
 
-def getPrefix(csSession,stdPrefix=""):
+def getDynPrefix(dynPrefixes,curprefix):
+    if curprefix != None:
+        if curprefix in list(dynPrefixes.keys()):
+            dynpref = dynPrefixes.get(curprefix)
+            if dynpref != None and type(dynpref) == str:
+                return dynpref
+
+def getPrefix(csSession,stdPrefix="",noparse=False,encoding=None,dynPrefixVars=None):
     # import
     from cslib._crosshellGlobalTextSystem import parsePrefixDirTag
     # Get values
@@ -746,7 +755,39 @@ def getPrefix(csSession,stdPrefix=""):
     prefixEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixEnabled")
     dirEnabled = csSession.data["set"].getProperty("crsh","Console.PrefixShowDir")
     curdir = csSession.data["dir"]
-    # Use defprefix if prefix if nto defined
+    selEncoding = csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")
+    if encoding != None:
+        selEncoding = encoding
+    # Dynamic prefix
+    if csSession.data["set"].getProperty("crsh","Console.DynamicPrefixes") == True:
+        # get filepath
+        dynPrefixFile = getDynPrefix(csSession.registry["dynPrefix"], prefix)
+        if dynPrefixFile != None:
+            # prep globals for generator
+            generatorGlobals = globals()
+            if dynPrefixVars != None and type(dynPrefixVars) == dict:
+                generatorGlobals.update(dynPrefixVars)
+            # exec file to define generate function
+            try:
+                exec(open(dynPrefixFile,'r',encoding=selEncoding).read(),generatorGlobals)
+            except FileNotFoundError:
+                csSession.deb.perror("lng:cs.prefixsys.dynprefix.errornotfound",{"dynPrefixFile":dynPrefixFile})
+            except Exception as e:
+                csSession.deb.perror("lng:cs.prefixsys.dynprefix.errorinexec",{"dynPrefixFile":dynPrefixFile,"traceback":e})
+            # exec generator function
+            generatedPrefix = None
+            try:
+                generatedPrefix = generate()
+            except CrosshellDebErr as e:
+                raise
+            except Exception as e:
+                csSession.deb.perror("lng:cs.prefixsys.dynprefix.errorincall",{"dynPrefixFile":dynPrefixFile,"traceback":e})
+            # set prefix
+            if generatedPrefix != None:
+                prefix = generatedPrefix
+            else:
+                prefix = None
+    # Use defprefix if prefix if not defined
     if prefix == None:
         prefix = defprefix
     # if prefix enabled
@@ -758,10 +799,24 @@ def getPrefix(csSession,stdPrefix=""):
             return stdPrefix
         # Handle prefix
         else:
-            prefix = parsePrefixDirTag(prefix,curdir,dirEnabled,stdPrefix)
-            prefix = csSession.data["txt"].parse(prefix)
-            prefix = prefix + "\033[0m"
+            if noparse != True:
+                prefix = parsePrefixDirTag(prefix,curdir,dirEnabled,stdPrefix)
+                prefix = csSession.data["txt"].parse(prefix)
+                prefix = prefix + "\033[0m"
             return prefix
+
+def evalDynPrefix(csSession,stdPrefix,encoding):
+    dynPrefixVars = {
+        "CS_CurDir": csSession.data["dir"],
+        "CS_BaseDir": csSession.data["bdr"],
+        "CS_CoreDir": csSession.data["cdr"]
+    }
+    if csSession.data["set"].getProperty("crsh","Console.RestrictDynPrefixes") == True:
+        dynPrefixVars.update({
+            '__builtins__': DummyObject(),
+            '__import__': DummyObject()
+        })
+    return getPrefix(csSession,stdPrefix,True,encoding,dynPrefixVars)
 
 class CmdletVarManager():
     def __init__(self,persistanceInstance,moduleName="CmdletVars",persistent=False):

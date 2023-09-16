@@ -14,5 +14,9 @@
     "cs.cmdletexec.notfound": "&31mCmdlet '{command}' not found!&0m",
     "cs.cmdletexec.invalidinput": "&31mInvalid input: {input}&0m",
 
-    "cs.cmdlet.changedir.dirnotfound": "&31mCould not find directory/path: '{dirIn}'&0m"
+    "cs.cmdlet.changedir.dirnotfound": "&31mCould not find directory/path: '{dirIn}'&0m",
+
+    "cs.prefixsys.dynprefix.errornotfound": "&31mDynPrefix file not found: '{dynPrefixFile}'!&0m",
+    "cs.prefixsys.dynprefix.errorinexec": "&31mException raised when loading dynPrefix file: '{dynPrefixFile}'!\n{traceback}&0m",
+    "cs.prefixsys.dynprefix.errorincall": "&31mThere was an error calling the dynPrefixFile generate function in '{dynPrefixFile}'!\n{traceback}&0m"
 }

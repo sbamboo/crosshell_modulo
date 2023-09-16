@@ -1,0 +1,77 @@
+{
+    "ask": {
+        "desc": "Prompts the user for input.",
+        "args": "<prompt>",
+        "aliases": ["read"]
+    },
+    "basedir": {
+        "desc": "Returns crosshells basedir path as a string."
+    },
+    "cd": {
+        "desc": "Moves to a diffrent directory.",
+        "args": "<path-string>",
+        "aliases": ["change-directory","changedir","set-directory"]
+    },
+    "clearvars": {
+        "desc": "Clears the croshell user-defined variables.",
+        "aliases": ["clr"],
+        "args": "optional:--force"
+    },
+    "cls": {
+        "desc": "Clears the console.",
+        "aliases": ["clear"]
+    },
+    "exit": {
+        "desc": "Exits crosshell."
+    },
+    "false": {
+        "desc": "Returns false."
+    },
+    "format": {
+        "desc": "Returns a formatted string."
+    },
+    "get": {
+        "desc": "Gets a variables value.",
+        "args": "<name>"
+    },
+    "getpathables": {
+        "desc": "Prints out a list of al pathables/cmdlets in crosshell.",
+        "aliases": ["get-pathables","getcmdlets","get-cmdlets"]
+    },
+    "noformat": {
+        "desc": "Returns any input but enclosing it in format-escapes.",
+        "aliases": ["unformat"],
+        "args": "<string>"
+    },
+    "p": {
+        "desc": "Returns any input. (Effectly printing it)",
+        "aliases": ["conout"],
+        "args": "<string>"
+    },
+    "prefix": {
+        "desc": "Cmdlet for managing crosshells prefix.",
+        "args": "<content> -set/-s -get/-g -reset/-r -dir -enable -disable"
+    },
+    "red": {
+        "desc": "Returns any input put surrounded by red formatting.",
+        "args": "<string>"
+    },
+    "reload": {
+        "desc": "Reloads the console."
+    },
+    "set": {
+        "desc": "Sets a variable",
+        "args": "<name> <value> <optional:type>"
+    },
+    "stripansi": {
+        "desc": "Strips input of ansi sequences.",
+        "args": "<string>"
+    },
+    "title": {
+        "desc": "Cmdlet for managing crosshells title.",
+        "args": "<content> -set/-s -reset/-r"
+    },
+    "true": {
+        "desc": "Returns true."
+    }
+}

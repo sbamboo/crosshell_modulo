@@ -95,6 +95,14 @@ def getPackdir(basedir,scriptroot,index=0):
     childFolder = scriptroot.split(os.sep)[index]
     return f"{bpackdir}{os.sep}{childFolder}"
 
+def find_absname(cmdletData,command):
+    if command not in list(cmdletData.keys()):
+        for cmd,data in cmdletData.items():
+            if data.get("aliases") != None:
+                if command in data.get("aliases"):
+                    return cmd
+    return command
+
 def safe_exit(code=None):
     raise CrosshellExit(code)
 
@@ -119,6 +127,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # Some setting up
     captured_output = None
     ## use tmp var incase nontype return
+    command = find_absname(csSession.registry["cmdlets"],command)
     _cmdletData = get_command_data(command,csSession.registry)
     ## handle no cmdlet found
     if _cmdletData == None:
@@ -142,7 +151,7 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # Add standard values
     scriptroot = os.path.abspath(os.path.dirname(cmdletData["path"]))
     globalValues["argv"] = args
-    globalValues["sargv"] = (" ".join(args)).strip(" ")
+    globalValues["sargv"] = " ".join(args)
     globalValues["CSScriptRoot"] = scriptroot
     globalValues["CSScriptData"] = cmdletData["reader"] = reader
     globalValues["CS_PackDir"] = getPackdir( csSession.data["ptm"].getTag("CS_BaseDir"),scriptroot,0 )

@@ -2,8 +2,12 @@ crsh:
   Console:
     DefPrefix: '> '
     DefTitle: Crosshell Modulo
+    DynamicPrefixes: true
+    FormatOutMode: format
     PrefixEnabled: true
     PrefixShowDir: true
+    RestrictDynPrefixes: false
+    StripAnsi: false
   Execution:
     CatchSystemExit: true
     HandleCmdletError: true
@@ -22,7 +26,8 @@ crsh:
   Modules:
     Files:
       console-py:
-        _choices: null
+        _choices:
+        - test
         selection: null
       exec-py:
         _choices: null

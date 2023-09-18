@@ -20,7 +20,8 @@ import getpass
 # Hex Background:   {#!<hex>}       NO OPACITY SUPPORT
 # RGB Foreground:   {rgb.<R>;<G>;<B>}  INTEGER ONLY
 # RGB Background:   {rgb!<R>;<G>;<B>} INTEGER ONLY
-# Esc Char:         §esc§
+# Esc Char:         {esc} / §esc§
+# Newline Char:     {\n}  / §nl§
 
 # Main function
 def formatStringTags(inputText,allowedVariables={},customTags={}): # AllowedVariables are dict of {varName: varValue}
@@ -40,6 +41,13 @@ def formatStringTags(inputText,allowedVariables={},customTags={}): # AllowedVari
       Esc Char:       {esc} / §esc§
       Newline char:   {\\n} / §nl§
     '''
+    _lastUsedTag = None
+    # Custom Tags
+    for tag,tagValue in customTags.items():
+        rtext = '{' + str(tag) + '}'
+        if tagValue in customTags.keys():
+            tagValue = customTags[tagValue]
+        inputText = inputText.replace(rtext,tagValue)
     # New lines parsing
     inputText = inputText.replace("{\\n}","\n")
     inputText = inputText.replace("§nl§","\n")
@@ -173,10 +181,6 @@ def formatStringTags(inputText,allowedVariables={},customTags={}): # AllowedVari
         r,g,b = matchString.split(";")
         ansi = '\033[{};2;{};{};{}m'.format(48 if background else 38, r, g, b)
         inputText = inputText.replace(str(matchObject),ansi)
-    # Custom Tags
-    for tag,tagValue in customTags.items():
-        rtext = '{' + str(tag) + '}'
-        inputText = inputText.replace(rtext,tagValue)
     # Replace esc chars
     inputText = inputText.replace("§esc§","\033")
     inputText = inputText.replace("{esc}","\033")

@@ -28,6 +28,7 @@ def getDataFromList(
     # Iterate over packages
     for package in packages:
         source = None
+        packageName = os.path.basename(package)
         # Modules
         source = f"{package}{os.sep}Modules"
         if os.path.exists(source):
@@ -117,5 +118,26 @@ def getDataFromList(
                 for key,value in prefixesJSON.items():
                     value = value.replace("{parent}",source)
                     registry["dynPrefix"][key] = value
+        # Formatting
+        source = f"{package}{os.sep}Formatting"
+        if os.path.exists(source):
+            if registry.get("packFormatting") == None:
+                registry["packFormatting"] = { "palettes":{},"mappings":{} }
+            paletteJSONpath = f"{source}{os.sep}palette.json"
+            mappingsJSONpath = f"{source}{os.sep}mappings.json"
+            fExi = False
+            if os.path.exists(paletteJSONpath):
+                fExi = True
+                paletteJSON = _fileHandler("json","get",paletteJSONpath,encoding=encoding,safeSeps=True)
+                if paletteJSON != None and paletteJSON != {}:
+                    registry["packFormatting"]["palettes"][packageName] = paletteJSON
+            if os.path.exists(mappingsJSONpath):
+                fExi = True
+                mappingsJSON = _fileHandler("json","get",mappingsJSONpath,encoding=encoding,safeSeps=True)
+                if mappingsJSON != None and mappingsJSON != {}:
+                    registry["packFormatting"]["mappings"][packageName] = mappingsJSON
+            if fExi == False:
+                if registry["packFormatting"]["mappings"].get(packageName) != None:
+                    registry["packFormatting"]["mappings"].pop(packageName)
     # Return
     return registry

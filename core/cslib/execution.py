@@ -32,6 +32,9 @@ def get_command_data(command=str,registry=dict) -> str:
     '''CSlib.execution: Function to get command data from the registry.'''
     for cmdlet,cmdletData in registry["cmdlets"].items():
         if cmdlet.lower() == command.lower():
+            if cmdletData.get("options") != None:
+                if cmdletData["options"].get("dontLoad") == True:
+                    return None
             return cmdletData
 
 def safe_decode_utf8_cp437(bytestring,defencoding="utf-8"):
@@ -95,18 +98,34 @@ def getPackdir(basedir,scriptroot,index=0):
     childFolder = scriptroot.split(os.sep)[index]
     return f"{bpackdir}{os.sep}{childFolder}"
 
+def getCleanAliasesDict(aliases=list) -> dict:
+    splits = {}
+    for i,elem in enumerate(aliases):
+        if ":" in elem:
+            _elem = elem.split(":")
+            args = _elem[-1].split(" ")
+            _elem.pop(-1)
+            elem = ':'.join(_elem)
+            splits[elem] = args
+        else:
+            splits[elem] = []
+    return splits
+
 def find_absname(cmdletData,command):
     if command not in list(cmdletData.keys()):
         for cmd,data in cmdletData.items():
-            if data.get("aliases") != None:
-                if command in data.get("aliases"):
-                    return cmd
-    return command
+            aliases = data.get("aliases")
+            if aliases != None:
+                cleanAliases = getCleanAliasesDict(aliases)
+                if command in cleanAliases.keys():
+                    i = list(cleanAliases.keys()).index(command)
+                    return cmd,list(cleanAliases.values())[i]
+    return command,None
 
 def safe_exit(code=None):
     raise CrosshellExit(code)
 
-def execute_expression(csSession,command=str,args=list,capture=False,globalValues=dict,entries=list):
+def execute_expression(csSession,command=str,args=list,capture=False,globalValues=dict,entries=list,inpipeLine=None):
     '''CSlib.execution: Main expression executer.
 
     Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!
@@ -127,7 +146,9 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # Some setting up
     captured_output = None
     ## use tmp var incase nontype return
-    command = find_absname(csSession.registry["cmdlets"],command)
+    command,addArgs = find_absname(csSession.registry["cmdlets"],command)
+    if addArgs != None:
+        args.extend(addArgs)
     _cmdletData = get_command_data(command,csSession.registry)
     ## handle no cmdlet found
     if _cmdletData == None:
@@ -158,6 +179,10 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     globalValues["CS_CurDir"] = csSession.data["dir"]
     globalValues["CS_BaseDir"] = csSession.data["bdr"]
     globalValues["CS_CoreDir"] = csSession.data["cdr"]
+    globalValues["CS_IsCaptured"] = capture
+    # add elementsAfter if passed
+    if inpipeLine != None:
+        globalValues["CS_InPipeline"] = inpipeLine
     # Safe exit handling
     if csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit"):
         globalValues["exit"] = safe_exit # overwrite exit
@@ -171,10 +196,15 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         buffer.printToConsole = False
         old_stdout = sys.stdout
         sys.stdout = buffer
+        globalValues["buffer_bwrite"] = buffer.bwrite
+        globalValues["buffer_cwrite"] = buffer.cwrite
+        globalValues["buffer_cwrite_adv"] = buffer.cwrite_adv
+        globalValues["buffer_bwrite_autoNL"] = buffer.bwrite_autoNL
+        globalValues["buffer_cwrite_autoNL"] = buffer.cwrite_autoNL
         globalValues["input"] = buffer.safe_input
         globalValues["CS_oinput"] = input
     # Execute script
-    CatchSystemExit   = csSession.data["set"].getProperty("crsh","Execution.CatchSystemExit")
+    CatchSystemExit   = csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit")
     HandleCmdletError = csSession.data["set"].getProperty("crsh","Execution.HandleCmdletError")
     PrintCmdletDebug  = csSession.data["set"].getProperty("crsh","Execution.PrintCmdletDebug")
     # Handle cmdleterror
@@ -297,7 +327,8 @@ class execline():
                     #capture      = elemIndex < len(segment)-1,
                     capture      = True,
                     globalValues = globalValues,
-                    entries= globalEntries
+                    entries= globalEntries,
+                    inpipeLine= len(segment) > 1
                 )
                 if _cont != None:
                     self.execline["current_content"] = _cont

@@ -176,12 +176,13 @@ class crosshellGlobalTextSystem():
     def addToCustomTags(self,key,value):
         self.customTags[key] = value
     def parse(self,inputText,_stripAnsi=False,addCustomTags=None):
-        customTags = self.customTags
-        if addCustomTags != None:
-            customTags.update(addCustomTags)
+        customTags = {}
         # WebcolorTags
         if self.parseWebcolor == True:
-            customTags.update(_getWebcolorMappings())
+            customTags = _getWebcolorMappings()
+        customTags.update(self.customTags)
+        if addCustomTags != None:
+            customTags.update(addCustomTags)
         # Pathtags
         if self.pathtagInstance != None:
             inputText = self.pathtagInstance.eval(inputText)

@@ -1,6 +1,6 @@
 # ConUtils: Console utility functions for python, Obs! xterm needed on linux 
 # Made by: Simon Kalmi Claesson and modified to work with crosshell
-# Version: 1.2_crsh
+# Version: 1.3_crsh
 
 # [Imports]
 import os
@@ -143,5 +143,25 @@ def IsMacOS() -> bool:
         return True
     elif platformv == "Windows":
         return False
+    else:
+        return False
+
+def GetPlatform() -> str:
+    platformv = platform.system()
+    plats = ["Linux","Darwin","Windows"]
+    if platformv in plats:
+        return platformv
+    else:
+        return None
+
+def IsOs(platformName=str) -> bool:
+    if platformName.lower() == "linux":
+        return IsLinux()
+    elif platformName.lower() == "darwin":
+        return IsMacOS()
+    elif platformName.lower() == "macos":
+        return IsMacOS()
+    elif platformName.lower() == "windows":
+        return IsWindows()
     else:
         return False

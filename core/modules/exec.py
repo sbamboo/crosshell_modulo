@@ -1,5 +1,5 @@
 # Imports
-from cslib import CrosshellDebErr
+from cslib import CrosshellDebErr,fromPath
 from cslib.datafiles import _fileHandler
 
 # Entries to include in the cmdletScope (Excluding variables added by exec)
@@ -13,4 +13,5 @@ except CrosshellDebErr as e:
         CS_LastOutput = e
     else:
         # Do something with the expression
-        CS_LastOutput = CS_LastInput
+        #CS_LastOutput = CS_LastInput
+        CS_LastOutput = e

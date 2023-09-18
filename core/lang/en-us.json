@@ -18,5 +18,13 @@
 
     "cs.prefixsys.dynprefix.errornotfound": "&31mDynPrefix file not found: '{dynPrefixFile}'!&0m",
     "cs.prefixsys.dynprefix.errorinexec": "&31mException raised when loading dynPrefix file: '{dynPrefixFile}'!\n{traceback}&0m",
-    "cs.prefixsys.dynprefix.errorincall": "&31mThere was an error calling the dynPrefixFile generate function in '{dynPrefixFile}'!\n{traceback}&0m"
+    "cs.prefixsys.dynprefix.errorincall": "&31mThere was an error calling the dynPrefixFile generate function in '{dynPrefixFile}'!\n{traceback}&0m",
+
+    "cs.welcome.channelmsg.dev": "&31mYou are running a development version of crosshell, these are far from final so bugs may occure and some features migth be missing.&0m",
+    "cs.welcome.channelmsg.alpha": "&33mYou are running a alpha version of crosshell, bugs may occure and some features migth be missing.&0m",
+    "cs.welcome.channelmsg.beta": "&33mYou are running a beta version of crosshell, although these are more stable then alpha versions bugs may still occure.&0m",
+    "cs.welcome.channelmsg.viva": "&31mYou are running the current version of Crosshell-VIVA, these are generally stable but may contain bugs.&0m",
+    "cs.welcome.channelmsg.unrecognised": "&31mThe version channel of your crosshell installation is not reconized, this may be a bug. (Channel: '{channel}')&0m",
+    "cs.welcome.msg.main": "&32mWelcome, write 'help' for help. To add messages to here edit: /assets/profile.msg&0m",
+    "cs.welcome.msg.guide": "&32mWelcome, for a guide on how to use crosshell write 'guide' or for command help write 'help'.&0m"
 }

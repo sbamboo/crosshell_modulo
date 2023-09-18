@@ -11,3 +11,4 @@ $var    Variable
 ;/"\n"  Newline
 !       SemicolonBlock
 //<v>// Section to not be formatted    
+#       Comment

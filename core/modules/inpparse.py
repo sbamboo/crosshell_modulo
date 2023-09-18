@@ -1,4 +1,4 @@
-from cslib._crosshellParsingEngine import orderParse_parenthesis,splitSafe_parse,useOnlyDoublePipeSplit
+from cslib._crosshellParsingEngine import orderParse_parenthesis,splitSafe_parse,useOnlyDoublePipeSplit,fixDoubleGet
 from cslib.execution import input_to_pipelineStructure,determine_delims
 
 delims = determine_delims(csSession,["||"])
@@ -9,7 +9,7 @@ parse2 = orderParse_parenthesis(parse1)
 parse3 = splitSafe_parse(parse2,delims)
 # Global Text System
 #parse4 = csSession.data["txt"].parse(parse3)
-parse4 = parse3
+parse4 = fixDoubleGet(parse3,csSession)
 # Pre-execution
 parse5 = input_to_pipelineStructure(csSession,parse4,delims)
 

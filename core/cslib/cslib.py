@@ -6,6 +6,7 @@ import subprocess
 import sys
 import os
 import re
+import importlib
 
 from cslib.externalLibs.limitExec import DummyObject
 
@@ -46,8 +47,9 @@ def _check_pip() -> bool:
     except FileNotFoundError:
         return False
     return True
-def intpip(pip_args):
-    '''CSlib: Function to use pip from inside python, this function should also install pip if needed (Experimental)'''
+def intpip(pip_args=str):
+    '''CSlib: Function to use pip from inside python, this function should also install pip if needed (Experimental)
+    Returns: bool representing success or not'''
     if not _check_pip():
         print("PIP not found. Installing pip...")
         get_pip_script = "https://bootstrap.pypa.io/get-pip.py"
@@ -55,33 +57,60 @@ def intpip(pip_args):
             subprocess.check_call([sys.executable, "-m", "ensurepip"])
         except subprocess.CalledProcessError:
             print("Failed to install pip using ensurepip. Aborting.")
-            return
+            return False
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
         except subprocess.CalledProcessError:
             print("Failed to upgrade pip. Aborting.")
-            return
+            return False
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", get_pip_script])
         except subprocess.CalledProcessError:
             print("Failed to install pip using get-pip.py. Aborting.")
-            return
+            return False
         print("PIP installed successfully.")
     try:
         subprocess.check_call([sys.executable, "-m", "pip"] + pip_args.split())
+        return True
     except subprocess.CalledProcessError:
         print(f"Failed to execute pip command: {pip_args}")
+        return False
+
+# Safe import function
+def autopipImport(moduleName=str,pipName=None,addPipArgsStr=None):
+    '''CSlib: Tries to import the module, if failed installes using intpip and tries again.'''
+    try:
+        imported_module = importlib.import_module(moduleName)
+    except:
+        if pipName != None:
+            command = f"install {pipName}"
+        else:
+            command = f"install {moduleName}"
+        if addPipArgsStr != None:
+            if not addPipArgsStr.startswith(" "):
+                addPipArgsStr = " " + addPipArgsStr
+            command += addPipArgsStr
+        intpip(command)
+        imported_module = importlib.import_module(moduleName)
+    return imported_module
+
+# Function to load a module from path
+def fromPath(path):
+    '''CSlib: Import a module from a path.'''
+    path = path.replace("\\",os.sep)
+    spec = importlib.util.spec_from_file_location("module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 # crosshellVersionManager
 def crosshellVersionManager_getData(versionFile,formatVersion="1",encoding="utf-8"):
     '''CSlib: gets the versionData from a compatible version file.'''
     data = {}
     if ".yaml" in versionFile:
-        import yaml
-        data = yaml.loads(open(versionFile,'r',encoding=encoding).read())
+        data = _fileHandler("yaml","get",versionFile,encoding=encoding)
     elif ".json" in versionFile or ".jsonc" in versionFile:
-        import json
-        data = json.loads(open(versionFile,'r',encoding=encoding).read())
+        data = _fileHandler("yaml","get",versionFile,encoding=encoding)
     forData = data.get("CSverFile")
     verData = data
     if verData.get("CSverFile") != None: verData.pop("CSverFile")
@@ -99,7 +128,7 @@ from ._crosshellParsingEngine import pathtagManager
 #TODO: remProperty
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
-    def __init__(self,settingsFile,encoding="utf-8",ensure=False):
+    def __init__(self,settingsFile,encoding="utf-8",ensure=False,keepComments=False):
         self.file = settingsFile
         self.modules = []
         self.encoding = encoding
@@ -113,33 +142,31 @@ class modularSettingsLinker():
                 if self.filetype == "json":
                     toc = "{}"
                 open(self.file,'w',encoding=encoding).write(toc)
+        self.keepComments = keepComments
+        self.keptComments = None
     def _getContent(self) -> dict:
         data = {}
-        if self.filetype == "yaml":
-            data = _fileHandler("yaml","get",self.file,encoding=self.encoding)
-        elif self.filetype == "json":
-            data = _fileHandler("json","get",self.file,encoding=self.encoding)
+        if self.keepComments == True:
+            data,self.keptComments = _fileHandler(self.filetype,"get",self.file,encoding=self.encoding,keepComments=True)
+        else:
+            data = _fileHandler(self.filetype,"get",self.file,encoding=self.encoding,keepComments=False)
         if data == None: data = {}
         return data
     def _setContent(self,content) -> None:
-        if self.filetype == "yaml":
-            _fileHandler("yaml","set",self.file,content,encoding=self.encoding)
-        elif self.filetype == "json":
-            _fileHandler("json","set",self.file,content,encoding=self.encoding)
+        if self.keepComments == True:
+            _fileHandler(self.filetype,"set",self.file,content,encoding=self.encoding,keepComments=True,commentsToInclude=self.keptComments)
+        else:
+            _fileHandler(self.filetype,"set",self.file,content,encoding=self.encoding,keepComments=False)
     def _appendContent(self,content) -> None:
         if self.filetype == "yaml":
-            data = _fileHandler("yaml","get",self.file,encoding=self.encoding)
+            data = self._getContent()
             if data == None: data = {}
             data.update(content)
-            _fileHandler("yaml","set",self.file,data,encoding=self.encoding)
-        elif self.filetype == "json":
-            data = _fileHandler("json","get",self.file,encoding=self.encoding)
-            if data == None: data = {}
-            data.update(content)
-            _fileHandler("json","set",self.file,data,encoding=self.encoding)
+            self._setContent(data)
     def _getModules(self) -> list:
         return list(self._getContent().items())
     def createFile(self,overwrite=False):
+        self.keptComments = None
         filesys.ensureDirPath(os.path.dirname(self.file))
         if overwrite == True:
             if filesys.doesExist(self.file): filesys.deleteFile(self.file)
@@ -152,6 +179,7 @@ class modularSettingsLinker():
             if content == "" or content == None:
                 filesys.writeToFile("{}")
     def removeFile(self):
+        self.keptComments = None
         filesys.deleteFile(self.file)
     def addModule(self,module,overwrite=False) -> None:
         self.modules.append(module)
@@ -162,6 +190,9 @@ class modularSettingsLinker():
             if data.get(module) == None:
                 data[module] = {}
         self._setContent(data)
+    def getModule(self,module) -> None:
+        data = self._getContent()
+        return data[module]
     def remModule(self,module) -> None:
         if module in self.modules:
             i = self.modules.index(module)
@@ -287,7 +318,7 @@ def recheckLanguageList(languageListFile,listFormat=None,returnDontRemove=False,
 
 class crosshellLanguageProvider():
     '''CSlib: Crosshell language system.'''
-    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8"):
+    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False):
         # Save
         self.languageListFile = languageListFile
         self.defLanguage = self.parseSingleLanguage(defaultLanguage)
@@ -296,12 +327,19 @@ class crosshellLanguageProvider():
         self.pathtagManInstance = pathtagManInstance
         self.langPath = langPath
         self.encoding = encoding
+        self.sameSuffixLoading = sameSuffixLoading
         # Retrive languageList after rechecking it
         recheckLanguageList(self.languageListFile,self.listFormat,encoding=self.encoding)
         self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding)
         # Set default language
         self.languagePrios = defaultLanguage
         self.language = self.defLanguage
+        # setup choices
+        self.choices = []
+        self.populateChoices()
+        # populate priority listing with any same-suffix names (if enabled)
+        if sameSuffixLoading == True:
+            self.loadSameSuffixedLanguages()
         # Load language
         self.load()
     def parseSingleLanguage(self,unparsed):
@@ -309,6 +347,26 @@ class crosshellLanguageProvider():
             return {"1":unparsed}
         else:
             return unparsed
+    def populateChoices(self):
+        for key in self.languageList.keys():
+            if key not in self.languagePrios.values():
+                self.choices.append(key)
+    def loadSameSuffixedLanguages(self):
+        for name in self.languageList.keys():
+            _suffix = name.split("_")
+            suffix = _suffix[-1].strip(" ")
+            current = self.languagePrios.values()
+            if suffix != name and suffix in current and name not in current:
+                heigestkey = None
+                for key in self.languagePrios.keys():
+                    try:
+                        int(key)
+                        if heigestkey == None:
+                            heigestkey = int(key)
+                        elif int(key) > heigestkey:
+                            heigestkey = int(key)
+                    except: pass
+                self.languagePrios[str(heigestkey+1)] = name
     def loadLanguagePriorityList(self):
         mergedLanguage = {}
         languages = [value for key, value in sorted(self.languagePrios.items(), key=lambda x: int(x[0]))]
@@ -317,11 +375,12 @@ class crosshellLanguageProvider():
             langData = self._load(self.languageList,lang,self.pathtagManInstance,self.langFormat)
             mergedLanguage.update(langData)
         return mergedLanguage
-    def populateList(self,keepExisting=False):
+    def populateList(self,keepExisting=False,reload=True):
         if self.langPath != None:
             populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding)
-            self.relist()
-            self.load()
+            if reload == True:
+                self.relist()
+                self.load()
     def relist(self):
         '''Reloads the languageList.'''
         self.languageList = _fileHandler("json","get",self.languageListFile,encoding=self.encoding)
@@ -530,13 +589,16 @@ class crosshellDebugger():
             if self.stripAnsi == True:
                 reset = ""
                 color = ""
-            title = self.titles[topScope]
+            title = ""
+            if noPrefix == False:
+                title = self.titles[topScope]
             if type(text) == str:
                 text = text.replace(", txt:",",txt:")
                 if text.startswith("lng:"):
                     text = text.replace("lng:","")
                     if self.languageProvider != None:
-                        _text = self.languageProvider.get(text,lpReloadMode,ct)
+                        tosend = text.split(",txt:")[0]
+                        _text = self.languageProvider.get(tosend,lpReloadMode,ct)
                         if _text != None:
                             text = _text
                         else:
@@ -577,7 +639,7 @@ crshDebug = crosshellDebugger()
 # Session
 class crosshellSession():
     '''CSlib: Crosshell session, class to contain session data.'''
-    def __init__(self,sessionFileFormat="json",defaultSessionFile=str,encoding="utf-8"):
+    def __init__(self,sessionFileFormat="json",defaultSessionFile=str,encoding="utf-8",tempDataInitialValues=None,tempDataPersistantValues=None):
         # Setup
         self.defSessionFile = defaultSessionFile
         self.sessionFileFormat = sessionFileFormat
@@ -591,6 +653,30 @@ class crosshellSession():
         self.data["lng"] = None
         self.deb = None
         self.varScope = {}
+        ## tempdata
+        self.tempData = {}
+        self.tmpDPersVals = None
+        if tempDataInitialValues != None and type(tempDataInitialValues) == dict:
+            self.tempData = tempDataInitialValues
+        if tempDataPersistantValues != None and type(tempDataPersistantValues) == dict:
+            self.tmpDPersVals = tempDataPersistantValues
+            self.tempData.update(tempDataPersistantValues)
+    # TempData
+    def tmpSet(self,key=None,value=str|int|list|dict):
+        if key == None and type(value) == dict:
+            self.tempData = value
+        else:
+            self.tempData[key] = value
+    def tmpGet(self,key=None):
+        if key == None:
+            return self.tempData
+        else:
+            return self.tempData.get(key)
+    def tmpClr(self):
+        if self.tmpDPersVals != None:
+            self.tempData = self.tmpDPersVals
+        else:
+            self.tempData = {}
     # Cmdletvariables
     def resetVarScope(self):
         self.varScope = {}
@@ -740,6 +826,7 @@ def handleOSinExtensionsList(extensions=list) -> list:
     return newList
 
 def getDynPrefix(dynPrefixes,curprefix):
+    '''CSlib: Smal function to get a dynamic prefix.'''
     if curprefix != None:
         if curprefix in list(dynPrefixes.keys()):
             dynpref = dynPrefixes.get(curprefix)
@@ -747,6 +834,7 @@ def getDynPrefix(dynPrefixes,curprefix):
                 return dynpref
 
 def getPrefix(csSession,stdPrefix="",noparse=False,encoding=None,dynPrefixVars=None):
+    '''CSlib: Function to get the selected prefix out as a string.'''
     # import
     from cslib._crosshellGlobalTextSystem import parsePrefixDirTag
     # Get values
@@ -806,10 +894,12 @@ def getPrefix(csSession,stdPrefix="",noparse=False,encoding=None,dynPrefixVars=N
             return prefix
 
 def evalDynPrefix(csSession,stdPrefix,encoding):
+    '''CSlib: Function to evaluate a dynprefix name and get the associated prefix.'''
     dynPrefixVars = {
         "CS_CurDir": csSession.data["dir"],
         "CS_BaseDir": csSession.data["bdr"],
-        "CS_CoreDir": csSession.data["cdr"]
+        "CS_CoreDir": csSession.data["cdr"],
+        "CS_AssetDir": csSession.data["adr"]
     }
     if csSession.data["set"].getProperty("crsh","Console.RestrictDynPrefixes") == True:
         dynPrefixVars.update({
@@ -819,6 +909,7 @@ def evalDynPrefix(csSession,stdPrefix,encoding):
     return getPrefix(csSession,stdPrefix,True,encoding,dynPrefixVars)
 
 class CmdletVarManager():
+    '''CSlib: Main cmdlet variable class, handle cmdlet variable operations.'''
     def __init__(self,persistanceInstance,moduleName="CmdletVars",persistent=False):
         self.vars = {}
         self.persistance = persistanceInstance
@@ -868,3 +959,81 @@ class CmdletVarManager():
             self.persistance.chnProperty(self.moduleName,key,value)
         else:
             self.vars[key] = value
+
+def printProfile(csSession):
+    msgProfileFile     = csSession.data["msp"]
+    pyProfileFile      = csSession.data["pyp"]
+    fprint            = csSession.data["fpr"]
+    # Check if pyprofile is present:
+    if os.path.exists(pyProfileFile):
+        pyProfileVars = {
+            '__builtins__': DummyObject(),
+            '__import__': DummyObject(),
+            'fprint': fprint
+        }
+        exec(open(pyProfileFile,'r',encoding=csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")).read(),pyProfileVars)
+    # Check for msgProfileFile
+    elif os.path.exists(msgProfileFile):
+        # Get content
+        content = open(msgProfileFile,"r",encoding=csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")).read()
+        # If not empty split by newlines and print out every line
+        if content != "":
+            for line in content.split("\n"):
+                fprint(line)
+    # Create a file and return False since failed
+    else:
+        f = open(msgProfileFile, "x", encoding=csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding"))
+        f.close()
+
+def getProfileFileContent(csSession):
+    msgProfileFile     = csSession.data["msp"]
+    pyProfileFile      = csSession.data["pyp"]
+    fprint            = csSession.data["fpr"]
+    # Check if pyprofile is present:
+    if os.path.exists(pyProfileFile):
+        return open(pyProfileFile,'r',encoding=csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")).read()
+    # Check for msgProfileFile
+    elif os.path.exists(msgProfileFile):
+        # Get content
+        return open(msgProfileFile,"r",encoding=csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")).read()
+    else:
+        return None
+
+def writeWelcome(csSession):
+    '''CSlib: Function to get the welcome message.'''
+    # setup
+    hasShownVerNotice = False
+    versionData = csSession.data["ver"]
+    hasShownGuide = csSession.data["per"].getProperty("crsh","HasShownGuide")
+    channel = versionData.get("channel")
+    # Version notice
+    if csSession.data["set"].getProperty("crsh","Console.Welcome.ShowVersionNotice") != False:
+        # Release/Stable (No Message so if not then add spacing)
+        if channel != "Release" and channel != "Stable":
+            hasShownVerNotice = True
+        # Development/Dev
+        if channel == "Development" or channel == "Dev":
+            csSession.deb.pinfo("lng:cs.welcome.channelmsg.dev",noPrefix=True)
+        # Alpha
+        elif channel == "Alpha":
+            csSession.deb.pinfo("lng:cs.welcome.channelmsg.alpha",noPrefix=True)
+        # Beta
+        elif channel == "Beta":
+            csSession.deb.pinfo("lng:cs.welcome.channelmsg.beta",noPrefix=True)
+        # Viva
+        elif channel == "Viva":
+            csSession.deb.pinfo("lng:cs.welcome.channelmsg.viva",noPrefix=True)
+        # No channel defined
+        else:
+            csSession.deb.pinfo("lng:cs.welcome.channelmsg.unrecognised",{"channel":channel},noPrefix=True)
+    # Spacing
+    if hasShownVerNotice == True: print("")
+    # Profile
+    if csSession.data["set"].getProperty("crsh","Console.Welcome.ShowProfile") != False:
+        printProfile(csSession)
+    # Guide or not?
+    if hasShownGuide == True:
+        csSession.deb.pmsg("lng:cs.welcome.msg.main",noPrefix=True)
+    else:
+        csSession.deb.pmsg("lng:cs.welcome.msg.guide",noPrefix=True)
+        csSession.data["per"].chnProperty("crsh","HasShownGuide",True)

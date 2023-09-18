@@ -118,7 +118,8 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                             "argparseHelp": False,
                             "synopsisDesc": False,
                             "restrictionMode": "normal", #normal, internal, limited
-                            "readerReturnVars": False
+                            "readerReturnVars": False,
+                            "dontLoad": False
                         },
                         "extras" : {}
                     }
@@ -183,6 +184,9 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                 if rootEntry["options"].get("readerReturnVars") != None:
                                     if regEntry.get("options") == None: regEntry["options"] = {}
                                     regEntry["options"]["readerReturnVars"] = bool(rootEntry["options"].get("readerReturnVars"))
+                                if rootEntry["options"].get("dontLoad") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    regEntry["options"]["dontLoad"] = bool(rootEntry["options"].get("dontLoad"))
                             for key in rootEntry.keys():
                                 if key not in hardCodedEntries:
                                     regEntry["extras"][key] = rootEntry[key]
@@ -228,6 +232,10 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                             if regEntry.get("options") == None: regEntry["options"] = {}
                             if regEntry["options"].get("readerReturnVars") != None:
                                 regEntry["options"]["readerReturnVars"] = bool(data.get("readerReturnVars"))
+                        if data.get("dontLoad") != None:
+                            if regEntry.get("options") == None: regEntry["options"] = {}
+                            if regEntry["options"].get("dontLoad") != None:
+                                regEntry["options"]["dontLoad"] = bool(data.get("dontLoad"))
                         for key in data.keys():
                             if key not in hardCodedEntries:
                                 regEntry["extras"][key] = data[key]
@@ -295,6 +303,10 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     if regEntry.get("options") == None: regEntry["options"] = {}
                                     if regEntry["options"].get("readerReturnVars") != None:
                                         regEntry["options"]["readerReturnVars"] = bool(data.get("readerReturnVars"))
+                                if data.get("dontLoad") != None:
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    if regEntry["options"].get("dontLoad") != None:
+                                        regEntry["options"]["dontLoad"] = bool(data.get("dontLoad"))
                                 for key in data.keys():
                                     if key not in hardCodedEntries:
                                         if str(data[key]).lower() == "true" or str(data[key]).lower() == "false": data[key] = bool(data[key])
@@ -314,8 +326,11 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                         regEntry["extras"].pop("restrictionMode")
                     if regEntry["extras"].get("readerReturnVars") != None and regEntry["options"].get("readerReturnVars") != None:
                         regEntry["extras"].pop("readerReturnVars")
+                    if regEntry["extras"].get("dontLoad") != None and regEntry["options"].get("dontLoad") != None:
+                        regEntry["extras"].pop("dontLoad")
                     # Add regEntry to registry
-                    regEntry_name = str(regEntry["name"])
-                    regEntry.pop("name")
-                    registry["cmdlets"][ regEntry_name ] = regEntry
+                    if regEntry["options"]["dontLoad"] == False:
+                        regEntry_name = str(regEntry["name"])
+                        regEntry.pop("name")
+                        registry["cmdlets"][ regEntry_name ] = regEntry
     return registry["cmdlets"]

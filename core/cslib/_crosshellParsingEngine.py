@@ -101,20 +101,26 @@ def crosshellParsingEngine(stringToParse) -> str:
             return final
         else:
             return inputString # No reorderPipes so just return
+    # Function to handle comments
+    def handleComments(string):
+        if string.strip(" ").startswith("#"):
+            string = "comment " + string.lstrip("#")
+        return string
     # Function to reparse pipe elements
     def reparsePipeElements(pipeString):
         split = pipeString.split("|")
         handledString = ""
         for s in split:
             s = s.strip()
-            handledString += parseInputString(s) + " | "
+            handledString += handleComments(parseInputString(s)) + " | "
         handledString = handledString.rstrip("| ")
         return handledString
     # Function to replace placeholders
     def reReplacePlaceholders(_string):
         return _string.replace("%variableOperator%","$")
     # [Parse]
-    stringToParse = parseInputString(stringToParse)
+    if "|" not in stringToParse and "§" not in stringToParse:
+        stringToParse = parseInputString(stringToParse)
     stringToParse = parseReorderPipes(stringToParse)
     stringToParse = reparsePipeElements(stringToParse)
     stringToParse = reReplacePlaceholders(stringToParse)
@@ -184,14 +190,23 @@ def _parse_parenthesis(sinput) -> list:
 def _parse_p_order_with_split(p_order=list) -> str:
     '''CSlib.CSPE: Function to semi separate a parenthesis list.'''
     semiorder_str = ""
-    for elem in p_order:
-        elem = elem.strip()
-        if elem.startswith("||"):
-            elem = elem.replace("||","")
+    for i,elem in enumerate(p_order):
+        # Fix broken-pipe-starts
+        if elem != "| ":
             elem = elem.strip()
-        if not elem.endswith("||"):
-            elem = elem + "||"
-        semiorder_str += elem
+            # I honestly don't know why these where here, so ehm hope they aren't needed
+            #if elem.startswith("||"):
+            #    elem = elem.replace("||","")
+            #    elem = elem.strip()
+            if not elem.endswith("||"):
+                _next = None
+                try:
+                    _next = p_order[i+1]
+                except: pass
+                if _next == None or _next.strip(" ").startswith("|") != True:
+                    elem = elem + "||"
+            semiorder_str += elem
+    # This also fixes broken-pipe-ends
     semiorder_str = semiorder_str.rstrip("||")
     return semiorder_str
 
@@ -311,3 +326,70 @@ def include_nonToFormat(input_string, substrings):
         # Replace "§cs.toNotFormat§" with the cleaned substring
         input_string = input_string.replace("§cs.toNotFormat§", clean_substring, 1)
     return input_string
+
+def find_qoutedSubstrings(string,pattern,placeholder):
+    # Find all substrings inside innermost double slashes
+    matches = re.findall(pattern, string)
+    if not matches:
+        # If no innermost double slashes found, return the input string as is
+        return (string, [])
+    # Replace all innermost double slashes with placeholder
+    replaced_string = re.sub(pattern, placeholder, string)
+    return (replaced_string, matches)
+
+def fix_qoutedSubStrings(matches,toReplace,replaceWidth):
+    for i,match in enumerate(matches):
+        matches[i] = '"' + match.replace(toReplace,replaceWidth) + '"'
+    return matches
+
+def include_substrings(input_string, substrings, placeholder):
+    for substring in substrings:
+        # Replace "§cs.qoutedString§" with the substring
+        input_string = input_string.replace(placeholder, substring, 1)
+    return input_string
+
+def placeholdAnyQouted(string,pattern,placeholder,toReplace,replaceWith) -> str:
+    s2,x = find_qoutedSubstrings(string,pattern,placeholder)
+    x = fix_qoutedSubStrings(x,toReplace,replaceWith)
+    s3 = include_substrings(s2, x,placeholder)
+    return s3
+
+def placeholdAnyQoutedX(string,replaceWith):
+    placeholder = "§copied§"
+    newstr = placeholdAnyQouted(
+        string=      string,
+        pattern=     r'\"(.*?)\"',
+        placeholder= "§cs.qoutedSubString§",
+        toReplace=   replaceWith,
+        replaceWith= placeholder
+    )
+    return newstr,placeholder
+
+def findVariables(string):
+    pattern = r'\$[a-zA-Z_][a-zA-Z0-9_]*'
+    variables = re.findall(pattern, string)
+    return variables
+
+def fixDoubleGet(string,csSession):
+    split = string.split("||")
+    for i,p in enumerate(split):
+        if p.startswith("get get "):
+            th = split_string_by_spaces(p.replace("get get ","",1))[0]
+            cmdletNames = []
+            for key,cmdlet in csSession.registry["cmdlets"].items():
+                cmdletNames.extend(key)
+                if cmdlet.get("aliases") != None:
+                    cmdletNames.extend(cmdlet["aliases"])
+            if th in cmdletNames:
+                p = p.replace("get get ","",1)
+                var = findVariables(p)[0]
+                p = p.replace(var+" ","")
+                p = p.replace(var,"")
+                p = f"get {var.replace('$','')} | " + p
+            else:
+                p = p.replace("get get ","get ")
+                for var in findVariables(p):
+                    p = p.replace(var,var.lstrip("$"))
+        split[i] = p
+    string = '||'.join(split)
+    return string

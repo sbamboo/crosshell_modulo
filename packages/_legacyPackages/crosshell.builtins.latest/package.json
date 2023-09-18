@@ -38,14 +38,17 @@
         "desc": "Prints out a list of al pathables/cmdlets in crosshell.",
         "aliases": ["get-pathables","getcmdlets","get-cmdlets"]
     },
+    "guide": {
+        "desc": "Guide for crosshell."
+    },
     "noformat": {
         "desc": "Returns any input but enclosing it in format-escapes.",
         "aliases": ["unformat"],
         "args": "<string>"
     },
-    "p": {
+    "print": {
         "desc": "Returns any input. (Effectly printing it)",
-        "aliases": ["conout"],
+        "aliases": ["p","conout","echo"],
         "args": "<string>"
     },
     "prefix": {
@@ -57,10 +60,18 @@
         "args": "<string>"
     },
     "reload": {
-        "desc": "Reloads the console."
+        "desc": "Reloads the console.",
+        "options": {
+            "restrictionMode": "internal"
+        },
+        "aliases": ["visreload:--vis"]
     },
     "set": {
         "desc": "Sets a variable",
+        "args": "<name> <value> <optional:type>"
+    },
+    "shellinf": {
+        "desc": "Shows information on your enviroment (Crosshell-Info)",
         "args": "<name> <value> <optional:type>"
     },
     "stripansi": {
@@ -73,5 +84,17 @@
     },
     "true": {
         "desc": "Returns true."
+    },
+    "versionassistant": {
+        "desc": "Crosshells version assistant.",
+        "aliases": ["version","ver"]
+    },
+    "webi": {
+        "desc": "Cmdlet for getting information from crosshell webinfo (webi).",
+        "args": "<id> -o/-open -list"
+    },
+    "welcome": {
+        "desc": "Shows the console welcome message.",
+        "aliases": ["hwelcome","hwelc","hhead"]
     }
 }

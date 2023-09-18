@@ -1,12 +1,18 @@
 # Imports
 from cslib.execution import execline
-from cslib.externalLibs.conUtils import setConTitle
+from cslib.externalLibs.conUtils import setConTitle,clear
 from cslib._crosshellParsingEngine import exclude_nonToFormat,include_nonToFormat
 from cslib._crosshellGlobalTextSystem import removeAnsiSequences
-from cslib import CrosshellDebErr
+from cslib import CrosshellDebErr,writeWelcome
 
 # Create a pipeline object
 CS_PipeLine = execline()
+
+# Do on-start operations
+if CS_Settings.getProperty("crsh","Console.ClearOnStart") == True:
+    clear()
+if CS_Settings.getProperty("crsh","Console.Welcome.ShowOnStart") == True:
+    writeWelcome(csSession)
 
 # Main loop
 while True:

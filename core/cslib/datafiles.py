@@ -1,5 +1,12 @@
-import json,yaml,re
-from .cslib import normalizePathSepMT
+import json,re
+from .cslib import normalizePathSepMT,intpip
+from ._crosshellParsingEngine import placeholdAnyQoutedX
+
+try:
+    import yaml
+except:
+    intpip("install pyyaml")
+    import yaml
 
 '''
 CSlibs: Datafiles module, contains a jsonYamlProvider class for using such files with more ease
@@ -7,31 +14,142 @@ Depends on pyyaml
 
 '''
 
+def injectStringAtIndex(dictionary, index, string_to_inject):
+    # Create a list to store the dictionary items as (index, value) tuples
+    items = list(dictionary.items())
+    # Insert the new key-value pair at the specified index
+    items.insert(index, (index, string_to_inject))
+    # Iterate over the remaining items and increment their keys
+    for i in range(index + 1, len(items)):
+        old_key, value = items[i]
+        new_key = old_key + 1
+        items[i] = (new_key, value)
+    # Convert the modified list of items back to a dictionary
+    modified_dict = dict(items)
+    return modified_dict
+
+def injectStringAtIndex(listToInjectTo=list,index=int,string=str) -> list:
+    return listToInjectTo[:index] + [string] + listToInjectTo[index:]
+
+def extractComments(json_or_yaml_string=str) -> (str,dict):
+    if json_or_yaml_string != None:
+        split = json_or_yaml_string.split("\n")
+        newsplit = []
+        extractedLines = {}
+        split2 = []
+        for elem in split:
+            if elem.strip(" ") != "":
+                split2.append(elem)
+        split = split2
+        for i,line in enumerate(split):
+            strip = line.strip(" ")
+            if strip.startswith("#") or strip.startswith("//"):
+                extractedLines[i] = line
+            else:
+                newsplit.append(line)
+        new = '\n'.join(newsplit)
+        return new,extractedLines
+    else:
+        return json_or_yaml_string,None
+
+def injectComments(json_or_yaml_string,extractedLines) -> str:
+    if json_or_yaml_string != None and extractedLines != None and extractedLines != {}:
+        split = json_or_yaml_string.split("\n")
+        for i,line in extractedLines.items():
+            split = injectStringAtIndex(split,i,line)
+        return '\n'.join(split)
+    else:
+        return json_or_yaml_string
+
+def extractComments_newlineSupport(json_or_yaml_string=str) -> (str,dict):
+    if json_or_yaml_string != None:
+        split = json_or_yaml_string.split("\n")
+        newsplit = []
+        extractedLines = {}
+        for i,elem in enumerate(split):
+            if elem == "":
+                split[i] = "§newline§"
+        for i,line in enumerate(split):
+            strip = line.strip(" ")
+            if strip.startswith("#") or strip.startswith("//"):
+                extractedLines[i] = line
+            elif strip == "§newline§":
+                extractedLines[i] = "\n"
+            else:
+                newsplit.append(line)
+        new = '\n'.join(newsplit)
+        return new,extractedLines
+    else:
+        return json_or_yaml_string,None
+
+def injectComments_newlineSupport(json_or_yaml_string,extractedLines) -> str:
+    if json_or_yaml_string != None and extractedLines != None and extractedLines != {}:
+        split = json_or_yaml_string.split("\n")
+        for i,line in extractedLines.items():
+            split = injectStringAtIndex(split,i,line)
+        newstring = ""
+        for elem in split:
+            if elem != "\n":
+                newstring += "\n" + elem
+            else:
+                newstring += elem
+        return newstring.strip("\n")
+    else:
+        return json_or_yaml_string
+
 def _stripJsonComments(jsonString):
     commentPattern = r'(\/\/[^\n]*|\/\*[\s\S]*?\*\/)'
     jsonWithoutComments = re.sub(commentPattern, '', jsonString)
     return jsonWithoutComments
 
-def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False):
+def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,keepComments=False,commentsToInclude=None,newlineSupport=False):
     '''CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.'''
     if mode == "json":
         if operation == "get":
             content = _stripJsonComments(open(file,'r',encoding=encoding).read())
+            if keepComments == True:
+                if newlineSupport == True:
+                    content,extractedComments = extractComments_newlineSupport(content)
+                else:
+                    content,extractedComments = extractComments(content)
             _dict = json.loads(content)
             if safeSeps == True: return normalizePathSepMT(_dict)
-            else: return _dict
+            else:
+                if keepComments == True:
+                    return _dict,extractComments
+                else:
+                    return _dict
         elif operation == "set":
-            with open(file, "w",encoding=encoding) as outfile:
-                json.dump(content, outfile)
+            content_str = json.dumps(content)
+            if keepComments == True and commentsToInclude != None and type(commentsToInclude) == dict:
+                if newlineSupport == True:
+                    content_str = injectComments_newlineSupport(content_str, commentsToInclude)
+                else:
+                    content_str = injectComments(content_str, commentsToInclude)
+            open(file,'w',encoding=encoding).write(content_str)
     elif mode == "yaml":
         if operation == "get":
-            with open(file, "r",encoding=encoding) as outfile:
-                _dict = yaml.safe_load(outfile)
+            content = open(file, "r",encoding=encoding).read()
+            if keepComments == True:
+                if newlineSupport == True:
+                    content,extractedComments = extractComments_newlineSupport(content)
+                else:
+                    content,extractedComments = extractComments(content)
+            _dict = yaml.safe_load(content)
             if safeSeps == True: return normalizePathSepMT(_dict)
-            else: return _dict
+            else:
+                if keepComments == True:
+                    return _dict,extractedComments
+                else:
+                    return _dict
         elif operation == "set":
-            with open(file, "w",encoding=encoding) as outfile:
-                yaml.dump(content, outfile)
+            content_str = yaml.dump(content, sort_keys=yaml_sort)
+            if keepComments == True and commentsToInclude != None and type(commentsToInclude) == dict:
+                if newlineSupport == True:
+                    content_str = injectComments_newlineSupport(content_str, commentsToInclude)
+                else:
+                    content_str = injectComments(content_str, commentsToInclude)
+            open(file,'w',encoding=encoding).write(content_str)
 
 class jsonYamlProviderSimpleIO():
     '''
@@ -40,20 +158,38 @@ class jsonYamlProviderSimpleIO():
       takes: mode of string, being "json" or "yaml"
       file:  string filepath/filename if applicable
       encoding: file encoding
+      yaml_sort: Whether or not the yaml mode should ABC sort the file
+      keepComments: If fileHandler should keep comments in file (experimental)
     '''
-    def __init__(self,mode=str,file=str,encoding="utf-8"):
+    def __init__(self,mode=str,file=str,encoding="utf-8",yaml_sort=True,keepComments=False):
         self.mode = mode
         self.file = file
         self.encoding = encoding
-    def set(self,value,key=None):
+        self.yaml_sort = yaml_sort
+        self.keepComments = keepComments
+        self.commentsToInclude = commentsToInclude
+    def set(self,value,key=None,commentsToInclude=None):
         if key == None:
-            _fileHandler(self.mode,"set",self.file,value,encoding=self.encoding)
+            if self.keepComments == True:
+                _fileHandler(self.mode,"set",self.file,value,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=True,commentsToInclude=commentsToInclude)
+            else:
+                _fileHandler(self.mode,"set",self.file,value,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=False)
         else:
-            data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
-            data[key] = value
-            _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
+            if self.keepComments == True:
+                data,comments = _fileHandler(self.mode,"get",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=True)
+                data[key] = value
+                _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=True,commentsToInclude=commentsToInclude)
+            else:
+                data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=False)
+                data[key] = value
+                _fileHandler(self.mode,"set",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=False)
     def get(self):
-        return _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
+        if self.keepComments == True:
+            data,comments = _fileHandler(self.mode,"get",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=True)
+        else:
+            data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=False)
+            comments = None
+        return data,comments
 
 class jsonYamlProvider():
     '''
@@ -62,42 +198,67 @@ class jsonYamlProvider():
       takes: mode of string, being "json" or "yaml"
       file:  string filepath/filename if applicable
       encoding: file encoding
+      yaml_sort: Whether or not the yaml mode should ABC sort the file
+      keepComments: If fileHandler should keep comments in file (experimental)
     '''
-    def __init__(self,mode=str,file=str,encoding="utf-8"):
+    def __init__(self,mode=str,file=str,encoding="utf-8",yaml_sort=True,keepComments=False):
         self.mode = mode
         self.file = file
         self.encoding = encoding
+        self.yaml_sort = yaml_sort
+        self.keepComments = keepComments
+    def _get(self):
+        if self.keepComments == True:
+            data,comments = _fileHandler(self.mode,"get",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=True)
+            return data,comments
+        else:
+            data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=False)
+            return data,None
+    def _set(self,data,commentsToInclude=None):
+        if self.keepComments == True:
+            _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=True,commentsToInclude=commentsToInclude)
+        else:
+            _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding,yaml_sort=self.yaml_sort,keepComments=False)
     def __setitem__(self, key, value):
-        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
+        data,comments = self._get()
         data.__setitem__(key, value)
-        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
+        self._set(data,comments)
     def __ior__(self, other):
         if isinstance(other, dict):
-            data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
+            data,comments = self._get()
             data.update(other)
-            _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
+            self._set(data,comments)
         return self
     def __getitem__(self, key):
-        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
-        return data.__getitem__(key)
-    def append(self,data):
-        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
-        data.append(data)
-        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
-    def update(self,data):
-        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
-        data.update(data)
-        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
-    def get(self,key=None):
-        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
-        if key != None:
-            return data[key]
+        data,comments = self._get()
+        if self.keepComments == True:
+            return data.__getitem__(key),comments
         else:
-            return data
+            return data.__getitem__(key)
+    def append(self,data):
+        _data,comments = self._get()
+        _data.append(data)
+        self._set(_data,comments)
+    def update(self,data):
+        _data,comments = self._get()
+        _data.update(data)
+        self._set(_data,comments)
+    def get(self,key=None):
+        data,comments = self._get()
+        if key != None:
+            if self.keepComments == True:
+                return data[key],comments
+            else:
+                return data[key]
+        else:
+            if self.keepComments == True:
+                return data,comments
+            else:
+                return data
     def clear(self):
-        data = _fileHandler(self.mode,"get",self.file,encoding=self.encoding)
-        data.clear()
-        _fileHandler(self.mode,"set",self.file,data,encoding=self.encoding)
+        _data,comments = self._get()
+        _data.clear()
+        self._set(_data)
 
 def getKeyPath(dictionary, keypath, listAs1Elem=False):
     '''CSlib.datafiles: Gets the value at a keypath from a dictionary (keypaths are keys sepparated by dots)'''

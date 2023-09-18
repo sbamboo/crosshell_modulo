@@ -39,7 +39,7 @@ class BufferedStdout:
         out = self.orgInput(prompt)
         self._setBools(stb=old_stb,ptc=old_ptc) # set new
         return out
-        
+
     def getBuffer(self):
         toret = []
         for line in self.buffer:
@@ -56,10 +56,25 @@ class BufferedStdout:
         st = '\n'.join(lst)
         return st.strip("\n")
 
-    def bwrite(self,text):
+    def bwrite(self,text,end=None):
         '''buffer-only write'''
+        if end != None: text += end
         self.buffer.append(text)
     
-    def cwrite(self,text):
+    def cwrite(self,text,end=None):
         '''console-only write'''
+        if end != None: text += end
         self.original_stdout.write(text)
+
+    def cwrite_adv(self, text=str):
+        old_stb, old_ptc = self._getBools()      # get old
+        self._setBools(stb=False,ptc=True)       # set new
+        out = print(text)
+        self._setBools(stb=old_stb,ptc=old_ptc) # set new
+        return out
+
+    def bwrite_autoNL(self,text=str,end="\n"):
+        self.bwrite(text,end)
+        
+    def cwrite_autoNL(self,text=str,end="\n"):
+        self.cwrite(text,end)

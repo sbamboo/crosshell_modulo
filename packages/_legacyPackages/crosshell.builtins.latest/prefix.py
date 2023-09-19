@@ -1,7 +1,10 @@
 from cslib._crosshellGlobalTextSystem import parsePrefixDirTag
 from cslib import evalDynPrefix
 
-operation = str(argv[-1])
+operation = ""
+try:
+    operation = str(argv[-1])
+except: pass
 try:
     argv.pop(-1)
     prefix = argv[0:]

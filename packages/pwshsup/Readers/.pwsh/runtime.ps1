@@ -10,6 +10,9 @@ $parameter = $args[5..$args.Length]
 if ($globals -Match "{s}") {
     $globals = $globals -replace "{s}"," "
 }
+if ($globals -Match "{q}") {
+    $globals = $globals -replace "{q}",'"'
+}
 $globals = $globals.trimend("§¤§")
 foreach ($var in $globals.split("§¤§")) {
     $name = $var.split("§")[0]

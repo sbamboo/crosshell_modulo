@@ -106,13 +106,27 @@ def crosshellParsingEngine(stringToParse) -> str:
         if string.strip(" ").startswith("#"):
             string = "comment " + string.lstrip("#")
         return string
+    # Parse "<str>" -> p "<str>"
+    def printQoute(string):
+        if string.strip(" ").startswith('"'):
+            # Find all substrings inside innermost double slashes
+            matches = re.findall(r'\"(.*?)\"', string)
+            # Replace all innermost double slashes with placeholder
+            for match in matches:
+                string = string.replace(match,f'p "{match}"',1)
+                string = string.replace('"',"",1)
+                string = string[::-1].replace('"',"",1)[::-1]
+        return string
     # Function to reparse pipe elements
     def reparsePipeElements(pipeString):
         split = pipeString.split("|")
         handledString = ""
         for s in split:
             s = s.strip()
-            handledString += handleComments(parseInputString(s)) + " | "
+            s = parseInputString(s)
+            s = handleComments(s)
+            s = printQoute(s)
+            handledString += s + " | "
         handledString = handledString.rstrip("| ")
         return handledString
     # Function to replace placeholders
@@ -126,6 +140,20 @@ def crosshellParsingEngine(stringToParse) -> str:
     stringToParse = reReplacePlaceholders(stringToParse)
     return stringToParse
 
+def pathtagManager_parse(string,toParse=dict) -> str:
+    '''CSlib.CSPE: Function to parse only a given set of tags, once!'''
+    for tagName,tagValue in toParse.items():
+        tagString = '{' + tagName + '}'
+        string = string.replace(tagString,tagValue)
+    return string
+
+def pathtagmanager_parseDict(_dict,toParse=dict) -> dict:
+    for key,val in _dict.items():
+        if type(val) == str:
+            _dict[key] = pathtagManager_parse(val,toParse)
+        else:
+            _dict[key] = pathtagmanager_parseDict(val,toParse)
+    return _dict
 
 class pathtagManager():
     '''CSlib.CSPE: Pathtagmanager class'''
@@ -149,10 +177,7 @@ class pathtagManager():
             if type(extraPathTags) != dict:
                 raise Exception("If defined, extraPathTags must be of type dict!")
             toParse.update(extraPathTags)
-        for tagName,tagValue in toParse.items():
-            tagString = '{' + tagName + '}'
-            string = string.replace(tagString,tagValue)
-        return string
+        return pathtagManager_parse(string,toParse)
     def ensureAl(self):
         for _,tagValue in self.pathtags.items():
             if filesys.notExist(tagValue) == True:
@@ -292,16 +317,19 @@ def useOnlyDoublePipeSplit(text) -> str:
     '''CSlib.CSPE: Function to replace ; with ||.'''
     result = []
     inside_braces = False
-    for char in text:
-        if char == '{':
-            inside_braces = True
-        elif char == '}':
-            inside_braces = False
-        if char == ';' and not inside_braces:
-            result.append('||')
-        else:
-            result.append(char)
-    return ''.join(result)
+    if text != None:
+        for char in text:
+            if char == '{':
+                inside_braces = True
+            elif char == '}':
+                inside_braces = False
+            if char == ';' and not inside_braces:
+                result.append('||')
+            else:
+                result.append(char)
+        return ''.join(result)
+    else:
+        return text
 
 
 def exclude_nonToFormat(input_string):

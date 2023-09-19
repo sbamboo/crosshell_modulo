@@ -105,7 +105,8 @@ def getDataFromList(
                 registry=registry,
                 encoding=encoding,
                 confFileExts=cmdlets_confFileExts,
-                rootFileExts=cmdlets_rootFileExts
+                rootFileExts=cmdlets_rootFileExts,
+                allowOldPackageFile=True
             )
         # DynPrefixes
         source = f"{package}{os.sep}DynPrefix"

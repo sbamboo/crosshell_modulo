@@ -1,5 +1,7 @@
 crsh:
   Prefix: '{f.magenta}{user}{f.darkgray}@{f.blue}{hostname}{f.darkgray}{f.darkgray}{dir:":
     {dir}\"}> {r}'
-  Title: Crosshell (Modulo)
+  Title: Crosshell Modulo
   HasShownGuide: true
+  sInput:
+    btoolbar_msg: null

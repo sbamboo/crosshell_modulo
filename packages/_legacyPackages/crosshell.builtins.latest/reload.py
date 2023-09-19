@@ -1,5 +1,8 @@
 from cslib.externalLibs.conUtils import clear
 from cslib import writeWelcome
+from cslib.smartInput import sInputPrompt
+
+CS_Registry["cmdlets"] = {}
 
 CS_packageList = {
   "modulo": loadPackages(
@@ -17,6 +20,16 @@ CS_packageList = {
 csSession.registry["packages"] = CS_packageList
 csLoadPackageData(CS_packageList,CS_Registry)
 
+# [SmartInput]
+_sInput_enabled = CS_Settings.getProperty("crsh","SmartInput.Enabled")
+if _sInput_enabled == True:
+  if CS_Registry["sInputInstance"] != None:
+    CS_Registry["sInputInstance"]._updateSettings()
+  else:
+    CS_Registry["sInputInstance"] = sInputPrompt(csSession)
+else:
+  if CS_Registry["sInputInstance"] != None:
+    CS_Registry["sInputInstance"] = None
 # [Formatting]
 ## get selected
 selectedPalette = CS_Settings.getProperty("crsh","Packages.Formatting.Palettes.Selected")

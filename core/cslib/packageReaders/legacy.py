@@ -4,6 +4,7 @@ from io import StringIO
 from ..datafiles import config_to_dict,dict_to_config
 from ..externalLibs.filesys import filesys as fs
 from ..cslib import handleOSinExtensionsList,_fileHandler
+from .._crosshellParsingEngine import pathtagManager_parse
 
 def _toBool(value) -> bool:
     if type(value) == bool:
@@ -57,7 +58,20 @@ def _getSynopsisDesc(defa=str,path=str,encoding="utf-8") -> str:
             pass
     return newDesc
 
-def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,encoding="utf-8",confFileExts=["cfg","config","conf"],rootFileExts=["json","cfg","conf","config"]):
+def _parseCfgPathTags(string,package,path_of_config_file):
+    if package.endswith("Cmdlets"):
+        root = os.path.dirname(package)
+    else:
+        root = package
+    tags = {
+        "cmdlets": package,
+        "cmdletsFolder": package,
+        "parent": os.path.dirname(path_of_config_file),
+        "root": root
+    }
+    return pathtagManager_parse(string,tags)
+
+def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,encoding="utf-8",confFileExts=["cfg","config","conf"],rootFileExts=["json","cfg","conf","config"],allowOldPackageFile=False):
     # OPT
     confFileExts = handleOSinExtensionsList(confFileExts)
     rootFileExts = handleOSinExtensionsList(rootFileExts)
@@ -133,14 +147,24 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                     if parent not in knownRootFiles.keys():
                         for ext in rootFileExts:
                             possibleRoot1 = f"{parent}{os.sep}package.{ext}"
-                            possibleRoot2 = f"{parent}{os.sep}root.{ext}"
+                            possibleRoot2 = f"{parent}{os.sep}cmdlets.{ext}"
                             if os.path.exists(possibleRoot1):
-                                knownRootFiles[parent] = str(possibleRoot1)
+                                # fix for package-root-files (non-cmdlet-configs), they are always package.json. See cslib._crosshellMpackageSystem.getPackageData
+                                if allowOldPackageFile == False and ext.lower() == "json":
+                                    _tmpContent = _getConfContent(str(possibleRoot1),encoding=encoding)
+                                    if _tmpContent.get("cmdlets") != None:
+                                        knownRootFiles[parent] = str(possibleRoot1)
+                                    elif os.path.exists(possibleRoot2):
+                                        knownRootFiles[parent] = str(possibleRoot2)
+                                else:
+                                    knownRootFiles[parent] = str(possibleRoot1)
                             elif os.path.exists(possibleRoot2):
                                 knownRootFiles[parent] = str(possibleRoot2)
                     ## check for entry in root file
                     if parent in knownRootFiles.keys():
                         rootFileContent = _getConfContent(knownRootFiles[parent],encoding=encoding)
+                        if rootFileContent.get("cmdlets") != None:
+                            rootFileContent = rootFileContent.get("cmdlets")
                         rootEntry = None
                         if name in rootFileContent.keys():
                             rootEntry = rootFileContent.get(name)
@@ -151,7 +175,11 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                 if rootEntry["overwrites"].get("name"):
                                     regEntry["name"] = rootEntry["overwrites"].get("name")
                                 if rootEntry["overwrites"].get("path"):
-                                    regEntry["path"] = rootEntry["overwrites"].get("path")
+                                    regEntry["path"] = _parseCfgPathTags(
+                                        rootEntry["overwrites"].get("path"),
+                                        package,
+                                        knownRootFiles[parent]
+                                    )
                                     if chck_fending != "MIME_EXECUTABLE":
                                         regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
                             if rootEntry.get("desc") != None:
@@ -189,6 +217,9 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                     regEntry["options"]["dontLoad"] = bool(rootEntry["options"].get("dontLoad"))
                             for key in rootEntry.keys():
                                 if key not in hardCodedEntries:
+                                    if "returnCSVars" in str(key):
+                                        if regEntry.get("options") == None: regEntry["options"] = {}
+                                        regEntry["options"]["readerReturnVars"] = rootEntry[key]
                                     regEntry["extras"][key] = rootEntry[key]
                     # Check for conf file
                     for ext in confFileExts:
@@ -221,7 +252,11 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                         if data.get("nameoverwrite") != None:
                             regEntry["name"] = data.get("nameoverwrite")
                         if data.get("pathoverwrite") != None:
-                            regEntry["path"] = data.get("pathoverwrite")
+                            regEntry["path"] = _parseCfgPathTags(
+                                data.get("pathoverwrite"),
+                                package,
+                                confFile
+                            )
                             if chck_fending != "MIME_EXECUTABLE":
                                 regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
                         if data.get("restrictionMode") != None:
@@ -238,6 +273,9 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                 regEntry["options"]["dontLoad"] = bool(data.get("dontLoad"))
                         for key in data.keys():
                             if key not in hardCodedEntries:
+                                if "returnCSVars" in str(key):
+                                    if regEntry.get("options") == None: regEntry["options"] = {}
+                                    regEntry["options"]["readerReturnVars"] = data[key]
                                 regEntry["extras"][key] = data[key]
                     # Check for header-data if enabled in settings
                     if settings.getProperty("crsh","Packages.Options.LoadInFileHeader") == True:
@@ -292,7 +330,11 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                 if data.get("nameoverwrite") != None:
                                     regEntry["name"] = data.get("nameoverwrite")
                                 if data.get("pathoverwrite") != None:
-                                    regEntry["path"] = data.get("pathoverwrite")
+                                    regEntry["path"] = _parseCfgPathTags(
+                                        data.get("pathoverwrite"),
+                                        package,
+                                        entry.path
+                                    )
                                     if chck_fending != "MIME_EXECUTABLE":
                                         regEntry["fending"] = fs.getFileExtension(regEntry["path"]).lower()
                                 if data.get("restrictionMode") != None:
@@ -310,6 +352,9 @@ def getDataFromList(settings,crshparentPath=str,packages=list,registry=list,enco
                                 for key in data.keys():
                                     if key not in hardCodedEntries:
                                         if str(data[key]).lower() == "true" or str(data[key]).lower() == "false": data[key] = bool(data[key])
+                                        if "returnCSVars" in str(key):
+                                            if regEntry.get("options") == None: regEntry["options"] = {}
+                                            regEntry["options"]["readerReturnVars"] = data[key]
                                         regEntry["extras"][key] = data[key]
                     # Fix duplicates
                     if regEntry["extras"].get("description") != None and regEntry.get("desc") != None:

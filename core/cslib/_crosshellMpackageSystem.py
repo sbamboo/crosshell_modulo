@@ -3,7 +3,10 @@ CSlib: CrosshellMpackageSystem contains crosshells code to handle modules.
 '''
 
 import os
+import json
 from .externalLibs.filesys import filesys
+from .datafiles import _fileHandler
+from ._crosshellParsingEngine import pathtagmanager_parseDict
 
 def _getPackageFiles(Path=str,packageExtensions=list):
     packageFiles = []
@@ -90,3 +93,48 @@ def loadPackages(findFilesPathObj,DestinationPath=str,packageExtensions=list,fin
                 filesys.renameFile(newPath,path)
     # Return a list of paths of installed packages
     return installedPackages
+
+def getPackageData(packagePath,encoding="utf-8"):
+    # setup priority (first is; top-prio = [0])
+    keys = ["package","mpackage","cspackage","crsh"]
+    # get file
+    possiblePackageFile = f"{packagePath}{os.sep}package.json"
+    if os.path.exists(possiblePackageFile):
+        # get content
+        content = _fileHandler("json","get",possiblePackageFile,encoding=encoding)
+        # check for keyname
+        data = {}
+        for key in keys:
+            if content.get(key) != None:
+                data = content.get(key)
+                break
+        # return
+        return data
+
+def getPackageDataFromList(packageList,encoding="utf-8"):
+    packageData = []
+    for key,value in packageList.items():
+        for p in value:
+            # get name
+            name = os.path.basename(p)
+            # set base data
+            pdict = {name:{"path":p,"type":key}}
+            # get data
+            _data = getPackageData(p,encoding)
+            if _data != None:
+                pdict[name].update(_data)
+            # append
+            packageData.append(pdict)
+    return packageData
+
+def getDataForPackage(packageName,registry,filterType=None):
+    reg_pdata = registry.get("packageData")
+    if reg_pdata != None:
+        for p in reg_pdata:
+            vZ = list(p.values())[0]
+            if filterType != None:
+                if packageName in p.keys() and vZ["type"] == filterType:
+                    return vZ
+            else:
+                if packageName in p.keys():
+                    return vZ

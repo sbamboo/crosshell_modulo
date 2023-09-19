@@ -14,15 +14,15 @@ crsh:
   Language:
     Loaded:
       '1': en-us
-    _choices:
-    - sv-se
+      '0': sv-se
+    _choices: []
     DefaultList: '{CS_BaseDir}\assets\langlist.json'
     ListFormat: json
     LangFormat: json
     LoadSameSuffixedLangs: true
   Packages:
     Options:
-      LoadInFileHeader: false
+      LoadInFileHeader: true
     AllowedFileTypes:
       Cmdlets:
         INTERNAL_PYTHON:
@@ -64,7 +64,7 @@ crsh:
     DefPrefix: '> '
     DefTitle: Crosshell Modulo
     PrefixEnabled: true
-    PrefixShowDir: true
+    PrefixShowDir: false
     DynamicPrefixes: true
     RestrictDynPrefixes: false
     StripAnsi: false
@@ -74,6 +74,36 @@ crsh:
       ShowOnStart: true
       ShowVersionNotice: true
       ShowProfile: true
+    VerboseStart: true
+  SmartInput:
+    Enabled: true
+    TabComplete: true
+    History: true
+    Highlight: true
+    ShowToolbar: true
+    MultiLine: false
+    MouseSupport: false
+    LineWrap: true
+    CursorChar: BLINKING_BEAM
+    HistorySuggest: true
+    HistoryType: File
+    Styling:
+      Enabled: true
+      Options:
+        bottom-toolbar: fg:#181818 bg:#107c41
+        completion-menu: 'bg:#151515 #eeeeee'
+        completion-menu.completion.current: bg:#2f2f2f
+      Completions:
+        cmd: fg:#b3b4b6
+        arg: fg:#5555ff
+        custom: fg:magenta
+      Inject: true
+    HistoryFile: '{CS_BaseDir}\assets\.history'
+    Completions:
+      IncludeStandards: true
+      IncludeArgs: true
+      IncludeCmdCustoms: true
+      HideByContext: true
   Modules:
     Files:
       console-py:

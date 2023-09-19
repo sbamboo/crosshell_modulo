@@ -17,10 +17,31 @@ try:
         params_raw = sys.argv
 except:
     params_raw = sys.argv
-if ("nc" in str(params_raw) or "nocolor" in str(params_raw)):
+params_nocolorrendering = False
+params_listWebcolors = False
+params_str = ' '.join(params_raw)
+
+if "--nc" in params_str:
+    params_str = params_str.replace("--nc","")
     params_nocolorrendering = True
-else:
-    params_nocolorrendering = False
+if "--nocolor" in params_str:
+    params_str = params_str.replace("--nocolor","")
+    params_nocolorrendering = True
+if "--l" in params_str:
+    params_str = params_str.replace("--l","")
+    params_listWebcolors = True
+if "--list" in params_str:
+    params_str = params_str.replace("--list","")
+    params_listWebcolors = True
+
+if "/nc" in params_str:
+    params_str = params_str.replace("/nc","")
+    params_nocolorrendering = True
+if "/l" in params_str:
+    params_str = params_str.replace("/l","")
+    params_listWebcolors = True
+
+params_str = params_str.strip(" ")
 
 # Enable ANSI
 os.system("")  # enables ansi escape characters in terminal
@@ -57,6 +78,7 @@ def closest_colour(requested_colour):
     return min_colours[min(min_colours.keys())]
 
 def get_colour_name(requested_colour):
+    requested_colour = [int(_v) for _v in requested_colour]
     try:
         closest_name = actual_name = webcolors.rgb_to_name(requested_colour)
     except ValueError:
@@ -64,8 +86,44 @@ def get_colour_name(requested_colour):
         actual_name = None
     return actual_name, closest_name
 
+def get_colorName_title(wasWebcolor,color_name,colorRGBlist=None,nocolor=None):
+    if wasWebcolor == True:
+        if nocolor == True:
+            return f"\033[33mWebcolor name: \033[0m{color_name}\033[0m;"
+        else:
+            ansi = color_GetANSICode(colorRGBlist[0],colorRGBlist[1],colorRGBlist[2])
+            return f"\033[33mWebcolor name: {ansi}{color_name}\033[0m;"
+    else:
+        if nocolor == True:
+            return f"\033[33mClosest name: \033[0m{color_name}\033[0m; "
+        else:
+            ansi = color_GetANSICode(colorRGBlist[0],colorRGBlist[1],colorRGBlist[2])
+            return f"\033[33mClosest name: {ansi}{color_name}\033[0m; "
+
+def hex_to_ansi(hex=str,background=False) -> str:
+    hex = hex.replace("#","")
+    lv = len(hex)
+    tup = tuple(int(hex[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+    tup2 = list(tup)
+    for i in range(len(tup)):
+        tup2[i] = int(tup[i])
+    return '\033[{};2;{};{};{}m'.format(48 if background else 38, *tup2)
+
+# Check if to list colors
+if params_listWebcolors == True:
+    print("\033[4mWebcolors supported by colorTool/xcolor:\033[24m\033[0m")
+    for name, hex in webcolors.CSS3_NAMES_TO_HEX.items():
+        ansi = hex_to_ansi(hex)
+        if name == "black": name = "\033[47m" + name + "\033[0m"
+        print(f"{ansi}{name}")
+    exit()
+
 # Get a color input
-color_Hex = input("Enter a colors hex value or color name: ")
+if params_str != "":
+    color_Hex = params_str
+else:
+    color_Hex = input("Enter a colors hex value or color name: ")
+if color_Hex.lower() == "exit": exit()
 color_Hex = color_Hex.replace('#','')
 
 color_RGB_list = None
@@ -85,33 +143,33 @@ if (IsHex != True):
         color_Hex = color_Hex.replace('#','')
     except:
         HasPrintedHead = False
-        ColorFound = False
+        valid = False
+        hasShown = False
         for name, hex in webcolors.CSS3_NAMES_TO_HEX.items():
             if str(color_name) in str(name):
                 if HasPrintedHead == False:
                     print("\033[32mThe color '" + str(color_name) + "' has no name, color names containing it is:\033[0m")
                     HasPrintedHead = True
-                ColorFound = True
+                    hasShown = True
                 print("\033[33m - " + str(name) + "\033[0m")
-        if ColorFound != True:
-            # check if rgb
-            colorname = color_name.replace("rgb(","(")
-            rgb_test = color_name.strip(" ").lstrip("(").rstrip(")").split(",")
-            valid = False
-            if len(rgb_test) > 2:
-                valid = True
-                rgb_test = [int(val) for val in rgb_test]
-                color_RGB_list = rgb_test
-                color_Hex = rgb_to_hex(rgb_test)
-                if color_Hex == None:
-                    valid = False
-                else:
-                    color_Hex = color_Hex.replace("#","")
-                    color_RGB = tuple(color_RGB_list)
-                    IsHex = True
-            if valid == False:
+        # check if rgb
+        colorname = color_name.replace("rgb(","(")
+        rgb_test = color_name.strip(" ").lstrip("(").rstrip(")").split(",")
+        if len(rgb_test) > 2:
+            valid = True
+            rgb_test = [int(val) for val in rgb_test]
+            color_RGB_list = [str(_int) for _int in rgb_test]
+            color_Hex = rgb_to_hex(rgb_test)
+            if color_Hex == None:
+                valid = False
+            else:
+                color_Hex = color_Hex.replace("#","")
+                color_RGB = tuple(color_RGB_list)
+                IsHex = True
+        if valid == False:
+            if hasShown != True:
                 print("\033[31m'" + str(color_name).capitalize() + "' does not exist as a known color name.\033[0m")
-                exit()
+            exit()
 
 # Get RGB
 if color_RGB_list == None:
@@ -124,10 +182,12 @@ if color_RGB_list == None:
     color_RGB_list = color_RGB_str.split(',')
 
 # Get color name
+wasWebcolor = False
 if (IsHex == True):
-    print(color_RGB_list)
-    color_name = closest_colour(color_RGB_list)
-
+    actual_name, color_name = get_colour_name(color_RGB_list)
+    if actual_name != None:
+        wasWebcolor = True
+        color_name = actual_name
 color_name = color_name.capitalize()
 
 # Split hex
@@ -140,9 +200,7 @@ for i in range(0,len(color_Hex_list)):
 # Print colored text and result.
 if (params_nocolorrendering == True):
     print(
-            "\033[33mClosest name: \033[0m"
-        + color_name
-        + "\033[0m"
+            get_colorName_title(wasWebcolor,color_name,nocolor=True)
         + " ("
         + color_GetANSICode(color_RGB_list[0],color_RGB_list[1],color_RGB_list[2])
         + '████' 
@@ -156,10 +214,7 @@ if (params_nocolorrendering == True):
     )
 else:
     print(
-            "\033[33mClosest name: \033[0m"
-        + color_GetANSICode(color_RGB_list[0],color_RGB_list[1],color_RGB_list[2])
-        + color_name
-        + "\033[0m"
+            get_colorName_title(wasWebcolor,color_name,color_RGB_list)
         + " ("
         + color_GetANSICode(color_RGB_list[0],color_RGB_list[1],color_RGB_list[2])
         + '████' 

@@ -125,37 +125,15 @@ def find_absname(cmdletData,command):
 def safe_exit(code=None):
     raise CrosshellExit(code)
 
-def execute_expression(csSession,command=str,args=list,capture=False,globalValues=dict,entries=list,inpipeLine=None):
-    '''CSlib.execution: Main expression executer.
-
-    Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!
-    ^ Except the ones added by this function:
-     - argv/sargv:   arguments sent to cmdlet
-     - CSScriptRoot: path to parent of cmdlet
-     - CSScriptData: dictionary containing cmdlet data, inkl. reader
-     - CS_PackDir:   The /packages path
-     - CS_CurDir:    The current dictionary from the sesison (shortcut)
-     - CS_BaseDir:   The base directory of crosshell (/) from session (shortcut)
-     - CS_CoreDir:   The core directory of crosshell (/core) from session (shortcut)
-     - input:        if capture is set to true a custom "safe" input function will be set ("safe" = buffer safe)
-     - exit:         crosshell will replace the standard exit function with a "safe" one ("safe" = non-crosshell terminating)
-     - CS_oinput:    the standard input function
-     - CS_oexit:     the standard exit function
-
-    '''
-    # Some setting up
-    captured_output = None
+def getCmdletData(csSession,command,args):
     ## use tmp var incase nontype return
     command,addArgs = find_absname(csSession.registry["cmdlets"],command)
     if addArgs != None:
         args.extend(addArgs)
-    _cmdletData = get_command_data(command,csSession.registry)
-    ## handle no cmdlet found
-    if _cmdletData == None:
-        csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
-    ## copy to var that can be used (copy needed to not f with registry)
-    cmdletData = _cmdletData.copy()
-    reader = determine_reader(cmdletData["fending"],csSession.registry)
+    cmdletData = get_command_data(command,csSession.registry)
+    return command,args,cmdletData
+
+def getGlobals(csSession,command,args,cmdletData,globalValues,entries,reader,capture=False,inpipeLine=False):
     # Fix global values to use
     if cmdletData["options"]["restrictionMode"].lower() != "internal" or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
         globalValues = prep_globals(globalValues,entries)
@@ -183,6 +161,8 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
     # add elementsAfter if passed
     if inpipeLine != None:
         globalValues["CS_InPipeline"] = inpipeLine
+    else:
+        globalValues["CS_InPipeline"] = False
     # Safe exit handling
     if csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit"):
         globalValues["exit"] = safe_exit # overwrite exit
@@ -195,7 +175,6 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         buffer = BufferedStdout(sys.stdout,input)
         buffer.printToConsole = False
         old_stdout = sys.stdout
-        sys.stdout = buffer
         globalValues["buffer_bwrite"] = buffer.bwrite
         globalValues["buffer_cwrite"] = buffer.cwrite
         globalValues["buffer_cwrite_adv"] = buffer.cwrite_adv
@@ -203,6 +182,44 @@ def execute_expression(csSession,command=str,args=list,capture=False,globalValue
         globalValues["buffer_cwrite_autoNL"] = buffer.cwrite_autoNL
         globalValues["input"] = buffer.safe_input
         globalValues["CS_oinput"] = input
+    else:
+        buffer = None
+        old_stdout = None
+    # Reuturn
+    return globalValues,ept,old_stdout,buffer
+
+def execute_expression(csSession,command=str,args=list,capture=False,globalValues=dict,entries=list,inpipeLine=None):
+    '''CSlib.execution: Main expression executer.
+
+    Entries are a list of al globalValue entries that should be included, no other ones will get sent to the cmdlet!
+    ^ Except the ones added by this function:
+     - argv/sargv:   arguments sent to cmdlet
+     - CSScriptRoot: path to parent of cmdlet
+     - CSScriptData: dictionary containing cmdlet data, inkl. reader
+     - CS_PackDir:   The /packages path
+     - CS_CurDir:    The current dictionary from the sesison (shortcut)
+     - CS_BaseDir:   The base directory of crosshell (/) from session (shortcut)
+     - CS_CoreDir:   The core directory of crosshell (/core) from session (shortcut)
+     - input:        if capture is set to true a custom "safe" input function will be set ("safe" = buffer safe)
+     - exit:         crosshell will replace the standard exit function with a "safe" one ("safe" = non-crosshell terminating)
+     - CS_oinput:    the standard input function
+     - CS_oexit:     the standard exit function
+
+    '''
+    # Some setting up
+    captured_output = None
+    ## use tmp var incase nontype return
+    command,args,_cmdletData = getCmdletData(csSession,command,args)
+    ## handle no cmdlet found
+    if _cmdletData == None:
+        csSession.deb.perror("lng:cs.cmdletexec.notfound, txt:Cmdlet '{command}' not found!",{"command":command,"args":args},raiseEx=True)
+    ## copy to var that can be used (copy needed to not f with registry)
+    cmdletData = _cmdletData.copy()
+    reader = determine_reader(cmdletData["fending"],csSession.registry)
+    # Get globals and stdout based on abunch of stuff
+    globalValues,ept,old_stdout,buffer = getGlobals(csSession,command,args,cmdletData,globalValues,entries,reader,capture,inpipeLine)
+    if capture == True:
+        sys.stdout = buffer
     # Execute script
     CatchSystemExit   = csSession.data["set"].getProperty("crsh","Execution.SafelyHandleExit")
     HandleCmdletError = csSession.data["set"].getProperty("crsh","Execution.HandleCmdletError")
@@ -373,6 +390,8 @@ def input_to_pipelineStructure(csSession,sinput=str,basicExecutionDelimiters=["|
 from .datafiles import _fileHandler
 
 def execute_string(string,csSession,capture=False,globalVals={},entries=None):
+    print(string)
+    # Get entries
     _entries = _fileHandler("json","get",csSession.data["gef"])
     if entries != [] and entries != None:
         entries.extend(_entries)

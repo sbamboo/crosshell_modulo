@@ -1,0 +1,8 @@
+{
+    "package": {
+        "author": "Crosshell",
+        "description": "Example package",
+        "installScript": "{parent}\\install.py",
+        "uninstallScript": "{root}\\uninstall.py"
+    }
+}

@@ -1,0 +1,16 @@
+{
+    "cmdlets": {
+        "uniToChar":{
+            "desc": "Converts any chartool-unicode-char to its character."
+        },
+        "uniToCp":{
+            "desc": "Converts any chartool-unicode-char to its codepage number."
+        },
+        "uniToForm":{
+            "desc": "Converts any chartool-unicode-char to its eqivalent in crosshell."
+        },
+        "uniToHex":{
+            "desc": "Converts any chartool-unicode-char to its hexcode."
+        }
+    }
+}

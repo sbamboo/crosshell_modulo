@@ -23,7 +23,10 @@ while True:
     setConTitle( title )
     # Get prefix and ask user for input
     _prefix = getPrefix(csSession,"> ")
-    CS_LastInput = input(_prefix)
+    if CS_Registry["sInputInstance"] != None:
+        CS_LastInput = CS_Registry["sInputInstance"].prompt(_prefix)
+    else:
+        CS_LastInput = input(_prefix)
     CS_LastOutput = None
     # Execute input
     if CS_LastInput != "":

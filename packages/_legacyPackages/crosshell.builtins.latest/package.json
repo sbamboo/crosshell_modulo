@@ -1,100 +1,115 @@
 {
-    "ask": {
-        "desc": "Prompts the user for input.",
-        "args": "<prompt>",
-        "aliases": ["read"]
-    },
-    "basedir": {
-        "desc": "Returns crosshells basedir path as a string."
-    },
-    "cd": {
-        "desc": "Moves to a diffrent directory.",
-        "args": "<path-string>",
-        "aliases": ["change-directory","changedir","set-directory"]
-    },
-    "clearvars": {
-        "desc": "Clears the croshell user-defined variables.",
-        "aliases": ["clr"],
-        "args": "optional:--force"
-    },
-    "cls": {
-        "desc": "Clears the console.",
-        "aliases": ["clear"]
-    },
-    "exit": {
-        "desc": "Exits crosshell."
-    },
-    "false": {
-        "desc": "Returns false."
-    },
-    "format": {
-        "desc": "Returns a formatted string."
-    },
-    "get": {
-        "desc": "Gets a variables value.",
-        "args": "<name>"
-    },
-    "getpathables": {
-        "desc": "Prints out a list of al pathables/cmdlets in crosshell.",
-        "aliases": ["get-pathables","getcmdlets","get-cmdlets"]
-    },
-    "guide": {
-        "desc": "Guide for crosshell."
-    },
-    "noformat": {
-        "desc": "Returns any input but enclosing it in format-escapes.",
-        "aliases": ["unformat"],
-        "args": "<string>"
-    },
-    "print": {
-        "desc": "Returns any input. (Effectly printing it)",
-        "aliases": ["p","conout","echo"],
-        "args": "<string>"
-    },
-    "prefix": {
-        "desc": "Cmdlet for managing crosshells prefix.",
-        "args": "<content> -set/-s -get/-g -reset/-r -dir -enable -disable"
-    },
-    "red": {
-        "desc": "Returns any input put surrounded by red formatting.",
-        "args": "<string>"
-    },
-    "reload": {
-        "desc": "Reloads the console.",
-        "options": {
-            "restrictionMode": "internal"
+    "cmdlets": {
+        "ask": {
+            "desc": "Prompts the user for input.",
+            "args": "<prompt>",
+            "aliases": ["read"]
         },
-        "aliases": ["visreload:--vis"]
-    },
-    "set": {
-        "desc": "Sets a variable",
-        "args": "<name> <value> <optional:type>"
-    },
-    "shellinf": {
-        "desc": "Shows information on your enviroment (Crosshell-Info)",
-        "args": "<name> <value> <optional:type>"
-    },
-    "stripansi": {
-        "desc": "Strips input of ansi sequences.",
-        "args": "<string>"
-    },
-    "title": {
-        "desc": "Cmdlet for managing crosshells title.",
-        "args": "<content> -set/-s -reset/-r"
-    },
-    "true": {
-        "desc": "Returns true."
-    },
-    "versionassistant": {
-        "desc": "Crosshells version assistant.",
-        "aliases": ["version","ver"]
-    },
-    "webi": {
-        "desc": "Cmdlet for getting information from crosshell webinfo (webi).",
-        "args": "<id> -o/-open -list"
-    },
-    "welcome": {
-        "desc": "Shows the console welcome message.",
-        "aliases": ["hwelcome","hwelc","hhead"]
+        "basedir": {
+            "desc": "Returns crosshells basedir path as a string."
+        },
+        "cd": {
+            "desc": "Moves to a diffrent directory.",
+            "args": "<path-string>",
+            "aliases": ["change-directory","changedir","set-directory"]
+        },
+        "clearvars": {
+            "desc": "Clears the croshell user-defined variables.",
+            "aliases": ["clr"],
+            "args": "optional:--force"
+        },
+        "cls": {
+            "desc": "Clears the console.",
+            "aliases": ["clear"]
+        },
+        "exit": {
+            "desc": "Exits crosshell."
+        },
+        "false": {
+            "desc": "Returns false."
+        },
+        "format": {
+            "desc": "Returns a formatted string."
+        },
+        "get": {
+            "desc": "Gets a variables value.",
+            "args": "<name>"
+        },
+        "getpathables": {
+            "desc": "Prints out a list of al pathables/cmdlets in crosshell.",
+            "aliases": ["get-pathables","getcmdlets","get-cmdlets"]
+        },
+        "guide": {
+            "desc": "Guide for crosshell."
+        },
+        "noformat": {
+            "desc": "Returns any input but enclosing it in format-escapes.",
+            "aliases": ["unformat"],
+            "args": "<string>"
+        },
+        "pause": {
+            "desc": "Pauses.",
+            "args": "<optional:str>"
+        },
+        "pipi": {
+            "desc": "Runs input to current executing python's pip. (cslib.intpip)",
+            "args": "<pip-args:str>"
+        },
+        "print": {
+            "desc": "Returns any input. (Effectly printing it)",
+            "aliases": ["p","conout","echo"],
+            "args": "<string> -o"
+        },
+        "prefix": {
+            "desc": "Cmdlet for managing crosshells prefix.",
+            "args": "<content> -set/-s -get/-g -reset/-r -dir -enable -disable"
+        },
+        "red": {
+            "desc": "Returns any input put surrounded by red formatting.",
+            "args": "<string>"
+        },
+        "reload": {
+            "desc": "Reloads the console.",
+            "args": "-v/--vis/v",
+            "options": {
+                "restrictionMode": "internal"
+            },
+            "aliases": ["visreload:--vis"]
+        },
+        "set": {
+            "desc": "Sets a variable",
+            "args": "<name> <value> <optional:type>"
+        },
+        "shellinf": {
+            "desc": "Shows information on your enviroment (Crosshell-Info)",
+            "args": "<name> <value> <optional:type>"
+        },
+        "stripansi": {
+            "desc": "Strips input of ansi sequences.",
+            "args": "<string>"
+        },
+        "sysc": {
+            "desc": "Runs input like a shell-command.",
+            "args": "<string>"
+        },
+        "title": {
+            "desc": "Cmdlet for managing crosshells title.",
+            "args": "<content> -set/-s -reset/-r"
+        },
+        "true": {
+            "desc": "Returns true."
+        },
+        "versionassistant": {
+            "desc": "Crosshells version assistant.",
+            "aliases": ["version","ver"]
+        },
+        "webi": {
+            "desc": "Cmdlet for getting information from crosshell webinfo (webi).",
+            "args": "<id> -o/-open -list"
+        },
+        "welcome": {
+            "desc": "Shows the console welcome message.",
+            "aliases": ["hwelcome","hwelc","hhead"]
+        }
     }
 }

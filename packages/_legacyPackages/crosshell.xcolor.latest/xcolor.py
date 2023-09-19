@@ -1,3 +1,5 @@
+# Coloring library made by Simon Kalmi Claesson
+
 from cslib import autopipImport
 #import webcolors
 webcolors = autopipImport("webcolors")
@@ -402,7 +404,7 @@ def autoToAnsiStr(value=str) -> str:
     elif t == "hex":
         return hex_to_ansi(str_to_hex(value))
     elif t == "webcolor":
-        return webcolor_to_ansi(webcolor)
+        return webcolor_to_ansi(value)
     elif t == "str":
         return str_to_ansi(value)
 

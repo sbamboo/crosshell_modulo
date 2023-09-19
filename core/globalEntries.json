@@ -2,5 +2,7 @@
     "csSession",
     "fprint",
     "csLoadPackageData",
-    "fromPath"
+    "fromPath",
+    "intpip",
+    "autopipImport"
 ]

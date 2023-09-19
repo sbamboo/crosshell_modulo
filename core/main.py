@@ -1,8 +1,6 @@
 import os
 import sys
 import inspect
-from cslib import crshDebug
-from cslib._crosshellParsingEngine import exclude_nonToFormat,include_nonToFormat
 
 '''
 Variables:
@@ -32,12 +30,19 @@ Variables/Settings:
   CS_lPackPath:            Path of lPackages/legacyPackages (the folder to install to)
 '''
 
+# [First things first]
+# Enable ansi on windows
+os.system("")
+
 # [Imports from cslib]
 from cslib import *
+from cslib._crosshellParsingEngine import exclude_nonToFormat,include_nonToFormat
 from cslib._crosshellParsingEngine import pathtagManager,crosshellParsingEngine
 from cslib._crosshellGlobalTextSystem import crosshellGlobalTextSystem,standardHexPalette
-from cslib._crosshellMpackageSystem import loadPackages
+from cslib._crosshellMpackageSystem import loadPackages,getPackageDataFromList
 from cslib._crosshellModularityEngine import linkedFileModularise
+from cslib.smartInput import sInputPrompt
+from cslib.datafiles import setKeyPath,getKeyPath
 
 # [Settings]
 CS_ModuleReplacebleNames = ["console.py","inpparse.py","exec.py"]
@@ -46,6 +51,7 @@ CS_CoreDir_RetrivalMode = "inspect"
 CS_SettingsFile = f"{os.sep}assets{os.sep}settings.yaml"
 CS_PersistanceFile = f"{os.sep}core{os.sep}persistance.yaml"
 CS_DefSessionFile = f"{os.sep}core{os.sep}default.session"
+CS_sInputHistoryFile = f"{os.sep}assets{os.sep}.history"
 CS_PackagesFolder = f"{os.sep}packages"
 CS_GlobalEntriesFile = f"{os.sep}globalEntries.json"
 CS_VersionFile = f"{os.sep}version.yaml"
@@ -55,8 +61,6 @@ CS_BuiltInReaders = {"PLATFORM_EXECUTABLE":f"{'{CS_CoreDir}'}{os.sep}readers{os.
 
 
 # [Setup]
-# Enable ansi on windows
-os.system("")
 # Handle mainfile argument
 CS_Args = sys.argv
 CS_Startfile = "Unknown"
@@ -111,55 +115,87 @@ CS_Persistance.addModule("crsh")
 # Add settings main module
 CS_Settings.addModule("crsh")
 
-# Add settings
-CS_Settings.addProperty("crsh","Console.DefPrefix","> ")
-CS_Settings.addProperty("crsh","Console.DefTitle","Crosshell Modulo")
-CS_Settings.addProperty("crsh","Console.PrefixEnabled",True)
-CS_Settings.addProperty("crsh","Console.PrefixShowDir",True)
-CS_Settings.addProperty("crsh","Console.DynamicPrefixes",True)
-CS_Settings.addProperty("crsh","Console.RestrictDynPrefixes", False)
+# Setup first settings
+CS_Settings.addProperty("crsh","Console.VerboseStart", True)
 CS_Settings.addProperty("crsh","Console.StripAnsi", False)
-CS_Settings.addProperty("crsh","Console.FormatOutMode", "format")
-CS_Settings.addProperty("crsh","Console.ClearOnStart", True)
-CS_Settings.addProperty("crsh","Console.Welcome.ShowOnStart", True)
-CS_Settings.addProperty("crsh","Console.Welcome.ShowVersionNotice", True)
-CS_Settings.addProperty("crsh","Console.Welcome.ShowProfile", True)
-CS_Settings.addProperty("crsh","Execution.HandleCmdletError", True)
-CS_Settings.addProperty("crsh","Execution.PrintCmdletDebug", False)
-CS_Settings.addProperty("crsh","Execution.SplitByNewline", True)
-CS_Settings.addProperty("crsh","Execution.SafelyHandleExit",True)
-CS_Settings.addProperty("crsh","Execution.OnlyAllowCmdlets",False)
-CS_Settings.addProperty("crsh","Execution.PrintComments",True)
-CS_Settings.addProperty("crsh","Parse.Text.Webcolors", True)
-CS_Settings.addProperty("crsh","Formats.DefaultEncoding",CS_DefaultEncoding)
+from cslib.progressMsg import startupMessagingWProgress
+st = startupMessagingWProgress(CS_Settings.getProperty("crsh","Console.VerboseStart"),CS_Settings.getProperty("crsh","Console.StripAnsi"),crshDebug,pgMax=30,pgIncr=3)
+
+# VERBOSE START #
+st.verb("Loading settings...")
+
+# Add settings
+## get data
+_set = CS_Settings.getModule("crsh")
+_set = setKeyPath(_set,"Console.DefPrefix","> ")
+_set = setKeyPath(_set,"Console.DefTitle","Crosshell Modulo")
+_set = setKeyPath(_set,"Console.PrefixEnabled",True)
+_set = setKeyPath(_set,"Console.PrefixShowDir",True)
+_set = setKeyPath(_set,"Console.DynamicPrefixes",True)
+_set = setKeyPath(_set,"Console.RestrictDynPrefixes", False)
+_set = setKeyPath(_set,"Console.FormatOutMode", "format")
+_set = setKeyPath(_set,"Console.ClearOnStart", True)
+_set = setKeyPath(_set,"Console.Welcome.ShowOnStart", True)
+_set = setKeyPath(_set,"Console.Welcome.ShowVersionNotice", True)
+_set = setKeyPath(_set,"Console.Welcome.ShowProfile", True)
+_set = setKeyPath(_set,"Execution.HandleCmdletError", True)
+_set = setKeyPath(_set,"Execution.PrintCmdletDebug", False)
+_set = setKeyPath(_set,"Execution.SplitByNewline", True)
+_set = setKeyPath(_set,"Execution.SafelyHandleExit",True)
+_set = setKeyPath(_set,"Execution.OnlyAllowCmdlets",False)
+_set = setKeyPath(_set,"Execution.PrintComments",True)
+_set = setKeyPath(_set,"Parse.Text.Webcolors", True)
+_set = setKeyPath(_set,"Formats.DefaultEncoding",CS_DefaultEncoding)
 CS_Settings.encoding = CS_Settings.getProperty("crsh", "Formats.DefaultEncoding")
-CS_Settings.addProperty("crsh","Language.Loaded",{"1":"en-us"})
-CS_Settings.addProperty("crsh","Language._choices",[])
-CS_Settings.addProperty("crsh","Language.DefaultList",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}langlist.json")
-CS_Settings.addProperty("crsh","Language.ListFormat","json")
-CS_Settings.addProperty("crsh","Language.LangFormat","json")
-CS_Settings.addProperty("crsh","Language.LoadSameSuffixedLangs",True)
-CS_Settings.addProperty("crsh","Version.VerFile", f"{'{CS_CoreDir}'}{CS_VersionFile}")
-CS_Settings.addProperty("crsh","Version.FileFormatVer", "1")
-CS_Settings.addProperty("crsh","Packages.Options.LoadInFileHeader",False)
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON",["py"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Cmdlets.PLATFORM_EXECUTABLE",["win@exe","win@cmd","win@bat","lnx;mac@MIME_EXECUTABLE"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo",["mpackage","mpack","csmpack"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy",["package","pack","cspack"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Conf", ["cfg","config","conf"])
-CS_Settings.addProperty("crsh","Packages.AllowedFileTypes.CmdletFiles.Pack", ["json","cfg","conf","config"])
-CS_Settings.addProperty("crsh","Packages.Readers.ReaderFile",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}readerfiles.json")
-CS_Settings.addProperty("crsh","Packages.Formatting.Palettes.Selected",None)
-CS_Settings.addProperty("crsh","Packages.Formatting.Palettes._choices",[])
-CS_Settings.addProperty("crsh","Packages.Formatting.Mappings.Selected",None)
-CS_Settings.addProperty("crsh","Packages.Formatting.Mappings._choices",[])
-CS_Settings.addProperty("crsh","CGTS.ANSI_Hex_Palette",standardHexPalette)
-CS_Settings.addProperty("crsh","CGTS.CustomMappings",{})
+_set = setKeyPath(_set,"Language.Loaded",{"1":"en-us"})
+_set = setKeyPath(_set,"Language._choices",[])
+_set = setKeyPath(_set,"Language.DefaultList",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}langlist.json")
+_set = setKeyPath(_set,"Language.ListFormat","json")
+_set = setKeyPath(_set,"Language.LangFormat","json")
+_set = setKeyPath(_set,"Language.LoadSameSuffixedLangs",True)
+_set = setKeyPath(_set,"SmartInput.Enabled",True)
+_set = setKeyPath(_set,"SmartInput.TabComplete",True)
+_set = setKeyPath(_set,"SmartInput.History",True)
+_set = setKeyPath(_set,"SmartInput.Highlight",True)
+_set = setKeyPath(_set,"SmartInput.ShowToolbar",True)
+_set = setKeyPath(_set,"SmartInput.MultiLine",False)
+_set = setKeyPath(_set,"SmartInput.MouseSupport",True)
+_set = setKeyPath(_set,"SmartInput.LineWrap",True)
+_set = setKeyPath(_set,"SmartInput.CursorChar","BLINKING_BEAM")
+_set = setKeyPath(_set,"SmartInput.Completions.IncludeStandards",True)
+_set = setKeyPath(_set,"SmartInput.Completions.IncludeArgs",True)
+_set = setKeyPath(_set,"SmartInput.Completions.IncludeCmdCustoms",True)
+_set = setKeyPath(_set,"SmartInput.Completions.HideByContext",False)
+_set = setKeyPath(_set,"SmartInput.HistorySuggest",True)
+_set = setKeyPath(_set,"SmartInput.HistoryType","File")
+_set = setKeyPath(_set,"SmartInput.HistoryFile",f"{'{CS_BaseDir}'}{CS_sInputHistoryFile}")
+_set = setKeyPath(_set,"SmartInput.Styling.Enabled",True)
+_set = setKeyPath(_set,"SmartInput.Styling.Inject",True)
+_set = setKeyPath(_set,"SmartInput.Styling.Options",{"bottom-toolbar":"ansigreen"})
+_set = setKeyPath(_set,"SmartInput.Styling.Completions",{"cmd":"fg:green","arg":"fg:red","custom":"fg:blue"})
+_set = setKeyPath(_set,"Version.VerFile", f"{'{CS_CoreDir}'}{CS_VersionFile}")
+_set = setKeyPath(_set,"Version.FileFormatVer", "1")
+_set = setKeyPath(_set,"Packages.Options.LoadInFileHeader",False)
+_set = setKeyPath(_set,"Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON",["py"])
+_set = setKeyPath(_set,"Packages.AllowedFileTypes.Cmdlets.PLATFORM_EXECUTABLE",["win@exe","win@cmd","win@bat","lnx;mac@MIME_EXECUTABLE"])
+_set = setKeyPath(_set,"Packages.AllowedFileTypes.Packages.Modulo",["mpackage","mpack","csmpack"])
+_set = setKeyPath(_set,"Packages.AllowedFileTypes.Packages.Legacy",["package","pack","cspack"])
+_set = setKeyPath(_set,"Packages.AllowedFileTypes.CmdletFiles.Conf", ["cfg","config","conf"])
+_set = setKeyPath(_set,"Packages.AllowedFileTypes.CmdletFiles.Pack", ["json","cfg","conf","config"])
+_set = setKeyPath(_set,"Packages.Readers.ReaderFile",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}readerfiles.json")
+_set = setKeyPath(_set,"Packages.Formatting.Palettes.Selected",None)
+_set = setKeyPath(_set,"Packages.Formatting.Palettes._choices",[])
+_set = setKeyPath(_set,"Packages.Formatting.Mappings.Selected",None)
+_set = setKeyPath(_set,"Packages.Formatting.Mappings._choices",[])
+_set = setKeyPath(_set,"CGTS.ANSI_Hex_Palette",standardHexPalette)
+_set = setKeyPath(_set,"CGTS.CustomMappings",{})
+CS_Settings.set("crsh",_set)
 
 # Default persistance
 CS_Persistance.addProperty("crsh","Prefix",CS_Settings.getProperty("crsh","Console.DefPrefix"))
 CS_Persistance.addProperty("crsh","Title",CS_Settings.getProperty("crsh","Console.DefTitle"))
 CS_Persistance.addProperty("crsh","HasShownGuide",False)
+CS_Persistance.addProperty("crsh","sInput.btoolbar_msg",None)
 
 # Add function to quickly get encoding
 def CS_GetEncoding():
@@ -174,6 +210,9 @@ CS_Settings.addProperty("crsh_debugger","Execution.AllowRunAsInternal", True)
 # Load debug mode from settings
 crshDebug.setScope(CS_Settings.getProperty("crsh_debugger", "Scope"))
 
+# VERBOSE START #
+st.verb("Loading formatter...")
+
 # Initate a formatter instance
 palette = CS_Settings.getProperty("crsh","CGTS.ANSI_Hex_Palette")
 customMappings = CS_Settings.getProperty("crsh","CGTS.CustomMappings")
@@ -182,6 +221,9 @@ crshDebug.setFormatterInstance(CS_Text) # Attatch the formatter to the Debugger
 
 # Set stripansi
 CS_Text.stripAnsi = CS_Settings.getProperty("crsh","Console.StripAnsi")
+
+# VERBOSE START #
+st.verb("Does it work? {#DA70D6}*Toad*{r}")
 
 # Define a formattedPrint function using the formatter instance
 def fprint(text,end=None):
@@ -192,6 +234,9 @@ def fprint(text,end=None):
     print(text)
   else:
     print(text,end=end)
+
+# VERBOSE START #
+st.verb("Loading language provider...")
 
 # Create language path
 CS_LangpathObj = pathObject([
@@ -212,6 +257,9 @@ CS_lp = crosshellLanguageProvider(
 )
 crshDebug.setLanguageProvider(CS_lp) # Attach the language provider to the Debugger
 
+# VERBOSE START #    not_translatable
+st.verb(f"Populating languageList... (len: {len(CS_lp.languageList)})",l="cs.startup.populanglist._nonadrss_",ct={"len":len(CS_lp.languageList)})
+
 # Populate language file
 CS_lp.populateList()
 
@@ -229,6 +277,9 @@ CS_packFilePathObj = pathObject([
 ])
 for path in CS_packFilePathObj.get(): filesys.ensureDirPath(path) # Ensure al paths exists
 
+# VERBOSE START #
+st.verb("Loading packages...",l="cs.startup.loadpkgs")
+
 # Retrive a list of packages in /packages and install those waiting for it, then add it to the packagesLabeledList
 CS_packageList = {
   "modulo": loadPackages(
@@ -244,6 +295,7 @@ CS_packageList = {
   )
 }
 
+
 # [Get version info]
 CS_VersionData = crosshellVersionManager_getData(
   versionFile=   CS_PathtagMan.eval(CS_Settings.getProperty("crsh","Version.VerFile")),
@@ -251,7 +303,12 @@ CS_VersionData = crosshellVersionManager_getData(
   encoding=      CS_Settings.getProperty("crsh","Formats.DefaultEncoding")
 )
 
+
 # [Populate session]
+
+# VERBOSE START #
+st.verb(f"Populating session...",l="cs.startup.populatesession")
+
 # Link
 CS_Registry = csSession.registry
 # Populate
@@ -272,6 +329,14 @@ csSession.data["msp"] = f"{CS_BaseDir}{CS_MsgProfileFile}"
 csSession.data["pyp"] = f"{CS_BaseDir}{CS_PyProfileFile}"
 csSession.deb = crshDebug
 CS_Registry["packages"] = CS_packageList
+CS_Registry["packageData"] = getPackageDataFromList(CS_packageList,CS_DefaultEncoding)
+
+# sinput thing
+if CS_Settings.getProperty("crsh","SmartInput.Enabled") == True:
+  CS_Registry["sInputInstance"] = sInputPrompt(csSession)
+else:
+  CS_Registry["sInputInstance"] = None
+
 
 # [Setup Module Linkers]
 # Create objs
@@ -282,7 +347,12 @@ CS_Console = CS_ModuleReplacebles["console.py"]["obj"]
 CS_Inpparse = CS_ModuleReplacebles["inpparse.py"]["obj"]
 CS_Exec = CS_ModuleReplacebles["exec.py"]["obj"]
 
+
 # [Load package data]
+
+# VERBOSE START #
+st.verb(f"Loading readers...",l="cs.startup.loadreaders")
+
 CS_Registry["dynPrefix"] = {}
 # Find readerData
 CS_Registry["readerData"] = toReaderFormat(
@@ -331,8 +401,16 @@ def csLoadPackageData(packageList=dict,CS_Registry=dict):
       confFileExts=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.CmdletFiles.Conf"),
       rootFileExts=CS_Settings.getProperty("crsh", "Packages.AllowedFileTypes.CmdletFiles.Pack")
     )
+
+# VERBOSE START #
+amnt = len(CS_packageList.get("legacy")) + len(CS_packageList.get("modulo"))
+st.verb("Loading package data... (Pkgs: {amnt})",l="cs.startup.loadpkgdata",ct={"amnt":amnt})
+
 # Execute loaderFunction into registry
 csLoadPackageData(CS_packageList,CS_Registry)
+
+# VERBOSE START #
+st.verb(f"Finishing up before console...",l="cs.startup.finishingup")
 
 # [Update formatting choices]
 try:
@@ -387,5 +465,9 @@ for key,value in CS_StdVars.items():
 
 # [Execute console]
 csSession.data["dir"] = CS_BaseDir
+
+# Clear if was verbose-start
+if CS_Settings.getProperty("crsh","Console.VerboseStart") == True:
+    st.clr()
 
 CS_Console.execute_internally(globals())

@@ -7,6 +7,7 @@ import sys
 import os
 import re
 import importlib
+import random
 
 from cslib.externalLibs.limitExec import DummyObject
 
@@ -316,6 +317,10 @@ def recheckLanguageList(languageListFile,listFormat=None,returnDontRemove=False,
     else:
         _fileHandler(listFormat, "set", languageListFile, newLanguageList,encoding=encoding)
 
+def _handleAnsi(text):
+    '''CSlib: Smal function to handle the &<ansi>m format.'''
+    return re.sub(r'&(\d+)m', r'\033[\1m', text)
+
 class crosshellLanguageProvider():
     '''CSlib: Crosshell language system.'''
     def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False):
@@ -405,7 +410,7 @@ class crosshellLanguageProvider():
         self.language = self.defLanguage.copy()
         self.load()
     def _handleAnsi(self,text):
-        return re.sub(r'&(\d+)m', r'\033[\1m', text)
+        return _handleAnsi(text)
     def _handlePathTags(self,text,extraPathTags=None):
         return self.pathtagManInstance.eval(text,extraPathTags)
     def _handle(self,text,extraPathTags=None):
@@ -413,6 +418,15 @@ class crosshellLanguageProvider():
             text = self._handleAnsi(text)
             text = self._handlePathTags(text,extraPathTags)
         return text
+    def _handle_rollings(self,req):
+        matches = []
+        for key in self.languageData.keys():
+            if key.startswith(req):
+                matches.append(key)
+        if matches == []:
+            return req
+        else:
+            return self.languageData.get(random.choice(matches))
     def print(self,textId,defaultText=None,reloadMode="None",ept=None):
         '''Prints a text from the current language, and if needed reloads the language. reloadMode can be 'lang', 'list' or 'both' '''
         if reloadMode == "lang":
@@ -423,7 +437,10 @@ class crosshellLanguageProvider():
             self.relist()
             self.load()
         try:
-            text = self.languageData.get(textId)
+            if textId.endswith("_rolling_"):
+                text = self._handle_rollings(textId)
+            else:
+                text = self.languageData.get(textId)
             text = self._handle(text,ept)
             if text == None and type(text) == str:
                 print(self._handle(defaultText,ept))
@@ -440,7 +457,10 @@ class crosshellLanguageProvider():
         elif reloadMode == "both":
             self.relist()
             self.load()
-        text = self.languageData.get(textId)
+        if textId.endswith("_rolling_"):
+            text = self._handle_rollings(textId)
+        else:
+            text = self.languageData.get(textId)
         text = self._handle(text,ept)
         return text
     def getLanguageData(self) -> dict:
@@ -1037,3 +1057,23 @@ def writeWelcome(csSession):
     else:
         csSession.deb.pmsg("lng:cs.welcome.msg.guide",noPrefix=True)
         csSession.data["per"].chnProperty("crsh","HasShownGuide",True)
+
+
+class startupMessaging():
+    def __init__(self,enabled=True,stripAnsi=True,debugger=None):
+        self.enabled = enabled
+        self.stripAnsi = stripAnsi
+        self.debugger = debugger
+        if self.debugger == None:
+            self.debugger = crosshellDebugger()
+    def verb(self,text,l=None,scope="info",noPrefix=False):
+        '''l: langID'''
+        if self.debugger.scope == self.debugger.defScope:
+            scope = self.debugger.defScope
+        if l != None:
+            if self.debugger.languageProvider != None:
+                self.debugger.print(f"lng:{l}",onScope=scope,noPrefix=noPrefix)
+            else:
+                self.debugger.print(text,onScope=scope,noPrefix=noPrefix)
+        else:
+            self.debugger.print(text,onScope=scope,noPrefix=noPrefix)

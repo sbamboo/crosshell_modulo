@@ -1,7 +1,22 @@
 import os
 import ast
 
+import threading
+
 from cslib.execution import execute_string
+
+def check_files_with_pattern(filepath, seenFiles, max_count=100):
+    found = False
+    if os.path.exists(filepath):
+        found = filepath
+    else:
+        for i in range(1, max_count + 1):
+            filename = f"{filepath}_{i}"
+            if filename not in seenFiles:
+                if os.path.exists(filename):
+                    found = filename
+                    break
+    return found
 
 def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=bool,globalValues=dict):
     ps1file = cmddata["path"]
@@ -17,10 +32,10 @@ def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=
         _passbackVars = cmddata["extras"].get("pwsh.returnCSVars")
         _legacyNames = cmddata["extras"].get("pwsh.legacyNames")
         _allowFuncCalls = cmddata["extras"].get("pwsh.allowFuncCalls")
-        if _sendVars in _true: sendVars = True
-        if _passbackVars in _true: passbackVars = True
-        if _legacyNames in _true: legacyNames = True
-        if _allowFuncCalls in _true: allowFuncCalls = True
+        if _sendVars in _true and _sendVars != None: sendVars = True
+        if _passbackVars in _true and _passbackVars != None: passbackVars = True
+        if _legacyNames in _true and _legacyNames != None: legacyNames = True
+        if _allowFuncCalls in _true and _allowFuncCalls != None: allowFuncCalls = True
     pwshPath = "pwsh"
     sendBackVars = {}
     # Get .pwsh folder
@@ -65,29 +80,33 @@ def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=
         if os.path.exists(exitFile) == True:
             os.remove(exitFile)
         # Run the runtime script
+        def run_pwsh(rtcommand):
+            os.system(rtcommand)
         rtcommand = f'{pwshPath} {runtime} {ps1file} "{vars}" {passbackVars} {legacyNames} {allowFuncCalls}'
-        os.system(rtcommand)
+        pwsh_thread = threading.Thread(target=run_pwsh, args=(rtcommand,))
+        pwsh_thread.start()
         # Handle passbacks if enabled
         if passbackVars == True:
             # While loop to wait for passbackfiles
+            seenFiles = []
             while True:
                 # If allowFuncCalls check for functionCalls
-                if os.path.exists(funcCallFile) == True:
+                _file = check_files_with_pattern(funcCallFile,seenFiles)
+                if _file != False:
+                    seenFiles.append(_file)
                     # Try getting the content
                     try:
-                        content = open(funcCallFile,'r',encoding=defencoding).read()
+                        content = open(_file,'r',encoding=defencoding).read()
                         content = content.rstrip("\n")
                     except:
                         content = ""
-                    # Remove the file
-                    os.remove(funcCallFile)
                     # Handle decode atempt
                     if "{%1%}" in content or "{%2%}" in content:
                         content = content.replace("{%2%}",'"')
                         content = content.replace("{%1%}","'")
                     # Send call to be executed in crosshell
                     execute_string(content,session,capture=False,globalVals=globalValues)
-                # If a variablePassbackFilee exists break the loop (Since they are post-exec)
+                # If a variablePassbackFile exists break the loop (Since they are post-exec)
                 if os.path.exists(passbackFile) == True:
                     break
             # Handle passback file
@@ -121,6 +140,12 @@ def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=
         # If a exit.empty file exists remove it
         if os.path.exists(exitFile):
             os.remove(exitFile)
+        # Wait for the pwsh-script to finish
+        pwsh_thread.join()
+        # Remove any seenfiles
+        for _file in seenFiles:
+            if os.path.exists(_file):
+                os.remove(_file)
         # return sendback if exists
         if sendBackVars != None:
             return sendBackVars

@@ -14,8 +14,8 @@ crsh:
   Language:
     Loaded:
       '1': en-us
-      '0': sv-se
-    _choices: []
+    _choices:
+    - sv-se
     DefaultList: '{CS_BaseDir}\assets\langlist.json'
     ListFormat: json
     LangFormat: json
@@ -69,7 +69,7 @@ crsh:
     RestrictDynPrefixes: false
     StripAnsi: false
     FormatOutMode: format
-    ClearOnStart: false
+    ClearOnStart: true
     Welcome:
       ShowOnStart: true
       ShowVersionNotice: true

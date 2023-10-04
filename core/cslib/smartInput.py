@@ -48,6 +48,7 @@ class CustomCompleter(Completer):
     def __init__(self,csSession=None):
         self.csSession = csSession
     def get_completions(self, document, complete_event):
+        colorAliases = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.ColorAliases")
         # Get the current word being typed by the user
         word_before_cursor = document.get_word_before_cursor(WORD=True)
         beforeCursor = document.text_before_cursor
@@ -59,7 +60,10 @@ class CustomCompleter(Completer):
             items.append(item)
             aliases = data.get("aliases")
             if aliases != None:
-                items.extend( list(getCleanAliasesDict(aliases).keys()) )
+                if colorAliases == True:
+                    items.extend( [m+"_alias" for m in list(getCleanAliasesDict(aliases).keys())] )
+                else:
+                    items.extend( list(getCleanAliasesDict(aliases).keys()) )
         wMatches = [x for x in items if x.startswith(word_before_cursor) and x != ""]
         # CSSession
         aMatches = []
@@ -116,11 +120,26 @@ class CustomCompleter(Completer):
         if self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.HideByContext") == True:
             if segments[0] in items:
                 se = segments[-1].strip(" ")
+                new_wMatches = []
+                for item in items:
+                    if item.startswith(se) and document.text_before_cursor.endswith(" ") != True:
+                        new_wMatches.append(item)
                 if se.endswith(";") == False and se.endswith("||") == False:
-                    wMatches = []
+                    wMatches = new_wMatches
                 else:
                     aMatches = []
                     cMatches = []
+        ## split aliases and cmds
+        if colorAliases == True:
+            wMatches_cmd = []
+            wMatches_ali = []
+            for item in wMatches:
+                if item.endswith("_alias"):
+                    wMatches_ali.append(item[::-1].replace("saila_","",1)[::-1])
+                else:
+                    wMatches_cmd.append(item)
+        else:
+            wMatches_cmd = wMatches
         ## add objs
         completions.extend(
             [Completion(match, start_position=-len(word_before_cursor), style=styles["arg"]) for match in aMatches]
@@ -129,8 +148,12 @@ class CustomCompleter(Completer):
             [Completion(match, start_position=-len(word_before_cursor), style=styles["custom"]) for match in cMatches]
         )
         completions.extend(
-            [Completion(match, start_position=-len(word_before_cursor), style=styles["cmd"]) for match in wMatches]
+            [Completion(match, start_position=-len(word_before_cursor), style=styles["cmd"]) for match in wMatches_cmd]
         )
+        if colorAliases == True:
+            completions.extend(
+                [Completion(match, start_position=-len(word_before_cursor), style=styles["alias"]) for match in wMatches_ali]
+            )
         # Return a list of Completion objects for the matches
         return completions
 

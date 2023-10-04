@@ -26,6 +26,12 @@ while True:
     if CS_Registry["sInputInstance"] != None:
         CS_LastInput = CS_Registry["sInputInstance"].prompt(_prefix)
     else:
+        # Hide toad if sInput disabled
+        if CS_Registry["toadInstance"].no_si_showToad == True:
+            CS_Registry["toadInstance"].showToad()
+        else:
+            CS_Registry["toadInstance"].remNoSIToad()
+        # Prompt
         CS_LastInput = input(_prefix)
     CS_LastOutput = None
     # Execute input

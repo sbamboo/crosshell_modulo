@@ -10,7 +10,11 @@ def mexpr_eval(mexpr):
     try:
         return eval(mexpr)
     except ZeroDivisionError:
-        csSession.registry["toadInstance"].screamToadNow("\033[41mDividing by zero, dosen't make you a hero! (ZeroDivisionError)")
+        if csSession.registry["toadInstance"].sInputInstance == None:
+            csSession.registry["toadInstance"].timedMsg("\033[31mDividing by zero, dosen't make you a hero! (ZeroDivisionError)",1)
+            csSession.registry["toadInstance"].updNoSIToad()
+        else:
+            csSession.registry["toadInstance"].screamToadNow("\033[31mDividing by zero, dosen't make you a hero! (ZeroDivisionError)")
         return 0
 
 if is_simple_math_expression(sargv):

@@ -78,6 +78,8 @@ def clear():
     # Error message if platform isn't supported
     else:
         raise Exception(f"Error: Platform {platformv} not supported yet!")
+    # SET x,y
+    print("\033[0;0H")
 
 # Pause
 def pause():

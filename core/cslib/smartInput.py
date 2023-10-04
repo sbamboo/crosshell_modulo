@@ -143,16 +143,16 @@ def ptk_style_to_ansi(ptk_style):
             ansi_style += sInput_rgb_to_ansi(rgb,background=False)
     return ansi_style
 
-def update_bottom_toolbar_message(promptSession=None,seti=dict,new_message=str,printer=None):
+def update_bottom_toolbar_message(promptSession=None,seti=dict,new_message=str,printer=None,noformat=False):
     # set session msg
     if promptSession != None:
         promptSession.bottom_toolbar = ANSI(new_message)
     # Prep msg formatting
     ptk_style = getKeyPath(seti,"SmartInput.Styling.Options.bottom-toolbar")
-    if ptk_style != None:
-        formatting = ptk_style_to_ansi(ptk_style)
-    else:
+    if ptk_style == None or noformat == True:
         formatting = ""
+    else:
+        formatting = ptk_style_to_ansi(ptk_style)
     new_message = swapp_ansi_ground(new_message)
     new_message = new_message.replace("\033[0m",formatting)
     # Define ansi codes
@@ -177,6 +177,78 @@ def update_bottom_toolbar_message(promptSession=None,seti=dict,new_message=str,p
         sys.stdout.write(save_line + move_to_last_line + clear_line + move_to_beginning + formatting + new_message + load_line)
         sys.stdout.flush()
 
+class optimized_CustomCompleter(Completer):
+    def __init__(self, csSession=None):
+        self.csSession = csSession
+        self.cache_values()
+
+    def cache_values(self):
+        self.colorAliases = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.ColorAliases")
+        self.includeCustoms = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeCmdCustoms")
+        self.includeArgs = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeArgs")
+        self.includeStandards = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards")
+        self.hideByContext = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.HideByContext")
+        self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
+
+    def get_completions(self, document, complete_event):
+        word_before_cursor = document.get_word_before_cursor(WORD=True).strip()
+        before_cursor = document.text_before_cursor.strip(" ")
+        segments = before_cursor.split(" ")
+
+        # Collect items and aliases in a single pass
+        items = set()
+        for item, data in self.csSession.registry["cmdlets"].items():
+            items.add(item)
+            items.update(
+                [key+"_alias" for key in getCleanAliasesDict(data.get("aliases", {})).keys()]
+            )
+
+        wMatches = {item for item in items if item.startswith(word_before_cursor) and item}
+
+        aMatches = set()
+        cMatches = set()
+        if self.csSession:
+            key = segments[0] if segments[0] in items else next((m for m in wMatches if m in items), None)
+            data = self.csSession.registry["cmdlets"].get(key)
+            if data == None: data = {}
+            if self.includeArgs and data.get("args"):
+                args = {arg.strip(" ").replace("optional:", "") for arg in splitByDelimiters(data["args"], [" ", "/"]) if not arg.strip(" ").startswith("<") and not arg.strip(" ").endswith(">") and not contains_special_characters(arg.strip(" ")) and arg.strip(" ").startswith("-")}
+                aMatches.update(args)
+            if self.includeCustoms and data.get("extras", {}).get("sInputCompletions"):
+                cmdletCompletions = data["extras"]["sInputCompletions"]
+                if isinstance(cmdletCompletions, str):
+                    cmdletCompletions = cmdletCompletions.split(";")
+                cMatches.update(cmdletCompletions)
+
+        # hide by context
+        if self.hideByContext and segments[0] in items:
+            se = segments[-1].strip(" ")
+            new_wMatches = {item for item in items if item.startswith(se) and not document.text_before_cursor.endswith(" ")}
+            if not se.endswith(";") and not se.endswith("||"):
+                wMatches = new_wMatches
+            else:
+                aMatches = set()
+                cMatches = set()
+
+        completions = [
+            Completion(match, start_position=-len(word_before_cursor), style=self.styles["arg"]) for match in aMatches
+        ] + [
+            Completion(match, start_position=-len(word_before_cursor), style=self.styles["custom"]) for match in cMatches
+        ]
+        
+        if self.includeStandards == False:
+            wMatches = []
+
+        if self.colorAliases:
+            completions += [Completion(match, start_position=-len(word_before_cursor), style=self.styles["cmd"]) for match in wMatches if "_alias" not in match]
+            wMatches_ali = {item[::-1].replace("saila_", "", 1)[::-1] for item in wMatches if item.endswith("_alias")}
+            completions += [Completion(match, start_position=-len(word_before_cursor), style=self.styles["alias"]) for match in wMatches_ali]
+        else:
+            
+            completions += [Completion(match[::-1].replace("saila_", "", 1)[::-1], start_position=-len(word_before_cursor), style=self.styles["cmd"]) for match in wMatches]
+        return completions
+
+"""
 class CustomCompleter(Completer):
     '''cslib.smartInput: Class for tabCompletion.'''
     def __init__(self,csSession=None):
@@ -290,7 +362,8 @@ class CustomCompleter(Completer):
             )
         # Return a list of Completion objects for the matches
         return completions
-
+"""
+        
 def bottom_toolbar(csSession):
     '''cslib.smartInput: Function to get toolbar msg.'''
     stdMsg = csSession.registry["toadInstance"].getToadMsg()
@@ -368,7 +441,8 @@ class sInputPrompt():
         seti = self.csSession.data["set"].getModule("crsh")
         # Tabcomplete
         if getKeyPath(seti,"SmartInput.TabComplete") == True:
-            self.sessionArgs["completer"] = CustomCompleter(self.csSession)
+            #self.sessionArgs["completer"] = CustomCompleter(self.csSession)
+            self.sessionArgs["completer"] = optimized_CustomCompleter(self.csSession)
         # History
         if getKeyPath(seti,"SmartInput.History") == True:
             # History type

@@ -105,7 +105,7 @@ crsh:
       IncludeArgs: true
       IncludeCmdCustoms: true
       HideByContext: true
-      ColorAliases: false
+      ColorAliases: true
   Modules:
     Files:
       console-py:

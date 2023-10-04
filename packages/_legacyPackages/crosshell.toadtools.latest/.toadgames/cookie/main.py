@@ -1,8 +1,11 @@
 toadG = toadG
 
 import os
-wav = os.path.join(os.path.dirname(__file__),"munching.wav")
+wav = os.path.join(os.path.dirname(__file__),"background.wav")
+wav2 = os.path.join(os.path.dirname(__file__),"munching.wav")
+wav3 = os.path.join(os.path.dirname(__file__),"victory.wav")
 
+toadG.setBgMusic(wav)
 toadG.start()
 
 maxlen = toadG.toad.getToadMaxMsgLen()
@@ -24,7 +27,7 @@ try:
         toadG.p(string)
         toadG.sleep(0.10)
     # munch
-    toadG.playSound(wav)
+    toadG.playSound(wav2)
     toadG.sleep(0.9)
     t1 = "🍪\033[33m *munch*\033[0m"
     t2 = "🍪\033[30m *munch*\033[0m"
@@ -43,6 +46,8 @@ try:
 except KeyboardInterrupt:
     toadG.reset()
     exit()
+
+toadG.playSound(wav3)
 
 tx = "["+toadG.title+"]"
 wp = round((maxlen-len(tx))/2)

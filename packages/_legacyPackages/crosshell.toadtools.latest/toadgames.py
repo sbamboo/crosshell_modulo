@@ -110,6 +110,37 @@ class toadGame():
     def sleep(self,seconds):
         '''Waits/Sleeps for X seconds (Alias for time.sleep)'''
         time.sleep(seconds)
+    # [Size]
+    def _sWarnTermToSmal(self,minSize):
+        t1 = f"Terminal to smal, minimum: {minSize}"
+        t2 = f"Terminal to smal: {minSize}"
+        t3 = f"Term to smal: {minSize}"
+        t4 = f"Terminal to smal"
+        t5 = f"Term to smal"
+        if minSize > len(t1):
+            tx = t1
+        elif minSize > len(t2):
+            tx = t2
+        elif minSize > len(t3):
+            tx = t3
+        elif minSize > len(t4):
+            tx = t4
+        elif minSize > len(t5):
+            tx = t5
+        else:
+            tx = "To smal!"
+        self.p(tx)
+        self.sleep(1.2)
+    def restrictSize(self,size):
+        width = os.get_terminal_size().columns
+        if width > size:
+            self._sWarnTermToSmal(size)
+    def restrictSizeByMsgSp(self,size):
+        width = os.get_terminal_size().columns
+        size = width - len(self.prefix)
+        if width > size:
+            self._sWarnTermToSmal(size)
+
     # [Sound]
     def playSound(self, wavFilePath, loop=False):
         '''Plays a wavfile sound, also takes bool if should loop.'''

@@ -1,5 +1,3 @@
 Fix commentkeeper to properly handle changed dict size
 
 /Flag support for sinput args
-
-colored aliases

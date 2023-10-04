@@ -697,6 +697,12 @@ class crosshellSession():
             self.tempData = self.tmpDPersVals
         else:
             self.tempData = {}
+    def tmpRem(self,key=None):
+        if key == None:
+            self.tmpClr()
+        else:
+            if self.tempData.get(key) != None:
+                self.tempData.pop(key)
     # Cmdletvariables
     def resetVarScope(self):
         self.varScope = {}

@@ -173,6 +173,7 @@ def getGlobals(csSession,command,args,cmdletData,globalValues,entries,reader,cap
     # If capture is true, redirect stdout
     if capture == True:
         buffer = BufferedStdout(sys.stdout,input)
+        csSession.tmpSet("buffer",buffer)
         buffer.printToConsole = False
         old_stdout = sys.stdout
         globalValues["buffer_bwrite"] = buffer.bwrite

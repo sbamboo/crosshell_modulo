@@ -1,11 +1,11 @@
 import os
+import sys
 import re
 
 from .cslib import intpip,_handleAnsi
 from .execution import getCleanAliasesDict
 from ._crosshellParsingEngine import splitByDelimiters
 from .datafiles import getKeyPath
-from .toad import getToad
 
 try:
     from pygments.lexers import PythonLexer
@@ -42,6 +42,140 @@ def contains_special_characters(input_string):
     match = re.search(pattern, input_string)
     # If a match is found, return True (contains special characters), else return False
     return match is not None
+
+def capped_string_with_ansi(input_string, max_length):
+    # Regular expression to match ANSI escape codes
+    ansi_pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+
+    # Initialize variables to keep track of rendered and original lengths
+    rendered_length = 0
+    original_length = 0
+    # Iterate through the input string
+    i = 0
+    while i < len(input_string):
+        # Check if the current character is the escape character (27) which indicates the start of an ANSI escape code
+        if ord(input_string[i]) == 27:
+            # Find the end of the ANSI escape code using regular expression
+            match = ansi_pattern.match(input_string[i:])
+            if match:
+                # Increase rendered length by 0 for ANSI codes
+                rendered_length += 0
+                # Move the index past the ANSI escape code
+                i += len(match.group(0))
+            else:
+                # If it's not a valid ANSI code, treat it as a regular character
+                rendered_length += 1
+                original_length += 1
+                i += 1
+        else:
+            # If it's a regular character, increase both rendered and original lengths
+            rendered_length += 1
+            original_length += 1
+            i += 1
+        # Check if the rendered length exceeds the maximum length
+        if rendered_length > max_length:
+            # Trim the original string to the desired length
+            input_string = input_string[:original_length]
+            break
+    return input_string
+def sInput_autoIntTuple(pre=tuple) -> tuple:
+    post = list(pre)
+    for i in range(len(pre)):
+        post[i] = int(pre[i])
+    return tuple(post)
+def sInput_hex_to_rgb(hex=str) -> str:
+    lv = len(hex)
+    tup = tuple(int(hex[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+    return sInput_autoIntTuple(tup)
+def sInput_rgb_to_ansi(rgb=tuple, background=False) -> str:
+    return '\033[{};2;{};{};{}m'.format(48 if background else 38, *rgb)
+def swapp_ansi_ground(ansicode=str):
+    _swapp_mapping = {
+        "0": "0",
+        "30": "40",
+        "31": "41",
+        "32": "42",
+        "33": "43",
+        "34": "44",
+        "35": "45",
+        "36": "46",
+        "37": "47",
+        "90": "100",
+        "91": "101",
+        "92": "102",
+        "93": "103",
+        "94": "104",
+        "95": "105",
+        "96": "106",
+        "97": "107",
+    }
+    swapp_mapping = _swapp_mapping.copy()
+    for key,value in _swapp_mapping.items():
+        swapp_mapping[value] = key
+    # Find
+    ansi_escape_pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])') # Define a regular expression pattern to match ANSI escape codes
+    matches = ansi_escape_pattern.finditer(ansicode)                           # Use re.finditer to find all matches in the input string
+    # Replace
+    for match in matches:
+        code = str(match.group())
+        ocode = code
+        if "38;2" in code or "48;2" in code:
+            # replace rgb
+            code = code.replace("48;2","§rgb-swapp§")
+            code = code.replace("38;2","48;2")
+            code = code.replace("§rgb-swapp§","38;2")
+        else:
+            if len(code) == 8 or len(code) == 9:
+                code = swapp_mapping[code]
+        ansicode = ansicode.replace(ocode,code,1)
+    return ansicode
+def ptk_style_to_ansi(ptk_style):
+    styles = ptk_style.strip(" ").split(" ")
+    ansi_style = ""
+    for style in styles:
+        if style.startswith("fg:"):
+            _hex = style.replace("fg:#","")
+            rgb = sInput_hex_to_rgb(_hex)
+            ansi_style += sInput_rgb_to_ansi(rgb,background=True)
+        elif style.startswith("bg:"):
+            _hex = style.replace("bg:#","")
+            rgb = sInput_hex_to_rgb(_hex)
+            ansi_style += sInput_rgb_to_ansi(rgb,background=False)
+    return ansi_style
+
+def update_bottom_toolbar_message(promptSession=None,seti=dict,new_message=str,printer=None):
+    # set session msg
+    if promptSession != None:
+        promptSession.bottom_toolbar = ANSI(new_message)
+    # Prep msg formatting
+    ptk_style = getKeyPath(seti,"SmartInput.Styling.Options.bottom-toolbar")
+    if ptk_style != None:
+        formatting = ptk_style_to_ansi(ptk_style)
+    else:
+        formatting = ""
+    new_message = swapp_ansi_ground(new_message)
+    new_message = new_message.replace("\033[0m",formatting)
+    # Define ansi codes
+    clear_line = "\x1b[K"    # ANSI escape code to clear the line
+    save_line = "\x1b[s"    # ANSI escape code to save pos
+    load_line = "\x1b[u"    # ANSI escape code to load poss
+    move_to_beginning = "\r" # ANSI escape code to move the cursor to the beginning of the line
+    width,height = os.get_terminal_size()
+    move_to_last_line = f"\x1b[{height};0H"
+    # handle msg
+    ansi_escape_pattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    new_message_na = ansi_escape_pattern.sub("",new_message)
+    spacing = width-len(new_message_na)
+    spacing -= 2
+    spaces = " "*spacing
+    new_message = new_message + spaces
+    new_message = capped_string_with_ansi(new_message,width)
+    # Move up one line, clear the line, and redraw the new line
+    if printer != None:
+        printer(save_line + move_to_last_line + clear_line + move_to_beginning + formatting + new_message + load_line)
+    else:
+        sys.stdout.write(save_line + move_to_last_line + clear_line + move_to_beginning + formatting + new_message + load_line)
+        sys.stdout.flush()
 
 class CustomCompleter(Completer):
     '''cslib.smartInput: Class for tabCompletion.'''
@@ -157,6 +291,19 @@ class CustomCompleter(Completer):
         # Return a list of Completion objects for the matches
         return completions
 
+def bottom_toolbar(csSession):
+    '''cslib.smartInput: Function to get toolbar msg.'''
+    stdMsg = csSession.registry["toadInstance"].getToadMsg()
+    pers = csSession.data["per"].getProperty("crsh","sInput.btoolbar_msg")
+    nonAllowed = ["","STDTITLE","stdtitle",None,"none","None","Null","null"]
+    if pers in nonAllowed:
+        msg = stdMsg
+    else:
+        msg = _handleAnsi(pers)
+    if msg.startswith("toad:"):
+        msg = msg.replace("toad:","")
+        msg = csSession.registry["toadInstance"].sayToad(msg)
+    return ANSI(msg)
 
 class MyHistory(History):
     '''cslib.smartInput: Class for history.'''
@@ -168,17 +315,6 @@ class MyHistory(History):
     def store_string(self, string):
         # Store the given string in some source (e.g. a file or database)
         pass
-
-def bottom_toolbar(csSession):
-    '''cslib.smartInput: Function to get toolbar msg.'''
-    stdMsg = getToad(csSession)
-    pers = csSession.data["per"].getProperty("crsh","sInput.btoolbar_msg")
-    nonAllowed = ["","STDTITLE","stdtitle",None,"none","None","Null","null"]
-    if pers in nonAllowed:
-        msg = stdMsg
-    else:
-        msg = _handleAnsi(pers)
-    return ANSI(msg)
 
 def sInputCreateHistoryObj(csSession):
     '''cslib.smartInput: Creates a history instance if it dosen't exists.'''
@@ -304,3 +440,6 @@ class sInputPrompt():
                 self.old_defstyle = None
         # Return
         return inp
+    def liveSetBToolbarMsg(self,msg):
+        seti = self.csSession.data["set"].getModule("crsh")
+        update_bottom_toolbar_message(self.pSession,seti,msg)

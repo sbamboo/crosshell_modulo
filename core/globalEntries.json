@@ -4,5 +4,6 @@
     "csLoadPackageData",
     "fromPath",
     "intpip",
-    "autopipImport"
+    "autopipImport",
+    "CS_GetEncoding"
 ]

@@ -42,7 +42,8 @@ from cslib._crosshellGlobalTextSystem import crosshellGlobalTextSystem,standardH
 from cslib._crosshellMpackageSystem import loadPackages,getPackageDataFromList
 from cslib._crosshellModularityEngine import linkedFileModularise
 from cslib.smartInput import sInputPrompt
-from cslib.datafiles import setKeyPath,getKeyPath
+from cslib.toad import toad
+from cslib.datafiles import setKeyPath
 
 # [Settings]
 CS_ModuleReplacebleNames = ["console.py","inpparse.py","exec.py"]
@@ -333,8 +334,10 @@ CS_Registry["packages"] = CS_packageList
 CS_Registry["packageData"] = getPackageDataFromList(CS_packageList,CS_DefaultEncoding)
 
 # sinput thing
+CS_Registry["toadInstance"] = toad(csSession)
 if CS_Settings.getProperty("crsh","SmartInput.Enabled") == True:
   CS_Registry["sInputInstance"] = sInputPrompt(csSession)
+  CS_Registry["toadInstance"].link_sInput(CS_Registry["sInputInstance"])
 else:
   CS_Registry["sInputInstance"] = None
 

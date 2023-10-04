@@ -76,6 +76,10 @@
             },
             "aliases": ["visreload:--vis"]
         },
+        "scalc": {
+            "desc": "Crosshells simple build-in calculator",
+            "args": "<math-expression>"
+        },
         "set": {
             "desc": "Sets a variable",
             "args": "<name> <value> <optional:type>"

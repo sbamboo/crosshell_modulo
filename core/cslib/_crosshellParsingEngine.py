@@ -21,6 +21,20 @@ def evaluateDataType(toEval):
         except ValueError:
             return "string" # Fallback to string
 
+# Check if simple-math-expression
+def is_simple_math_expression(expression):
+    # Check st-opr
+    operators = ["+","-","*","/","//","^","**"]
+    if expression[0] in operators or expression[0:1] in operators:
+        return False
+    # Build a regular expression pattern to match digits, arithmetic operators, parentheses
+    pattern = r"^[0-9\.\+\-\*\/\(\)\^\.\s]*$"
+    # Use the search function to check if the expression matches the pattern
+    try:
+        match = re.search(pattern, expression)
+    except: pass
+    return match is not None
+
 # CrosshellParsingEngine
 def crosshellParsingEngine(stringToParse) -> str:
     '''CSPA: CrosshellParsingEngine version 1.0
@@ -117,6 +131,14 @@ def crosshellParsingEngine(stringToParse) -> str:
                 string = string.replace('"',"",1)
                 string = string[::-1].replace('"',"",1)[::-1]
         return string
+    # Parse "<mexpr>" -> scalc "mexpr"
+    def scalcMexpr(string):
+        string2 = string.replace("ans","")
+        if string2.strip(" ") == "":
+            return string
+        if is_simple_math_expression(string2.strip(" ")):
+            string = f'scalc "{string.strip(" ")}"'
+        return string
     # Function to reparse pipe elements
     def reparsePipeElements(pipeString):
         split = pipeString.split("|")
@@ -125,6 +147,7 @@ def crosshellParsingEngine(stringToParse) -> str:
             s = s.strip()
             s = parseInputString(s)
             s = handleComments(s)
+            s = scalcMexpr(s)
             s = printQoute(s)
             handledString += s + " | "
         handledString = handledString.rstrip("| ")

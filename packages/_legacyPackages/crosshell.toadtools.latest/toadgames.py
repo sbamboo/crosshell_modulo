@@ -21,7 +21,7 @@ soundMap = fromPath(os.path.join(CSScriptRoot,".soundMap.py"))
 keyboard = fromPath(os.path.join(CSScriptRoot,".keyboard.py"))
 
 class toadGame():
-    '''Toadgame main class, (Game-Engine)'''
+    '''Toadgame main class, (Game-API)'''
     def __init__(self,toadInstance,name=str,title=None,prefix=None,noSound=False):
         '''Initializer function.'''
         self.toad = toadInstance

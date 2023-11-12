@@ -50,7 +50,7 @@ def runShell(csSession,shellExecPath=str,shellExecArgs=[],capture=False,cmdletpa
     execList = [f'{shellExecPath}', *shellExecArgs, cmdletpath, *cmdletargs]
     # check long path safety
     if lph_isAllowed(' '.join(execList)) == False:
-        csSession.deb.perror("lng:cs.cmdletexec.longpath.disabled",raiseEx=True)
+        csSession.deb.perror("lng:cs.cmdletexec.longpath.nonallowed",raiseEx=False)
     # Capture output if enabled otherwise just execute the subprocess
     if capture == False:
         subprocess.run(execList, stderr=sys.stderr, stdout=sys.stdout)

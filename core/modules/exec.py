@@ -13,5 +13,14 @@ except CrosshellDebErr as e:
         CS_LastOutput = e
     else:
         # Do something with the expression
+        tp = None
+        if os.path.exists(CS_LastInput):
+            tp = CS_LastInput
+        elif os.path.exists(os.path.join(csSession.data["dir"],CS_LastInput)):
+            tp = os.path.join(csSession.data["dir"],CS_LastInput)
+        if tp != None:
+            try:
+                os.system(tp)
+            except: pass
         #CS_LastOutput = CS_LastInput
         CS_LastOutput = e

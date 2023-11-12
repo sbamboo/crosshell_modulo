@@ -31,7 +31,7 @@ def main(session,cmddata=dict,args=list,encoding=str,defencoding=str,isCaptured=
         if cs_lph_isAllowed(command) == True:
             os.system(command)
         else:
-            session.deb.perror("cs.cmdletexec.longpath.disabled",raiseEx=True)
+            session.deb.perror("lng:cs.cmdletexec.longpath.nonallowed",raiseEx=True)
     # Send variables:
     else:
         # Add some variables

@@ -58,11 +58,14 @@
         "print": {
             "desc": "Returns any input. (Effectly printing it)",
             "aliases": ["p","conout","echo"],
-            "args": "<string> -o"
+            "args": "<string>"
         },
         "prefix": {
             "desc": "Cmdlet for managing crosshells prefix.",
             "args": "<content> -set/-s -get/-g -reset/-r -dir -enable -disable"
+        },
+        "quote": {
+            "dest": "Qoute any input."
         },
         "red": {
             "desc": "Returns any input put surrounded by red formatting.",

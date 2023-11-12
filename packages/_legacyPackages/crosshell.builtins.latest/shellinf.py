@@ -97,11 +97,15 @@ infoBlock = f'''
   {labelFormat}Coredir:   {valueFormat}{CS_CoreDir}
   {labelFormat}Assetsdir: {valueFormat}{CS_CoreDir}
   {labelFormat}Curdir:    {valueFormat}{CS_CurDir}
+  {labelFormat}StripAnsi: {valueFormat}{csSession.data["sta"]}
   
 {headerFormat}PlatformInfo:
   {labelFormat}Platform: {valueFormat}{platformName}
 
-{headerFormat}Arguments: {errorFormat}UNABLE TO LOAD!
+{headerFormat}Arguments:
+  {labelFormat}StartFile: {valueFormat}{csSession.data["sfi"]}
+  {labelFormat}MainFile:  {valueFormat}{csSession.data["efi"]}
+  {labelFormat}OtherArgs: {valueFormat}{csSession.data["arg"]}
 
 {headerFormat}Title:
   {labelFormat}Title:    {valueFormat}{current_title}

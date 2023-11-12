@@ -1,0 +1,13 @@
+# Get variables from sargs
+getind sargs 0 | set tmp_c
+getind sargs 1 | set tmp_f
+
+# Append file content to tmp-var
+get tmp_f | readfromfile | append tmp_c
+
+# Set file content to new value
+get tmp_c | outFile vb.txt
+
+# Remove variables
+rmvar tmp_c
+rmvar tmp_f

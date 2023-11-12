@@ -44,6 +44,7 @@ from cslib._crosshellModularityEngine import linkedFileModularise
 from cslib.smartInput import sInputPrompt
 from cslib.toad import toad
 from cslib.datafiles import setKeyPath
+import argparse
 
 # [Settings]
 CS_ModuleReplacebleNames = ["console.py","inpparse.py","exec.py"]
@@ -67,11 +68,36 @@ CS_Args = sys.argv
 CS_Startfile = "Unknown"
 for arg in CS_Args:
     if "@startfile" in arg:
+        ind = CS_Args.index(arg)
         CS_Startfile = (arg.split("@startfile:"))[-1]
+        CS_Args.pop(ind)
 
 # Set efile and args
 CS_Efile = CS_Args[0]
 CS_Args.pop(0)
+
+# Parse arguments
+CS_Argparser = argparse.ArgumentParser(prog="Crosshell", description="Crosshell Modulo")
+# Define the command-line arguments
+CS_Argparser.add_argument('-sa', '--stripAnsi', '--stripansi', dest="stripAnsi", action='store_true', help="If given crosshell strips out any ansi sequences.")
+CS_Argparser.add_argument('-c','--cmd', dest="cmd", help="Command to execute on start.")
+CS_Argparser.add_argument('-scr', help="Runns a script on start.")
+CS_Argparser.add_argument('--noverbstart', action="store_true", help="Suppresses verbose start.")
+CS_Argparser.add_argument('--noexit', action="store_true", help="Keeps crosshell started post cli-command execution.")
+CS_Argparser.add_argument('--nowelc', action="store_true", help="Suppresses crosshells welcome message.")
+CS_Argparser.add_argument('--nocls', action="store_true", help="Suppresses startup-clear. (if such is enabled in settings)")
+# Parse the command-line arguments
+CS_Pargs = CS_Argparser.parse_args(CS_Args)
+
+# Handle script start
+if CS_Pargs.scr != None:
+  CS_Pargs.cmd = "script " + CS_Pargs.scr
+
+# Handle dashes
+CS_Pargs.cmd = CS_Pargs.cmd.replace("§"," ")
+
+# setup stripAnsi var
+CS_StripAnsi = CS_Pargs.stripAnsi
 
 # Prep things from cslib
 CS_PythonPath = getExecutingPython()
@@ -119,8 +145,14 @@ CS_Settings.addModule("crsh")
 # Setup first settings
 CS_Settings.addProperty("crsh","Console.VerboseStart", True)
 CS_Settings.addProperty("crsh","Console.StripAnsi", False)
+if CS_StripAnsi != True:
+  CS_StripAnsi = CS_Settings.getProperty("crsh","Console.StripAnsi")
+if CS_Pargs.noverbstart == True:
+  CS_VerboseStart = False
+else:
+  CS_VerboseStart = CS_Settings.getProperty("crsh","Console.VerboseStart")
 from cslib.progressMsg import startupMessagingWProgress
-st = startupMessagingWProgress(CS_Settings.getProperty("crsh","Console.VerboseStart"),CS_Settings.getProperty("crsh","Console.StripAnsi"),crshDebug,pgMax=30,pgIncr=3)
+st = startupMessagingWProgress(CS_VerboseStart,CS_StripAnsi,crshDebug,pgMax=30,pgIncr=3)
 
 # VERBOSE START #
 st.verb("Loading settings...")
@@ -222,7 +254,9 @@ CS_Text = crosshellGlobalTextSystem( pathtagInstance = CS_PathtagMan, palette=pa
 crshDebug.setFormatterInstance(CS_Text) # Attatch the formatter to the Debugger
 
 # Set stripansi
-CS_Text.stripAnsi = CS_Settings.getProperty("crsh","Console.StripAnsi")
+if CS_StripAnsi != True:
+  CS_StripAnsi = CS_Settings.getProperty("crsh","Console.StripAnsi")
+CS_Text.stripAnsi = CS_StripAnsi
 
 # VERBOSE START #
 st.verb("Does it work? {#DA70D6}*Toad*{r}")
@@ -329,6 +363,11 @@ csSession.data["ver"] = CS_VersionData
 csSession.data["fpr"] = fprint
 csSession.data["msp"] = f"{CS_BaseDir}{CS_MsgProfileFile}"
 csSession.data["pyp"] = f"{CS_BaseDir}{CS_PyProfileFile}"
+csSession.data["prg"] = CS_Pargs
+csSession.data["arg"] = CS_Args
+csSession.data["sfi"] = CS_Startfile
+csSession.data["efi"] = CS_Efile
+csSession.data["sta"] = CS_StripAnsi
 csSession.deb = crshDebug
 CS_Registry["packages"] = CS_packageList
 CS_Registry["packageData"] = getPackageDataFromList(CS_packageList,CS_DefaultEncoding)
@@ -471,7 +510,7 @@ for key,value in CS_StdVars.items():
 csSession.data["dir"] = CS_BaseDir
 
 # Clear if was verbose-start
-if CS_Settings.getProperty("crsh","Console.VerboseStart") == True:
+if CS_VerboseStart == True:
     st.clr()
 
 CS_Console.execute_internally(globals())

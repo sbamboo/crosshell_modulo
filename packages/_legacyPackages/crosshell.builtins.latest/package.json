@@ -1,5 +1,9 @@
 {
     "cmdlets": {
+        "append": {
+            "desc": "Appends input to variable.",
+            "args": "<name> <value>"
+        },
         "ask": {
             "desc": "Prompts the user for input.",
             "args": "<prompt>",
@@ -34,6 +38,10 @@
         "get": {
             "desc": "Gets a variables value.",
             "args": "<name>"
+        },
+        "getind": {
+            "desc": "Gets a variables value at an index.",
+            "args": "<name> <index>"
         },
         "getpathables": {
             "desc": "Prints out a list of al pathables/cmdlets in crosshell.",
@@ -79,9 +87,20 @@
             },
             "aliases": ["visreload:--vis"]
         },
+        "rmvar": {
+            "desc": "Removes a variable.",
+            "args": "<name>"
+        },
         "scalc": {
             "desc": "Crosshells simple build-in calculator",
             "args": "<math-expression>"
+        },
+        "script": {
+            "desc": "Runns a basic-crsh-script file in crosshell.",
+            "args": "<script-file> <optional:arguments>",
+            "options": {
+                "restrictionMode": "internal"
+            }
         },
         "set": {
             "desc": "Sets a variable",

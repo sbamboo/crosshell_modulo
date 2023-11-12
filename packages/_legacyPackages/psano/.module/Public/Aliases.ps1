@@ -1,1 +1,0 @@
-New-Alias -Name PSano -Value Edit-TextFile

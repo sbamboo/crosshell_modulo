@@ -27,6 +27,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.styles import Style
 
+
 def isAliasFor(possibleAlias,registry):
     for key,value in registry["cmdlets"].items():
         if value.get("aliases") != None:
@@ -89,7 +90,7 @@ def sInput_hex_to_rgb(hex=str) -> str:
     return sInput_autoIntTuple(tup)
 def sInput_rgb_to_ansi(rgb=tuple, background=False) -> str:
     return '\033[{};2;{};{};{}m'.format(48 if background else 38, *rgb)
-def swapp_ansi_ground(ansicode=str):
+def swapp_ansi_ground(ansicode=str,strip=False):
     _swapp_mapping = {
         "0": "0",
         "30": "40",
@@ -127,7 +128,10 @@ def swapp_ansi_ground(ansicode=str):
         else:
             if len(code) == 8 or len(code) == 9:
                 code = swapp_mapping[code]
-        ansicode = ansicode.replace(ocode,code,1)
+        if strip == True:
+            ansicode = ansicode.replace(ocode,"",1)
+        else:
+            ansicode = ansicode.replace(ocode,code,1)
     return ansicode
 def ptk_style_to_ansi(ptk_style):
     styles = ptk_style.strip(" ").split(" ")
@@ -144,6 +148,9 @@ def ptk_style_to_ansi(ptk_style):
     return ansi_style
 
 def update_bottom_toolbar_message(promptSession=None,seti=dict,new_message=str,printer=None,noformat=False):
+    # stripansi
+    if promptSession.csSession.data["sta"] == True:
+        return
     # set session msg
     if promptSession != None:
         promptSession.bottom_toolbar = ANSI(new_message)
@@ -188,7 +195,10 @@ class optimized_CustomCompleter(Completer):
         self.includeArgs = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeArgs")
         self.includeStandards = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards")
         self.hideByContext = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.HideByContext")
-        self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
+        if self.csSession.data["sta"] != True:
+            self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
+        else:
+            self.styles = {"cmd":"","arg":"","alias":"","custom":""}
 
     def get_completions(self, document, complete_event):
         word_before_cursor = document.get_word_before_cursor(WORD=True).strip()
@@ -376,6 +386,9 @@ def bottom_toolbar(csSession):
     if msg.startswith("toad:"):
         msg = msg.replace("toad:","")
         msg = csSession.registry["toadInstance"].sayToad(msg)
+    # stripansi fix
+    if csSession.data["sta"] == True:
+        return swapp_ansi_ground(msg,True)
     return ANSI(msg)
 
 class MyHistory(History):
@@ -418,6 +431,7 @@ class sInputPrompt():
         self.history = None
         self._createHistory()
         self._updateSettings()
+        self.ansiStrippedFormatters = {'search': '', 'incsearch.current': '', 'selected': '', 'cursor-column': '', 'cursor-line': '', 'color-column': '', 'matching-bracket.other': '', 'matching-bracket.cursor': '', 'multiple-cursors': '', 'line-number': '', 'line-number.current': '', 'tilde': '', 'search-toolbar': '', 'search-toolbar.text': '', 'system-toolbar': '', 'system-toolbar.text': '', 'arg-toolbar': '', 'arg-toolbar.text': '', 'validation-toolbar': '', 'window-too-small': '', 'completion-toolbar': '', 'completion-toolbar.arrow': '', 'completion-toolbar.completion': '', 'completion-toolbar.completion.current': '', 'completion-menu': '', 'completion-menu.completion.current': '', 'completion-menu.meta.completion': '', 'completion-menu.meta.completion.current': '', 'completion-menu.multi-column-meta': '', 'completion-menu.completion fuzzymatch.outside': '', 'completion-menu.completion fuzzymatch.inside': '', 'completion-menu.completion fuzzymatch.inside.character': '', 'completion-menu.completion.current fuzzymatch.outside': '', 'completion-menu.completion.current fuzzymatch.inside': '', 'readline-like-completions.completion fuzzymatch.outside': '', 'readline-like-completions.completion fuzzymatch.inside': '', 'readline-like-completions.completion fuzzymatch.inside.character': '', 'scrollbar.background': '', 'scrollbar.button': '', 'scrollbar.arrow': '', 'auto-suggestion': '', 'trailing-whitespaces': '', 'tab': '', 'aborting': '', 'exiting': '', 'digraph': '', 'control-character': '', 'nbsp': '', 'i': '', 'u': '', 's': '', 'b': '', 'em': '', 'strong': '', 'del': '', 'hidden': '', 'italic': '', 'underline': '', 'strike': '', 'bold': '', 'reverse': '', 'noitalic': '', 'nounderline': '', 'nostrike': '', 'nobold': '', 'noreverse': '', 'bottom-toolbar': ''}
     def _createHistory(self):
         self.history = sInputCreateHistoryObj(self.csSession)
     def _createSession(self):
@@ -494,6 +508,12 @@ class sInputPrompt():
             self._createSession()
         if self.history == None:
             self._createHistory()
+        # Strip ansi
+        if self.csSession.data["sta"] == True:
+            self.styleOpts.update(self.ansiStrippedFormatters)
+            if self.sessionArgs.get("lexer") != None:
+                self.sessionArgs["lexer"] = None
+                self._createSession()
         # Hackie color inject
         if self.styleEna == True and self.inject == True:
             if self.old_defstyle == None:

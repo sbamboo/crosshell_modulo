@@ -9,9 +9,9 @@ from cslib import CrosshellDebErr,writeWelcome
 CS_PipeLine = execline()
 
 # Do on-start operations
-if CS_Settings.getProperty("crsh","Console.ClearOnStart") == True:
+if CS_Settings.getProperty("crsh","Console.ClearOnStart") == True and CS_Pargs.nocls != True:
     clear()
-if CS_Settings.getProperty("crsh","Console.Welcome.ShowOnStart") == True:
+if CS_Settings.getProperty("crsh","Console.Welcome.ShowOnStart") == True and CS_Pargs.nowelc != True:
     writeWelcome(csSession)
 
 # Main loop
@@ -23,7 +23,9 @@ while True:
     setConTitle( title )
     # Get prefix and ask user for input
     _prefix = getPrefix(csSession,"> ")
-    if CS_Registry["sInputInstance"] != None:
+    if CS_Pargs.cmd != None:
+        CS_LastInput = CS_Pargs.cmd
+    elif CS_Registry["sInputInstance"] != None:
         CS_LastInput = CS_Registry["sInputInstance"].prompt(_prefix)
     else:
         # Hide toad if sInput disabled
@@ -55,3 +57,14 @@ while True:
             print(final)
         elif type(CS_LastOutput) == CrosshellDebErr:
             print(CS_LastOutput)
+    # Exit post cli-cmd exec
+    if CS_Pargs.cmd != None:
+        # Clear input values
+        CS_Pargs.cmd = None
+        # Exit?
+        if CS_Pargs.noexit == False:
+            # clear using ansi to stop coloring terminal post crosshell
+            if csSession.data["sta"] != True:
+                print("\033[0m")
+            # break loop to exit
+            break

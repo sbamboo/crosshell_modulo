@@ -94,7 +94,9 @@ if CS_Pargs.scr != None:
   CS_Pargs.cmd = "script " + CS_Pargs.scr
 
 # Handle dashes
-CS_Pargs.cmd = CS_Pargs.cmd.replace("§"," ")
+try:
+  CS_Pargs.cmd = CS_Pargs.cmd.replace("§"," ")
+except: pass
 
 # setup stripAnsi var
 CS_StripAnsi = CS_Pargs.stripAnsi

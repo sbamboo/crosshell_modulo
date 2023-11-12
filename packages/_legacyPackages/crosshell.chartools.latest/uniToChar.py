@@ -12,6 +12,10 @@ elif len(sargv) == 1:
 else:
     v = sargv
 
-v = chr(int(v, 16))
-
+try:
+    v = chr(int(v, 16))
+except Exception as e:
+    print(f"\033[31mError: {e}\033[0m")
+    exit()
+    
 print(v)

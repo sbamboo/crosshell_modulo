@@ -63,7 +63,7 @@ crsh:
   Console:
     DefPrefix: '> '
     DefTitle: Crosshell Modulo
-    PrefixEnabled: false
+    PrefixEnabled: true
     PrefixShowDir: false
     DynamicPrefixes: true
     RestrictDynPrefixes: false
@@ -76,7 +76,7 @@ crsh:
       ShowProfile: true
     VerboseStart: true
   SmartInput:
-    Enabled: false
+    Enabled: true
     TabComplete: true
     History: true
     Highlight: true

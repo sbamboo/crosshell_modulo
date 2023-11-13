@@ -1,4 +1,4 @@
-import json,re
+import json,re,os
 from .cslib import normalizePathSepMT,intpip
 from ._crosshellParsingEngine import placeholdAnyQoutedX
 
@@ -104,6 +104,8 @@ def _stripJsonComments(jsonString):
 
 def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,keepComments=False,commentsToInclude=None,newlineSupport=False):
     '''CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.'''
+    if not os.path.exists(file):
+        file = normalizePathSepMT(file)
     if mode == "json":
         if operation == "get":
             content = _stripJsonComments(open(file,'r',encoding=encoding).read())

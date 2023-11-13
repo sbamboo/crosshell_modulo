@@ -55,10 +55,10 @@ crsh:
       ReaderFile: '{CS_BaseDir}\assets\readerfiles.json'
     Formatting:
       Palettes:
-        Selected:
+        Selected: null
         _choices: []
       Mappings:
-        Selected:
+        Selected: null
         _choices: []
   Console:
     DefPrefix: '> '
@@ -98,6 +98,9 @@ crsh:
         arg: fg:#5555ff
         alias: fg:cyan
         custom: fg:magenta
+        dir: fg:#f4a460
+        file: fg:#deb887
+        script: fg:#db7093
       Inject: true
     HistoryFile: '{CS_BaseDir}\assets\.history'
     Completions:
@@ -106,18 +109,19 @@ crsh:
       IncludeCmdCustoms: true
       HideByContext: true
       ColorAliases: true
+      IncludeCurDir: true
   Modules:
     Files:
       console-py:
-        selection:
+        selection: null
         _choices:
         - test
       inpparse-py:
-        selection:
-        _choices:
+        selection: null
+        _choices: null
       exec-py:
-        selection:
-        _choices:
+        selection: null
+        _choices: null
   Version:
     VerFile: '{CS_CoreDir}\version.yaml'
     FileFormatVer: '1'

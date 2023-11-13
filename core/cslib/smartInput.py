@@ -195,6 +195,7 @@ class optimized_CustomCompleter(Completer):
         self.includeCustoms = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeCmdCustoms")
         self.includeArgs = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeArgs")
         self.includeStandards = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards")
+        self.IncludeCurDir = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeCurDir")
         self.hideByContext = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.HideByContext")
         if self.csSession.data["sta"] != True:
             self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
@@ -255,10 +256,20 @@ class optimized_CustomCompleter(Completer):
             wMatches_ali = {item[::-1].replace("saila_", "", 1)[::-1] for item in wMatches if item.endswith("_alias")}
             completions += [Completion(match, start_position=-len(word_before_cursor), style=self.styles["alias"]) for match in wMatches_ali]
         else:
-            
             completions += [Completion(match[::-1].replace("saila_", "", 1)[::-1], start_position=-len(word_before_cursor), style=self.styles["cmd"]) for match in wMatches]
+        if self.csSession and self.IncludeCurDir == True:
+            for ent in os.listdir(self.csSession.data["dir"]):
+                if word_before_cursor in ent:
+                    if os.path.isdir(ent) == True:
+                        completions.append(Completion(ent, start_position=-len(word_before_cursor), style=self.styles["dir"]))
+                    else:
+                        if os.path.splitext(ent)[1] in [".crsh",".crcmd"]:
+                            completions.append(Completion(ent, start_position=-len(word_before_cursor), style=self.styles["script"]))
+                        else:
+                            completions.append(Completion(ent, start_position=-len(word_before_cursor), style=self.styles["file"]))
         return completions
 
+# region depricated
 """
 class CustomCompleter(Completer):
     '''cslib.smartInput: Class for tabCompletion.'''
@@ -374,6 +385,7 @@ class CustomCompleter(Completer):
         # Return a list of Completion objects for the matches
         return completions
 """
+# endregion depricated
         
 def bottom_toolbar(csSession):
     '''cslib.smartInput: Function to get toolbar msg.'''

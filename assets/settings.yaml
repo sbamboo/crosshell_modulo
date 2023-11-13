@@ -55,10 +55,10 @@ crsh:
       ReaderFile: '{CS_BaseDir}\assets\readerfiles.json'
     Formatting:
       Palettes:
-        Selected: null
+        Selected:
         _choices: []
       Mappings:
-        Selected: null
+        Selected:
         _choices: []
   Console:
     DefPrefix: '> '
@@ -109,15 +109,15 @@ crsh:
   Modules:
     Files:
       console-py:
-        selection: null
+        selection:
         _choices:
         - test
       inpparse-py:
-        selection: null
-        _choices: null
+        selection:
+        _choices:
       exec-py:
-        selection: null
-        _choices: null
+        selection:
+        _choices:
   Version:
     VerFile: '{CS_CoreDir}\version.yaml'
     FileFormatVer: '1'
@@ -159,4 +159,4 @@ crsh:
 crsh_debugger:
   Scope: error
   Execution:
-    AllowRunAsInternal: true
+    AllowRunAsInternal: false

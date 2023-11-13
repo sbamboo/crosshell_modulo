@@ -11,6 +11,8 @@ from cslib.longPathHandler import lph_isAllowed
 from cslib._crosshellParsingEngine import split_string_by_spaces
 from cslib.externalLibs.limitExec import DummyObject,ReturningDummyObject,RaisingDummyObject
 
+parent = os.path.abspath(os.path.dirname(__file__))
+
 def prep_globals(globalValue=dict,entries=list):
     '''CSlib.execution: Function to filter globals by entries.'''
     newGlobals = {}
@@ -134,8 +136,25 @@ def getCmdletData(csSession,command,args):
     return command,args,cmdletData
 
 def getGlobals(csSession,command,args,cmdletData,globalValues,entries,reader,capture=False,inpipeLine=False):
-    # Fix global values to use
-    if cmdletData["options"]["restrictionMode"].lower() != "internal" or csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
+    # Check internal-restriction-mode whitelist validity
+    prep_globals_v = False
+    if csSession.data["set"].getProperty("crsh_debugger","Execution.AllowRunAsInternal") != True:
+        if cmdletData["options"]["restrictionMode"].lower() == "internal":
+            whitelist = _fileHandler("json","get",f"{parent}{os.sep}..{os.sep}internalRestrictWhitelist.json").get("whitelist")
+            if whitelist == None:
+                whitelist = []
+            whitelist_name = os.path.basename(cmdletData["path"]).split(".")
+            whitelist_name.pop(-1)
+            whitelist_name = ".".join(whitelist_name)
+            if whitelist_name not in whitelist:
+                prep_globals_v = True
+        else:
+            prep_globals_v = True
+    else:
+        if cmdletData["options"]["restrictionMode"].lower() != "internal":
+            prep_globals_v = True
+    # Prep globals
+    if prep_globals_v == True:
         globalValues = prep_globals(globalValues,entries)
     # Restricted Mode
     if cmdletData["options"]["restrictionMode"].lower() == "restricted":

@@ -26,6 +26,15 @@
             "desc": "Clears the console.",
             "aliases": ["clear"]
         },
+        "comment": {
+            "desc": "Prints input as a comment."
+        },
+        "exc": {
+            "desc": "Executes input as cli-command.",
+            "options": {
+                "restrictionMode": "internal"
+            }
+        },
         "exit": {
             "desc": "Exits crosshell."
         },
@@ -39,6 +48,10 @@
             "desc": "Gets a variables value.",
             "args": "<name>"
         },
+        "getcontof": {
+            "desc": "Gets the content of a cmdlet. (Dev)",
+            "args": "<cmdlet-name>"
+        },
         "getind": {
             "desc": "Gets a variables value at an index.",
             "args": "<name> <index>"
@@ -46,6 +59,10 @@
         "getpathables": {
             "desc": "Prints out a list of al pathables/cmdlets in crosshell.",
             "aliases": ["get-pathables","getcmdlets","get-cmdlets"]
+        },
+        "getpathof": {
+            "desc": "Gets the file-path of a cmdlet. (Dev)",
+            "args": "<cmdlet-name>"
         },
         "guide": {
             "desc": "Guide for crosshell."

@@ -5,7 +5,7 @@ import re
 from .cslib import intpip,_handleAnsi
 from .execution import getCleanAliasesDict
 from ._crosshellParsingEngine import splitByDelimiters
-from .datafiles import getKeyPath
+from .datafiles import getKeyPath,_fileHandler
 
 try:
     from pygments.lexers import PythonLexer
@@ -27,6 +27,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.styles import Style
 
+parent = os.path.abspath(os.path.dirname(__file__))
 
 def isAliasFor(possibleAlias,registry):
     for key,value in registry["cmdlets"].items():
@@ -198,7 +199,7 @@ class optimized_CustomCompleter(Completer):
         if self.csSession.data["sta"] != True:
             self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
         else:
-            self.styles = {"cmd":"","arg":"","alias":"","custom":""}
+            self.styles = _fileHandler("json","get",f"{parent}{os.sep}..{os.sep}sInputNoFormatStyles.json")
 
     def get_completions(self, document, complete_event):
         word_before_cursor = document.get_word_before_cursor(WORD=True).strip()
@@ -431,7 +432,7 @@ class sInputPrompt():
         self.history = None
         self._createHistory()
         self._updateSettings()
-        self.ansiStrippedFormatters = {'search': '', 'incsearch.current': '', 'selected': '', 'cursor-column': '', 'cursor-line': '', 'color-column': '', 'matching-bracket.other': '', 'matching-bracket.cursor': '', 'multiple-cursors': '', 'line-number': '', 'line-number.current': '', 'tilde': '', 'search-toolbar': '', 'search-toolbar.text': '', 'system-toolbar': '', 'system-toolbar.text': '', 'arg-toolbar': '', 'arg-toolbar.text': '', 'validation-toolbar': '', 'window-too-small': '', 'completion-toolbar': '', 'completion-toolbar.arrow': '', 'completion-toolbar.completion': '', 'completion-toolbar.completion.current': '', 'completion-menu': '', 'completion-menu.completion.current': '', 'completion-menu.meta.completion': '', 'completion-menu.meta.completion.current': '', 'completion-menu.multi-column-meta': '', 'completion-menu.completion fuzzymatch.outside': '', 'completion-menu.completion fuzzymatch.inside': '', 'completion-menu.completion fuzzymatch.inside.character': '', 'completion-menu.completion.current fuzzymatch.outside': '', 'completion-menu.completion.current fuzzymatch.inside': '', 'readline-like-completions.completion fuzzymatch.outside': '', 'readline-like-completions.completion fuzzymatch.inside': '', 'readline-like-completions.completion fuzzymatch.inside.character': '', 'scrollbar.background': '', 'scrollbar.button': '', 'scrollbar.arrow': '', 'auto-suggestion': '', 'trailing-whitespaces': '', 'tab': '', 'aborting': '', 'exiting': '', 'digraph': '', 'control-character': '', 'nbsp': '', 'i': '', 'u': '', 's': '', 'b': '', 'em': '', 'strong': '', 'del': '', 'hidden': '', 'italic': '', 'underline': '', 'strike': '', 'bold': '', 'reverse': '', 'noitalic': '', 'nounderline': '', 'nostrike': '', 'nobold': '', 'noreverse': '', 'bottom-toolbar': ''}
+        self.ansiStrippedFormatters = _fileHandler("json","get",f"{parent}{os.sep}..{os.sep}sInputNoFormatOpts.json")
     def _createHistory(self):
         self.history = sInputCreateHistoryObj(self.csSession)
     def _createSession(self):

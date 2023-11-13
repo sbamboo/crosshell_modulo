@@ -1,6 +1,7 @@
 {
     "whitelist": [
         "reload",
-        "script"
+        "script",
+        "exc"
     ]
 }

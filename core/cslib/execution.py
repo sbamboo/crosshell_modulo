@@ -177,6 +177,9 @@ def getGlobals(csSession,command,args,cmdletData,globalValues,entries,reader,cap
     globalValues["CS_BaseDir"] = csSession.data["bdr"]
     globalValues["CS_CoreDir"] = csSession.data["cdr"]
     globalValues["CS_IsCaptured"] = capture
+    # Add exception types
+    globalValues["CrosshellDebErr"] = CrosshellDebErr
+    globalValues["CrosshellExit"] = CrosshellExit
     # add elementsAfter if passed
     if inpipeLine != None:
         globalValues["CS_InPipeline"] = inpipeLine

@@ -1,5 +1,18 @@
-print("{f.magenta}Loaded cmdlets:")
-for key,value in csSession.registry["cmdlets"].items():
+items = csSession.registry["cmdlets"]
+keys =  csSession.registry["cmdlets"].keys()
+
+title = "{f.magenta}Loaded cmdlets:"
+
+try:
+    if argv[0].strip() in list(keys):
+        keys = [argv[0]]
+except: pass
+
+title = "{f.magenta}Loaded cmdlets (query):"
+
+print(title)
+for key in keys:
+    value = items[key]
     print("{f.yellow}"+f'\n  {key}:'+"{r}")
     print("{f.darkgray}     desc:{f.green}"+f' "{value["desc"]}"')
     print("{f.darkgray}     aliases{f.green}"+f' {value["aliases"]}')

@@ -64,6 +64,10 @@
             "desc": "Gets the file-path of a cmdlet. (Dev)",
             "args": "<cmdlet-name>"
         },
+        "getsind": {
+            "desc": "Gets the indexed value from input.",
+            "args": "<index> <piped-input/input>"
+        },
         "guide": {
             "desc": "Guide for crosshell."
         },

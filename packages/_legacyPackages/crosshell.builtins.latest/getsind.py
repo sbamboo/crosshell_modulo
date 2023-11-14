@@ -1,7 +1,6 @@
 try:
-    key = argv[0]
-    ind = argv[1]
-    val = csSession.data["cvm"].getvar(key)
+    ind = argv[0]
+    val = argv[1:]
     
     if "\n" in val:
         val = val.split("\n")

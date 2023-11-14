@@ -66,10 +66,10 @@ class BufferedStdout:
         if end != None: text += end
         self.original_stdout.write(text)
 
-    def cwrite_adv(self, text=str):
+    def cwrite_adv(self, text=str, end=None):
         old_stb, old_ptc = self._getBools()      # get old
         self._setBools(stb=False,ptc=True)       # set new
-        out = print(text)
+        out = print(text,end=end)
         self._setBools(stb=old_stb,ptc=old_ptc) # set new
         return out
 

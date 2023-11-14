@@ -69,7 +69,6 @@ class startupMessagingWProgress():
         self.debugger = debugger
         if self.debugger == None:
             self.debugger = crosshellDebugger()
-
         self.pgMax = pgMax
         self.pgIncr = pgIncr
         self.pg = progressBar(pgMax,stripAnsi=stripAnsi)

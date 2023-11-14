@@ -78,7 +78,7 @@ def intpip(pip_args=str):
         return False
 
 # Safe import function
-def autopipImport(moduleName=str,pipName=None,addPipArgsStr=None):
+def autopipImport(moduleName=str,pipName=None,addPipArgsStr=None,cusPip=None):
     '''CSlib: Tries to import the module, if failed installes using intpip and tries again.'''
     try:
         imported_module = importlib.import_module(moduleName)
@@ -91,7 +91,10 @@ def autopipImport(moduleName=str,pipName=None,addPipArgsStr=None):
             if not addPipArgsStr.startswith(" "):
                 addPipArgsStr = " " + addPipArgsStr
             command += addPipArgsStr
-        intpip(command)
+        if cusPip != None:
+            os.system(f"{cusPip} {command}")
+        else:
+            intpip(command)
         imported_module = importlib.import_module(moduleName)
     return imported_module
 

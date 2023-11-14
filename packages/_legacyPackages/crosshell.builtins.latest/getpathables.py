@@ -3,10 +3,24 @@ keys =  csSession.registry["cmdlets"].keys()
 
 title = "{f.magenta}Loaded cmdlets:"
 
-try:
-    if argv[0].strip() in list(keys):
-        keys = [argv[0]]
-except: pass
+aliases = {}
+for key in keys:
+    for alias in items[key]["aliases"]:
+        aliases[alias] = key
+
+if sargv.strip("") != "":
+    q_keys = []
+    for arg in argv:
+        arg = arg.strip()
+        if arg in list(keys):
+            q_keys.append(arg)
+        elif arg in list(aliases.keys()):
+            q_keys.append(aliases[arg])
+    if q_keys == []:
+        print(f"Query invalid! ('{sargv}')")
+        exit()
+    else:
+        keys = q_keys
 
 title = "{f.magenta}Loaded cmdlets (query):"
 

@@ -1,9 +1,12 @@
 try:
-    ind = argv[0]
-    val = argv[1:]
-    
-    if "\n" in val:
-        val = val.split("\n")
+    ind = argv[-1]
+    argv.pop(-1)
+    sargv = sargv.replace(f" {ind}","")
+
+    if "\n" in sargv:
+        argv = sargv.split("\n")
+
+    val = argv
 
     try:
         val = val[int(ind)]

@@ -24,7 +24,7 @@ from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.cursor_shapes import CursorShape
+from prompt_toolkit.cursor_shapes import CursorShape # This is used by eval() later, thus shows as non-referenced.
 from prompt_toolkit.styles import Style
 
 parent = os.path.abspath(os.path.dirname(__file__))

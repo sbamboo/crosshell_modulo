@@ -1,3 +1,5 @@
 Fix commentkeeper to properly handle changed dict size
 
 /Flag support for sinput args
+
+in langlsit.json, readfiles.json and such path lists, they should use a placeholder for path.

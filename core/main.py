@@ -61,7 +61,6 @@ CS_MsgProfileFile = f"{os.sep}assets{os.sep}profile.msg"
 CS_PyProfileFile = f"{os.sep}assets{os.sep}profile.py"
 CS_BuiltInReaders = {"PLATFORM_EXECUTABLE":f"{'{CS_CoreDir}'}{os.sep}readers{os.sep}platexecs.py"}
 
-
 # [Setup]
 # Handle mainfile argument
 CS_Args = sys.argv

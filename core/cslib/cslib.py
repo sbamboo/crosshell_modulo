@@ -148,6 +148,7 @@ class modularSettingsLinker():
                 open(self.file,'w',encoding=encoding).write(toc)
         self.keepComments = keepComments
         self.keptComments = None
+        if os.path.exists(self.file) == False: open(self.file,'x').write("")
     def _getContent(self) -> dict:
         data = {}
         if self.keepComments == True:
@@ -329,6 +330,11 @@ class crosshellLanguageProvider():
     def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False):
         # Save
         self.languageListFile = languageListFile
+        if os.path.exists(self.languageListFile) == False:
+            if listFormat == "json":
+                open(self.languageListFile,'x').write("{}")
+            else:
+                open(self.languageListFile,'x').write("")
         self.defLanguage = self.parseSingleLanguage(defaultLanguage)
         self.listFormat = listFormat
         self.langFormat = langFormat
@@ -788,6 +794,11 @@ def expectedList(value) -> list:
 def getReaderExecutable(name,readerFile,encoding="utf-8") -> str:
     '''CSlib: Smal function to get the reader-executable from using its name'''
     # get readerFileContent
+    if os.path.exists(readerFile) == False:
+        if "json" in os.path.splitext(readerFile)[-1]:
+            open(readerFile,'x').write("{}")
+        else:
+            open(readerFile,'x').write("")
     readers = _fileHandler("json", "get", readerFile, encoding=encoding, safeSeps=True)
     if readers.get(name) != None:
         return readers.get(name)

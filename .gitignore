@@ -5,3 +5,4 @@ packages/_private
 assets/.history
 assets/langlist.json
 assets/readerfiles.json
+core/persistance.yaml

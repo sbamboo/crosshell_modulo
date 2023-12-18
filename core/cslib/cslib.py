@@ -884,6 +884,15 @@ def getPrefix(csSession,stdPrefix="",noparse=False,encoding=None,dynPrefixVars=N
             generatorGlobals = globals()
             if dynPrefixVars != None and type(dynPrefixVars) == dict:
                 generatorGlobals.update(dynPrefixVars)
+            # define always globals
+            def dynPrefixInclude(filename=str):
+                if "\\"  in filename or "/" in filename or "." in filename:
+                    csSession.deb.perror("lng:cs.prefixsys.dynprefix.invalidinclude",{"dynPrefixFile":dynPrefixFile})
+                    return None
+                filename += ".py"
+                return fromPath(os.path.join(os.path.dirname(dynPrefixFile),filename))
+            generatorGlobals["include"] = dynPrefixInclude
+            generatorGlobals["stripAnsi"] = csSession.data["sta"]
             # exec file to define generate function
             try:
                 exec(open(dynPrefixFile,'r',encoding=selEncoding).read(),generatorGlobals)

@@ -32,6 +32,7 @@
     "cs.prefixsys.dynprefix.errornotfound": "&31mDynPrefix file not found: '{dynPrefixFile}'!&0m",
     "cs.prefixsys.dynprefix.errorinexec": "&31mException raised when loading dynPrefix file: '{dynPrefixFile}'!\n{traceback}&0m",
     "cs.prefixsys.dynprefix.errorincall": "&31mThere was an error calling the dynPrefixFile generate function in '{dynPrefixFile}'!\n{traceback}&0m",
+    "cs.prefixsys.dynprefix.invalidinclude": "&31mThere was an error calling the dynPrefixFile generate function in '{dynPrefixFile}'!\n&0m&41mInvalid include() call!&0m",
 
     "cs.welcome.channelmsg.dev": "&31mYou are running a development version of crosshell, these are far from final so bugs may occure and some features migth be missing.&0m",
     "cs.welcome.channelmsg.alpha": "&33mYou are running a alpha version of crosshell, bugs may occure and some features migth be missing.&0m",

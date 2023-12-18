@@ -1,0 +1,13 @@
+{
+    "cmdlets": {
+        "pysc": {
+            "desc": "DEVTOOL: Runs input in python within crosshell's context.",
+            "options": {
+                "restrictionMode": "internal"
+            }
+        },
+        "pysc-help": {
+            "desc": "DEVTOOL: Info on how to use pysc."
+        }
+    }
+}

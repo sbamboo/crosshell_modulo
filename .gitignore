@@ -3,3 +3,5 @@
 packages/_legacyPackages/_private
 packages/_private
 assets/.history
+assets/langlist.json
+assets/readerfiles.json

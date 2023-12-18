@@ -673,6 +673,7 @@ class crosshellSession():
         self.defSessionFile = defaultSessionFile
         self.sessionFileFormat = sessionFileFormat
         self.sessionFile = self.defSessionFile
+        if os.path.exists(defaultSessionFile) == False: open(defaultSessionFile,'x').write("{}")
         self.loadSessionFile(self.sessionFile)
         self.encoding = encoding
         # Variables

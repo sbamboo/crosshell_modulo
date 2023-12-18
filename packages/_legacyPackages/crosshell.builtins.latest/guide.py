@@ -14,7 +14,7 @@ If commands dosen't load try writing: 'reload' to reload the commands.
 
 To Change settings edit the '/settings.yaml'.
 
-Croshell does have a formatting system so tags like //{f.blue}// can be used to change color.
+Crosshell does have a formatting system so tags like //{f.blue}// can be used to change color.
 For more information about formatting write: 'webi moduloformat'
 
 '''

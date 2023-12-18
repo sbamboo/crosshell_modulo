@@ -53,7 +53,7 @@ if _id != "" and _id != None:
     id_linkbase = "https://sbamboo.github.io/"
     id_link1 = "websa/crosshell/webi.html"
     url = id_linkbase + id_link1 + f"?id={_id}&giveurl=True" + f"&channel={channel}"
-    print(url)
+    print("\033[90mSource: "+url+"\033[0m")
     c = "urllocation_" + _id + " = "
     newlink = (((requests.get(url)).text).split(c)[1].split("\n")[0]).replace('"','')
     url = id_linkbase + newlink

@@ -110,6 +110,7 @@ crsh:
       HideByContext: true
       ColorAliases: true
       IncludeCurDir: true
+      Completer: v1
   Modules:
     Files:
       console-py:

@@ -118,7 +118,9 @@ def getDataFromList(
                 prefixesJSON = _fileHandler("json","get",prefixesJSONpath,encoding=encoding,safeSeps=True)
                 for key,value in prefixesJSON.items():
                     value = value.replace("{parent}",source)
+                    value = normalizePathSep(value)
                     registry["dynPrefix"][key] = value
+        # sInputCompleters
         # Formatting
         source = f"{package}{os.sep}Formatting"
         if os.path.exists(source):

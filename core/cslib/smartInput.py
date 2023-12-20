@@ -3,9 +3,8 @@ import sys
 import re
 
 from .cslib import intpip,_handleAnsi
-from .execution import getCleanAliasesDict
-from ._crosshellParsingEngine import splitByDelimiters
 from .datafiles import getKeyPath,_fileHandler
+from .smartInputCompleters import getCompleter
 
 try:
     from pygments.lexers import PythonLexer
@@ -18,7 +17,6 @@ try:
 except:
     intpip("install prompt_toolkit")
     from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.lexers import PygmentsLexer
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
@@ -28,22 +26,6 @@ from prompt_toolkit.cursor_shapes import CursorShape # This is used by eval() la
 from prompt_toolkit.styles import Style
 
 parent = os.path.abspath(os.path.dirname(__file__))
-
-def isAliasFor(possibleAlias,registry):
-    for key,value in registry["cmdlets"].items():
-        if value.get("aliases") != None:
-            if possibleAlias in value.get("aliases"):
-                return key
-    else:
-        possibleAlias 
-
-def contains_special_characters(input_string):
-    # Define a regular expression pattern to match non-alphanumeric and non-hyphen characters
-    pattern = r'[^a-zA-Z0-9-]'
-    # Use re.search to find the first occurrence of the pattern in the string
-    match = re.search(pattern, input_string)
-    # If a match is found, return True (contains special characters), else return False
-    return match is not None
 
 def capped_string_with_ansi(input_string, max_length):
     # Regular expression to match ANSI escape codes
@@ -184,209 +166,7 @@ def update_bottom_toolbar_message(promptSession=None,seti=dict,new_message=str,p
     else:
         sys.stdout.write(save_line + move_to_last_line + clear_line + move_to_beginning + formatting + new_message + load_line)
         sys.stdout.flush()
-
-class optimized_CustomCompleter(Completer):
-    def __init__(self, csSession=None):
-        self.csSession = csSession
-        self.cache_values()
-
-    def cache_values(self):
-        self.colorAliases = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.ColorAliases")
-        self.includeCustoms = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeCmdCustoms")
-        self.includeArgs = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.IncludeArgs")
-        self.includeStandards = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards")
-        self.IncludeCurDir = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeCurDir")
-        self.hideByContext = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.HideByContext")
-        if self.csSession.data["sta"] != True:
-            self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
-        else:
-            self.styles = _fileHandler("json","get",f"{parent}{os.sep}..{os.sep}sInputNoFormatStyles.json")
-
-    def get_completions(self, document, complete_event):
-        word_before_cursor = document.get_word_before_cursor(WORD=True).strip()
-        before_cursor = document.text_before_cursor.strip(" ")
-        segments = before_cursor.split(" ")
-
-        # Collect items and aliases in a single pass
-        items = set()
-        for item, data in self.csSession.registry["cmdlets"].items():
-            items.add(item)
-            items.update(
-                [key+"_alias" for key in getCleanAliasesDict(data.get("aliases", {})).keys()]
-            )
-
-        wMatches = {item for item in items if item.startswith(word_before_cursor) and item}
-
-        aMatches = set()
-        cMatches = set()
-        if self.csSession:
-            key = segments[0] if segments[0] in items else next((m for m in wMatches if m in items), None)
-            data = self.csSession.registry["cmdlets"].get(key)
-            if data == None: data = {}
-            if self.includeArgs and data.get("args"):
-                args = {arg.strip(" ").replace("optional:", "") for arg in splitByDelimiters(data["args"], [" ", "/"]) if not arg.strip(" ").startswith("<") and not arg.strip(" ").endswith(">") and not contains_special_characters(arg.strip(" ")) and arg.strip(" ").startswith("-")}
-                aMatches.update(args)
-            if self.includeCustoms and data.get("extras", {}).get("sInputCompletions"):
-                cmdletCompletions = data["extras"]["sInputCompletions"]
-                if isinstance(cmdletCompletions, str):
-                    cmdletCompletions = cmdletCompletions.split(";")
-                cMatches.update(cmdletCompletions)
-
-        # hide by context
-        if self.hideByContext and segments[0] in items:
-            se = segments[-1].strip(" ")
-            new_wMatches = {item for item in items if item.startswith(se) and not document.text_before_cursor.endswith(" ")}
-            if not se.endswith(";") and not se.endswith("||"):
-                wMatches = new_wMatches
-            else:
-                aMatches = set()
-                cMatches = set()
-
-        completions = [
-            Completion(match, start_position=-len(word_before_cursor), style=self.styles["arg"]) for match in aMatches
-        ] + [
-            Completion(match, start_position=-len(word_before_cursor), style=self.styles["custom"]) for match in cMatches
-        ]
-        
-        if self.includeStandards == False:
-            wMatches = []
-
-        if self.colorAliases:
-            completions += [Completion(match, start_position=-len(word_before_cursor), style=self.styles["cmd"]) for match in wMatches if "_alias" not in match]
-            wMatches_ali = {item[::-1].replace("saila_", "", 1)[::-1] for item in wMatches if item.endswith("_alias")}
-            completions += [Completion(match, start_position=-len(word_before_cursor), style=self.styles["alias"]) for match in wMatches_ali]
-        else:
-            completions += [Completion(match[::-1].replace("saila_", "", 1)[::-1], start_position=-len(word_before_cursor), style=self.styles["cmd"]) for match in wMatches]
-        if self.csSession and self.IncludeCurDir == True:
-            for ent in os.listdir(self.csSession.data["dir"]):
-                if word_before_cursor in ent:
-                    if os.path.isdir(ent) == True:
-                        completions.append(Completion(ent, start_position=-len(word_before_cursor), style=self.styles["dir"]))
-                    else:
-                        if os.path.splitext(ent)[1] in [".crsh",".crcmd"]:
-                            completions.append(Completion(ent, start_position=-len(word_before_cursor), style=self.styles["script"]))
-                        else:
-                            completions.append(Completion(ent, start_position=-len(word_before_cursor), style=self.styles["file"]))
-        return completions
-
-# region depricated
-"""
-class CustomCompleter(Completer):
-    '''cslib.smartInput: Class for tabCompletion.'''
-    def __init__(self,csSession=None):
-        self.csSession = csSession
-    def get_completions(self, document, complete_event):
-        colorAliases = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.ColorAliases")
-        # Get the current word being typed by the user
-        word_before_cursor = document.get_word_before_cursor(WORD=True)
-        beforeCursor = document.text_before_cursor
-        beforeCursor = beforeCursor.strip(" ")
-        segments = beforeCursor.split(" ")
-        # Find all items that start with the current word
-        items = []
-        for item,data in self.csSession.registry["cmdlets"].items():
-            items.append(item)
-            aliases = data.get("aliases")
-            if aliases != None:
-                if colorAliases == True:
-                    items.extend( [m+"_alias" for m in list(getCleanAliasesDict(aliases).keys())] )
-                else:
-                    items.extend( list(getCleanAliasesDict(aliases).keys()) )
-        wMatches = [x for x in items if x.startswith(word_before_cursor) and x != ""]
-        # CSSession
-        aMatches = []
-        cMatches = []
-        if self.csSession != None:
-            # Add per commands
-            includeCustoms = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeCmdCustoms")
-            includeArgs    = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeArgs")
-            if includeCustoms == True or includeArgs == True:
-                fS = segments[0]
-                key = None
-                if fS in items:
-                    key = fS
-                else:
-                    for m in wMatches:
-                        if m in items:
-                            key = m
-                            break
-                if key != None:
-                    data = {}
-                    data = self.csSession.registry["cmdlets"].get(key)
-                    if data == None:
-                        data = self.csSession.registry["cmdlets"].get( isAliasFor(key,self.csSession.registry) )
-                    if data == None:
-                        data = {}
-                    if includeArgs == True:
-                        if data.get("args") != None:
-                            args = splitByDelimiters(data.get("args"),[" ","/"])
-                            newargs = []
-                            for arg in args:
-                                _s = arg.strip(" ")
-                                if _s.startswith("<") == False and _s.endswith(">") == False:
-                                    if contains_special_characters(_s) == False and _s.startswith("-"):
-                                        _s = _s.replace("optional:","")
-                                        aMatches.append(_s)
-                    if includeCustoms == True:
-                        if data.get("extras") != None:
-                            cmdletCompletions = data["extras"].get("sInputCompletions")
-                            if cmdletCompletions != None:
-                                if type(cmdletCompletions) == str:
-                                    cmdletCompletions = cmdletCompletions.split(";")
-                                cMatches.extend(cmdletCompletions)
-            # Remove word-matches if not enabled
-            if self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards") != True:
-                wMatches = []
-        # Assemble
-        completions = []
-        ## get styles
-        styles = self.csSession.data["set"].getProperty("crsh","SmartInput.Styling.Completions")
-        ## rem empties
-        aMatches = [x for x in aMatches if x.startswith(word_before_cursor) and x != ""]
-        cMatches = [x for x in cMatches if x.startswith(word_before_cursor) and x != ""]
-        ## no-inkl cmd
-        if self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.HideByContext") == True:
-            if segments[0] in items:
-                se = segments[-1].strip(" ")
-                new_wMatches = []
-                for item in items:
-                    if item.startswith(se) and document.text_before_cursor.endswith(" ") != True:
-                        new_wMatches.append(item)
-                if se.endswith(";") == False and se.endswith("||") == False:
-                    wMatches = new_wMatches
-                else:
-                    aMatches = []
-                    cMatches = []
-        ## split aliases and cmds
-        if colorAliases == True:
-            wMatches_cmd = []
-            wMatches_ali = []
-            for item in wMatches:
-                if item.endswith("_alias"):
-                    wMatches_ali.append(item[::-1].replace("saila_","",1)[::-1])
-                else:
-                    wMatches_cmd.append(item)
-        else:
-            wMatches_cmd = wMatches
-        ## add objs
-        completions.extend(
-            [Completion(match, start_position=-len(word_before_cursor), style=styles["arg"]) for match in aMatches]
-        )
-        completions.extend(
-            [Completion(match, start_position=-len(word_before_cursor), style=styles["custom"]) for match in cMatches]
-        )
-        completions.extend(
-            [Completion(match, start_position=-len(word_before_cursor), style=styles["cmd"]) for match in wMatches_cmd]
-        )
-        if colorAliases == True:
-            completions.extend(
-                [Completion(match, start_position=-len(word_before_cursor), style=styles["alias"]) for match in wMatches_ali]
-            )
-        # Return a list of Completion objects for the matches
-        return completions
-"""
-# endregion depricated
-        
+    
 def bottom_toolbar(csSession):
     '''cslib.smartInput: Function to get toolbar msg.'''
     stdMsg = csSession.registry["toadInstance"].getToadMsg()
@@ -468,8 +248,7 @@ class sInputPrompt():
         seti = self.csSession.data["set"].getModule("crsh")
         # Tabcomplete
         if getKeyPath(seti,"SmartInput.TabComplete") == True:
-            #self.sessionArgs["completer"] = CustomCompleter(self.csSession)
-            self.sessionArgs["completer"] = optimized_CustomCompleter(self.csSession)
+            self.sessionArgs["completer"] = getCompleter(self.csSession)
         # History
         if getKeyPath(seti,"SmartInput.History") == True:
             # History type

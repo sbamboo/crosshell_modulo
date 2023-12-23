@@ -119,7 +119,8 @@ def getDataFromList(
                 for key,value in prefixesJSON.items():
                     value = value.replace("{parent}",source)
                     value = normalizePathSep(value)
-                    registry["dynPrefix"][key] = value
+                    nkey = os.path.split(package)[-1] + ":" + key # <package>:<key>
+                    registry["dynPrefix"][nkey] = value
         # sInputCompleters
         # Formatting
         source = f"{package}{os.sep}Formatting"

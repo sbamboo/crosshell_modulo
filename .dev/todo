@@ -8,8 +8,6 @@ make v2 completer to allow <path>/<cmdlet/<file>/<folder> type-completions for c
 
 allow loading custom completers through modulo-packages
 
-rewrite command-id "getidof" to be <author>.<package>.<channel>:<cmdlet-no-alias>
-
 make sure namespaces in dynprefix and similar are autofilled as pkg-name
 
 restructure al of crosshell to make them only share required scopes.

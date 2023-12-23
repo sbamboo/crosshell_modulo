@@ -17,11 +17,14 @@ try:
 
     pieces[-1] = os.path.splitext(pieces[-1])[0]
 
+    path = ""
     for i,piece in enumerate(pieces):
-        if "." in piece:
-            pieces[i] = piece.replace(".","_")
+        if i == len(pieces)-1:
+            path += ":" + piece
+        else:
+            path += "/" + piece
 
-    path = ".".join(pieces)
+    if path.startswith("/"): path = path.replace("/","",1)
 
     print(path)
 except:

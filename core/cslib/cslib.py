@@ -107,6 +107,13 @@ def fromPath(path):
     spec.loader.exec_module(module)
     return module
 
+def fromPathAA(path):
+    '''CSlib: Import a module from a path, to be used as: globals().update(fromPathAA(<path>))'''
+    spec = importlib.util.spec_from_file_location("module", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.__dict__
+
 # crosshellVersionManager
 def crosshellVersionManager_getData(versionFile,formatVersion="1",encoding="utf-8"):
     '''CSlib: gets the versionData from a compatible version file.'''

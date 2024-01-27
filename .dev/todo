@@ -12,3 +12,8 @@ make sure namespaces in dynprefix and similar are autofilled as pkg-name
 
 restructure al of crosshell to make them only share required scopes.
 allowing import of just cslib
+
+add a file for custom deffinitions like print/input/exit/include, they should be named descriptive names
+
+make include() for modules
+

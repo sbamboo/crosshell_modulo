@@ -81,7 +81,7 @@ crsh:
     History: true
     Highlight: true
     ShowToolbar: true
-    MultiLine: false
+    MultiLine: dynamic
     MouseSupport: false
     LineWrap: true
     CursorChar: BLINKING_BEAM
@@ -165,3 +165,12 @@ crsh_debugger:
   Scope: error
   Execution:
     AllowRunAsInternal: false
+  Parsing:
+    AskForDebug: false
+crsh_pkg_debad:
+  Formatting:
+    cathead: '{b.cyan}{f.black}%{r}'
+    catfull: '{b.cyan}{f.black}%{fill}{r}'
+    catedge: '{b.cyan}{f.black}%{edge}{r}'
+    subtitl: '{tab}{f.darkgray}%{delim}{r}'
+    subinfo: '{sp1}{auto}{f.blue}%{r}'

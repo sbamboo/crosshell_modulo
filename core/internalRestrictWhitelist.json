@@ -2,6 +2,7 @@
     "whitelist": [
         "reload",
         "script",
-        "exc"
+        "exc",
+        "if"
     ]
 }

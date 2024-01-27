@@ -161,6 +161,7 @@ st.verb("Loading settings...")
 # Add settings
 ## get data
 _set = CS_Settings.getModule("crsh")
+## set data
 _set = setKeyPath(_set,"Console.DefPrefix","> ")
 _set = setKeyPath(_set,"Console.DefTitle","Crosshell Modulo")
 _set = setKeyPath(_set,"Console.PrefixEnabled",True)
@@ -180,7 +181,7 @@ _set = setKeyPath(_set,"Execution.OnlyAllowCmdlets",False)
 _set = setKeyPath(_set,"Execution.PrintComments",True)
 _set = setKeyPath(_set,"Parse.Text.Webcolors", True)
 _set = setKeyPath(_set,"Formats.DefaultEncoding",CS_DefaultEncoding)
-CS_Settings.encoding = CS_Settings.getProperty("crsh", "Formats.DefaultEncoding")
+CS_Settings.encoding = CS_DefaultEncoding # set same value to skip an operation
 _set = setKeyPath(_set,"Language.Loaded",{"1":"en-us"})
 _set = setKeyPath(_set,"Language._choices",[])
 _set = setKeyPath(_set,"Language.DefaultList",f"{'{CS_BaseDir}'}{os.sep}assets{os.sep}langlist.json")
@@ -192,7 +193,7 @@ _set = setKeyPath(_set,"SmartInput.TabComplete",True)
 _set = setKeyPath(_set,"SmartInput.History",True)
 _set = setKeyPath(_set,"SmartInput.Highlight",True)
 _set = setKeyPath(_set,"SmartInput.ShowToolbar",True)
-_set = setKeyPath(_set,"SmartInput.MultiLine",False)
+_set = setKeyPath(_set,"SmartInput.MultiLine","dynamic")
 _set = setKeyPath(_set,"SmartInput.MouseSupport",True)
 _set = setKeyPath(_set,"SmartInput.LineWrap",True)
 _set = setKeyPath(_set,"SmartInput.CursorChar","BLINKING_BEAM")
@@ -226,7 +227,16 @@ _set = setKeyPath(_set,"Packages.Formatting.Mappings.Selected",None)
 _set = setKeyPath(_set,"Packages.Formatting.Mappings._choices",[])
 _set = setKeyPath(_set,"CGTS.ANSI_Hex_Palette",standardHexPalette)
 _set = setKeyPath(_set,"CGTS.CustomMappings",{})
+# SetMdl
 CS_Settings.set("crsh",_set)
+
+# Fill in debad
+CS_Settings.addModule("crsh_pkg_debad")
+CS_Settings.addProperty("crsh_pkg_debad","Formatting.cathead","{b.cyan}{f.black}%{r}")
+CS_Settings.addProperty("crsh_pkg_debad","Formatting.catfull","{b.cyan}{f.black}%{fill}{r}")
+CS_Settings.addProperty("crsh_pkg_debad","Formatting.catedge","{b.cyan}{f.black}%{edge}{r}")
+CS_Settings.addProperty("crsh_pkg_debad","Formatting.subtitl","{tab}{f.darkgray}%{delim}{r}")
+CS_Settings.addProperty("crsh_pkg_debad","Formatting.subinfo","{sp1}{auto}{f.blue}%{r}")
 
 # Default persistance
 CS_Persistance.addProperty("crsh","Prefix",CS_Settings.getProperty("crsh","Console.DefPrefix"))
@@ -243,6 +253,7 @@ def CS_GetEncoding():
 CS_Settings.addModule("crsh_debugger")
 CS_Settings.addProperty("crsh_debugger", "Scope", "error")
 CS_Settings.addProperty("crsh_debugger","Execution.AllowRunAsInternal", True)
+CS_Settings.addProperty("crsh_debugger","Parsing.AskForDebug", False)
 
 # Load debug mode from settings
 crshDebug.setScope(CS_Settings.getProperty("crsh_debugger", "Scope"))

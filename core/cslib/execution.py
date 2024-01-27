@@ -2,6 +2,7 @@ import traceback
 import os
 import sys
 import subprocess
+import re
 
 from cslib.buffering import BufferedStdout
 from cslib.externalLibs.filesys import filesys as fs
@@ -376,6 +377,30 @@ class execline():
         self._reset_execline()
         return out.strip("\n")
 
+def extract_codeblocks(s):
+    '''CSlib.execution: Function to extract codeblock regions'''
+    # Use a regular expression to find all blocks enclosed in brackets
+    matches = re.findall(r'\{[^{}]*\}', s)
+    # Sort matches by length in descending order
+    sorted_matches = sorted(matches, key=len, reverse=True)
+    # Filter out matches that are contained within others
+    non_overlapping_matches = []
+    for i, match in enumerate(sorted_matches):
+        if not any(match in other for other in sorted_matches[:i] + sorted_matches[i + 1:]):
+            non_overlapping_matches.append(match)
+    return non_overlapping_matches
+
+def exclude_codeblocks(input_string):
+    extracts = extract_codeblocks(input_string)
+    for extract in extracts:
+        input_string = input_string.replace(extract,"!cs.codeblock!")
+    return (input_string, extracts)
+
+def include_codeblocks(input_string, substrings):
+    for substring in substrings:
+        input_string = input_string.replace("!cs.codeblock!", substring, 1)
+    return input_string
+
 def determine_delims(csSession,baseDelims=["||"]) -> list:
     '''CSlib.execution: Function to determine delims to use by settings.'''
     splitByNewline = csSession.data["set"].getProperty("crsh","Execution.SplitByNewline")
@@ -400,6 +425,8 @@ def input_to_pipelineStructure(csSession,sinput=str,basicExecutionDelimiters=["|
             if len(split_expression) > 0:
                 cmd = split_expression[0]
                 split_expression.pop(0)
+                for i2,part in enumerate(split_expression):
+                    split_expression[i2] = part.replace("!cs.nl!","\n")
             else:
                 cmd,split_expression = expression,[]
             dict_expression = {"cmd":cmd, "args":split_expression}
@@ -426,3 +453,4 @@ def execute_string(string,csSession,capture=False,globalVals={},entries=None):
         cmd = split_expression[0]
         split_expression.pop(0)
     return execute_expression(csSession,cmd,split_expression,capture,globalVals,entries)
+    

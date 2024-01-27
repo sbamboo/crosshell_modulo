@@ -562,12 +562,13 @@ class crosshellDebugger():
         self.scope = defaultScope
         self.stripAnsi = stripAnsi
         # The scopes are are prio listed so if set to 'warn' info and msg will also be shown, to now show set !<mode>
-        self.allowedScopes = ["msg","info","warn","error","debug","off"]
+        self.allowedScopes = ["msg","info","warn","exception","error","debug","off"]
         self.colors = {
             "reset":"\033[0m",
             "msg":"",
             "info":"\033[90m",
             "warn":"\033[33m",
+            "exception":"\033[91m",
             "error":"\033[91m",
             "debug":"\033[90m",
             "off":"\033[31m"
@@ -576,6 +577,7 @@ class crosshellDebugger():
             "msg":"[Crsh]: ",
             "info":"[Crsh]: ",
             "warn":"[Crsh<Warn>]: ",
+            "exception":"[Crsh<Exception>]: ",
             "error":"[Crsh<Error>]: ",
             "debug":"[CSDebug]: ",
             "off":"[CSDebug<forcedOutput>]: "

@@ -247,6 +247,7 @@ class sInputPrompt():
         # Open settings
         seti = self.csSession.data["set"].getModule("crsh")
         # Tabcomplete
+        self.csSession.tmpSet("completerData",{})
         if getKeyPath(seti,"SmartInput.TabComplete") == True:
             self.sessionArgs["completer"] = getCompleter(self.csSession)
         # History
@@ -318,6 +319,11 @@ class sInputPrompt():
         if self.sessionArgs.get("bottom_toolbar") != None:
             self.pSession.bottom_toolbar = bottom_toolbar(self.csSession)
         # Ask
+        ## update completerData
+        _d = self.csSession.tmpGet("completerData")
+        _d["pSession"] = self.pSession
+        self.csSession.tmpSet("completerData",_d)
+        ## prompt
         inp = self.pSession.prompt(ANSI(_prefix))
         # Post Handle
         if self.styleEna == True and self.inject == True:

@@ -24,6 +24,41 @@ def contains_special_characters(input_string):
     # If a match is found, return True (contains special characters), else return False
     return match is not None
 
+def remove_sections_within_quotes(s):
+    result = []
+    inside_quotes = False
+    current_quote = None
+
+    for char in s:
+        if char == "'" or char == '"':
+            if not inside_quotes:
+                inside_quotes = True
+                current_quote = char
+            elif current_quote == char:
+                inside_quotes = False
+                current_quote = None
+        elif not inside_quotes:
+            result.append(char)
+
+    return ''.join(result)
+
+def has_unclosed_brackets(s):
+    # Remove sections within quotes
+    s_without_quotes = remove_sections_within_quotes(s)
+
+    # Check for unclosed brackets in the modified string
+    stack_brackets = []
+
+    for char in s_without_quotes:
+        if char == '{':
+            stack_brackets.append(char)
+        elif char == '}':
+            if not stack_brackets:
+                return True  # Found a closing bracket without a matching opening bracket
+            stack_brackets.pop()
+
+    return bool(stack_brackets)
+
 def getCompleter(csSession):
     completer = csSession.data["set"].getProperty("crsh","SmartInput.Completions.Completer").lower()
     if completer == "legacy":
@@ -44,6 +79,18 @@ class legacy_CustomCompleter(Completer):
         beforeCursor = document.text_before_cursor
         beforeCursor = beforeCursor.strip(" ")
         segments = beforeCursor.split(" ")
+
+        # Dynamic multiline
+        mlMode = self.csSession.data["set"].getProperty("crsh", "SmartInput.MultiLine")
+        dynMultiline = mlMode.lower() == "dynamic" if type(mlMode) == str else False
+        if dynMultiline == True:
+            pSession = self.csSession.tmpGet("completerData").get("pSession")
+            if pSession != None:
+                if has_unclosed_brackets(beforeCursor):
+                    pSession.multiline = True
+                else:
+                    pSession.multiline = False
+
         # Find all items that start with the current word
         items = []
         for item,data in self.csSession.registry["cmdlets"].items():
@@ -160,6 +207,8 @@ class optimized_CustomCompleterV1(Completer):
         self.includeStandards = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards")
         self.IncludeCurDir = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeCurDir")
         self.hideByContext = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.HideByContext")
+        mlMode = self.csSession.data["set"].getProperty("crsh", "SmartInput.MultiLine")
+        self.dynMultiline = mlMode.lower() == "dynamic" if type(mlMode) == str else False
         if self.csSession.data["sta"] != True:
             self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
         else:
@@ -170,6 +219,15 @@ class optimized_CustomCompleterV1(Completer):
         word_before_cursor = document.get_word_before_cursor(WORD=True).strip()
         before_cursor = document.text_before_cursor.strip(" ")
         segments = before_cursor.split(" ") # split by " " to get segments
+
+        # Dynamic multiline
+        if self.dynMultiline == True:
+            pSession = self.csSession.tmpGet("completerData").get("pSession")
+            if pSession != None:
+                if has_unclosed_brackets(before_cursor):
+                    pSession.multiline = True
+                else:
+                    pSession.multiline = False
 
         # Collect items and aliases in a single pass from registry. Aliases are suffixed by "_alias"
         items = set()
@@ -260,6 +318,8 @@ class optimized_CustomCompleterV2(Completer):
         self.includeStandards = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeStandards")
         self.IncludeCurDir = self.csSession.data["set"].getProperty("crsh","SmartInput.Completions.IncludeCurDir")
         self.hideByContext = self.csSession.data["set"].getProperty("crsh", "SmartInput.Completions.HideByContext")
+        mlMode = self.csSession.data["set"].getProperty("crsh", "SmartInput.MultiLine")
+        self.dynMultiline = mlMode.lower() == "dynamic" if type(mlMode) == str else False
         if self.csSession.data["sta"] != True:
             self.styles = self.csSession.data["set"].getProperty("crsh", "SmartInput.Styling.Completions")
         else:
@@ -270,6 +330,15 @@ class optimized_CustomCompleterV2(Completer):
         last_word_befCursor = document.get_word_before_cursor(WORD=True).strip()
         text_befCursor = document.text_before_cursor.strip(" ")
         segments = text_befCursor.split(" ") # split by " " to get segments
+
+        # Dynamic multiline
+        if self.dynMultiline == True:
+            pSession = self.csSession.tmpGet("completerData").get("pSession")
+            if pSession != None:
+                if has_unclosed_brackets(text_befCursor):
+                    pSession.multiline = True
+                else:
+                    pSession.multiline = False
 
         # Setup
         wMatches = set()

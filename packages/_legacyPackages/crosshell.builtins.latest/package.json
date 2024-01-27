@@ -29,6 +29,9 @@
         "comment": {
             "desc": "Prints input as a comment."
         },
+        "debad": {
+            "desc": "Croshell debug-information formatter, formats data with a rich format."
+        },
         "exc": {
             "desc": "Executes input as cli-command.",
             "options": {
@@ -75,6 +78,14 @@
             "desc": "Returns any input but enclosing it in format-escapes.",
             "aliases": ["unformat"],
             "args": "<string>"
+        },
+        "if": {
+                "desc": "Executes input as cli-command.",
+                "args": "<condition> <codeblock>",
+                "options": {
+                    "takesCondition": "true",
+                    "restrictionMode": "internal"
+                }
         },
         "pause": {
             "desc": "Pauses.",

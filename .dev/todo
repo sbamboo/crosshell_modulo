@@ -17,3 +17,10 @@ add a file for custom deffinitions like print/input/exit/include, they should be
 
 make include() for modules
 
+allow formatted descriptions:
+#st-fdesc
+#en-fdesc
+/
+fdesc: {}
+that get converted into a oneline string with placeholder for \n
+theese can work as "man"-pages

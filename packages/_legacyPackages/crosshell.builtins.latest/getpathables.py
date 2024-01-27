@@ -22,23 +22,23 @@ if sargv.strip("") != "":
     else:
         keys = q_keys
 
-title = "{f.magenta}Loaded cmdlets (query):"
+title = "{f.magenta}Loaded cmdlets (query-filtered):"
 
 print(title)
 for key in keys:
     value = items[key]
     print("{f.yellow}"+f'\n  {key}:'+"{r}")
     print("{f.darkgray}     desc:{f.green}"+f' "{value["desc"]}"')
-    print("{f.darkgray}     aliases{f.green}"+f' {value["aliases"]}')
-    print("{f.darkgray}     args{f.green}"+f' "{value["args"]}"')
-    print("{f.darkgray}     bcp{f.green}"+f' {value["blockCommonParameters"]}')
-    print("{f.darkgray}     encoding{f.green}"+f' {value["encoding"]}')
-    print("{f.darkgray}     fending{f.green}"+f' {value["fending"]}')
+    print("{f.darkgray}     aliases:{f.green}"+f' {value["aliases"]}')
+    print("{f.darkgray}     args:{f.green}"+f' "{value["args"]}"')
+    print("{f.darkgray}     blockCommonParams:{f.green}"+f' {value["blockCommonParameters"]}')
+    print("{f.darkgray}     encoding:{f.green}"+f' {value["encoding"]}')
+    print("{f.darkgray}     fending:{f.green}"+f' {value["fending"]}')
     print("{f.darkgray}     options:")
-    print("{f.darkgray}        argparseHelp{f.green}"+f' {value["options"]["argparseHelp"]}')
-    print("{f.darkgray}        synopsisDesc{f.green}"+f' {value["options"]["synopsisDesc"]}')
-    print("{f.darkgray}        restrictionMode{f.green}"+f' {value["options"]["restrictionMode"]}')
-    print("{f.darkgray}        readerReturnVars{f.green}"+f' {value["options"]["readerReturnVars"]}')
-    print("{f.darkgray}     path{f.green}"+f' {value["path"]}')
-    print("{f.darkgray}     extras{f.green}"+f' {value["extras"]}')
+    print("{f.darkgray}        argparseHelp:{f.green}"+f' {value["options"]["argparseHelp"]}')
+    print("{f.darkgray}        synopsisDesc:{f.green}"+f' {value["options"]["synopsisDesc"]}')
+    print("{f.darkgray}        restrictionMode:{f.green}"+f' {value["options"]["restrictionMode"]}')
+    print("{f.darkgray}        readerReturnVars:{f.green}"+f' {value["options"]["readerReturnVars"]}')
+    print("{f.darkgray}     path:{f.green}"+f' {value["path"]}')
+    print("{f.darkgray}     extras:{f.green}"+f' {value["extras"]}')
 print("{r}")

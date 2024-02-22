@@ -25,6 +25,11 @@ defPrefix = csSession.data["set"].getProperty("crsh","Console.DefPrefix")
 defEncoding = csSession.data["set"].getProperty("crsh","Formats.DefaultEncoding")
 defTitle = csSession.data["set"].getProperty("crsh","Console.DefTitle")
 settings = csSession.data['set']._getContent()
+
+## NF debad setts
+for key,value in settings["crsh_pkg_debad"]["Formatting"].items():
+    settings["crsh_pkg_debad"]["Formatting"][key] = "//" + value + "//"
+
 try:
     settings["crsh"]["Console"]["DefTitle"] = "//" + settings["crsh"]["Console"]["DefTitle"] + "//"
 except: pass

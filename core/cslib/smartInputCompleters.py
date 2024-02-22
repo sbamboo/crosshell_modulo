@@ -305,15 +305,18 @@ class optimized_CustomCompleterV1(Completer):
             # Show recursive info
             if word_before_cursor.strip().endswith("/"):
                 dirPreCur = os.path.join( self.csSession.data["dir"] , word_before_cursor.strip().rstrip("/") )
-                for ent in os.listdir(dirPreCur):
-                    entp = os.path.join(dirPreCur,ent).replace(self.csSession.data["dir"]+os.sep,"").replace(os.sep,"/")
-                    if os.path.isdir(entp) == True:
-                        completions.append(Completion(entp, start_position=-len(word_before_cursor), style=self.styles["dir"]))
-                    else:
-                        if os.path.splitext(entp)[1] in [".crsh",".crcmd"]:
-                            completions.append(Completion(entp, start_position=-len(word_before_cursor), style=self.styles["script"]))
+                try:
+                    for ent in os.listdir(dirPreCur):
+                        entp = os.path.join(dirPreCur,ent).replace(self.csSession.data["dir"]+os.sep,"").replace(os.sep,"/")
+                        if os.path.isdir(entp) == True:
+                            completions.append(Completion(entp, start_position=-len(word_before_cursor), style=self.styles["dir"]))
                         else:
-                            completions.append(Completion(entp, start_position=-len(word_before_cursor), style=self.styles["file"]))
+                            if os.path.splitext(entp)[1] in [".crsh",".crcmd"]:
+                                completions.append(Completion(entp, start_position=-len(word_before_cursor), style=self.styles["script"]))
+                            else:
+                                completions.append(Completion(entp, start_position=-len(word_before_cursor), style=self.styles["file"]))
+                except Exception as e:
+                    pass
 
 
         # Return completions

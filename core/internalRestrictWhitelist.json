@@ -3,6 +3,7 @@
         "reload",
         "script",
         "exc",
-        "if"
+        "if",
+        "refresh"
     ]
 }

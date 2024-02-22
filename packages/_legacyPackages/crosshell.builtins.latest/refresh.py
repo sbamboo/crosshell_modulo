@@ -1,0 +1,1 @@
+CS_Console.execute_internally(globals())

@@ -1,0 +1,34 @@
+#csSession contains it al
+
+#comment keep in csettings
+
+#csSettings clss basing on:
+class settingsConnector():
+    # used in local and non-local.
+
+#so CS_Settings.<method>
+# or local = CS_Settings.local()
+# local.<method>
+# using class inheritance
+    
+# cs split in:
+#core/
+#   main.py
+#   ...
+    
+# so can be used with <session>.core instead of importing cslib
+    
+# return() builtin for returning data as obj-links example: <dict_4921041> or <dict4@921041> or #4921041,
+# theese can be used to send objs through pipeline wihtout parsing-mashing them.
+    
+# Buffer-out should also append al output from final-pipelines so:
+# print h | num       : 14
+# print h || print o  : h, o
+    
+# execution modules should implement a execute function/method and be dyn-imported rather then executed.
+
+# diffrent modules of crosshell like exec/interp/console should be executed with just session in scope not sharing global, this ofc needs more implements in session.
+    
+# session should be re-structured to have exportable-data sepparate in f-ex <session>.data[...]
+
+# datatype lockable_dict that can be locked/readonly either thorugh custom class or pythonic implementation

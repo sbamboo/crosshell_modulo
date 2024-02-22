@@ -8,6 +8,9 @@
         },
         "pysc-help": {
             "desc": "DEVTOOL: Info on how to use pysc."
+        },
+        "todon": {
+            "desc": "DEVTOOL: Shows todo-information from /.dev/todo"
         }
     }
 }

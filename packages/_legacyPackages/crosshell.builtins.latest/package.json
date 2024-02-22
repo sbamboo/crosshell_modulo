@@ -111,6 +111,12 @@
             "desc": "Returns any input put surrounded by red formatting.",
             "args": "<string>"
         },
+        "refresh": {
+            "desc": "Launches a new console session.",
+            "options": {
+                "restrictionMode": "internal"
+            }
+        },
         "reload": {
             "desc": "Reloads the console.",
             "args": "-v/--vis/v",

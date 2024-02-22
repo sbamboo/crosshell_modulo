@@ -1,4 +1,4 @@
-def buildPrefix(char=str,vars=dict):
+def buildPrefix(char=str,vars=dict,space=True):
     # get vars
     stripAnsi=vars["stripAnsi"]
     # setup
@@ -9,6 +9,8 @@ def buildPrefix(char=str,vars=dict):
         format = ""
         reset = ""
     # build
-    string = f"{format}{char}{reset} "
+    string = f"{format}{char}{reset}"
+    if space == True:
+        string += " "
     # return
     return string

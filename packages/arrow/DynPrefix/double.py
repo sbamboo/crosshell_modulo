@@ -6,4 +6,4 @@ main = include("_main")
 char = "》"
 
 def generate():
-    return main.buildPrefix(char,globals())
+    return main.buildPrefix(char,globals(),space=False)

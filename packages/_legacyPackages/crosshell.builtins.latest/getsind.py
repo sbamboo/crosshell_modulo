@@ -7,7 +7,7 @@ try:
         argv = sargv.split("\n")
 
     val = argv
-
+    print(val)
     try:
         val = val[int(ind)]
     except:

@@ -164,7 +164,7 @@ crsh:
 crsh_debugger:
   Scope: error
   Execution:
-    AllowRunAsInternal: false
+    AllowRunAsInternal: true
   Parsing:
     AskForDebug: false
 crsh_pkg_debad:

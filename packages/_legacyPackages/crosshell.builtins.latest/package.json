@@ -165,10 +165,11 @@
         },
         "versionassistant": {
             "desc": "Crosshells version assistant.",
-            "aliases": ["version","ver"]
+            "aliases": ["version","ver"],
+            "args": "-g gui"
         },
         "webi": {
-            "desc": "Cmdlet for getting information from crosshell webinfo (webi).",
+            "desc": "Cmdlet for getting information from crosshell webinfo (webi).    Ver: 1.0     Channel: Modulo",
             "args": "<id> -o/-open -list"
         },
         "welcome": {

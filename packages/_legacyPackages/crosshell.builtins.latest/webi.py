@@ -41,7 +41,11 @@ if _list == True:
     id_link1 = "websa/crosshell/webi.html"
     url = id_linkbase + id_link1 + "?list=True" + f"&channel={channel}"
     c = "id_shorteners = "
-    rawlist = (((requests.get(url)).text).split(c)[1].split("\n")[0]).replace('"','')
+    try:
+        rawlist = (((requests.get(url)).text).split(c)[1].split("\n")[0]).replace('"','')
+    except IndexError:
+        print(f"\033[31mNo atricle returned for keyword '{_id}', use 'webi -list' to list out avaliable articles.\033[0m")
+        exit()
     rawlist = rawlist.replace(" ","")
     webiItems = rawlist.split(",")
     print("Avaliable shortener ids: ")
@@ -53,9 +57,13 @@ if _id != "" and _id != None:
     id_linkbase = "https://sbamboo.github.io/"
     id_link1 = "websa/crosshell/webi.html"
     url = id_linkbase + id_link1 + f"?id={_id}&giveurl=True" + f"&channel={channel}"
-    print("\033[90mSource: "+url+"\033[0m")
     c = "urllocation_" + _id + " = "
-    newlink = (((requests.get(url)).text).split(c)[1].split("\n")[0]).replace('"','')
+    try:
+        newlink = (((requests.get(url)).text).split(c)[1].split("\n")[0]).replace('"','')
+    except IndexError:
+        print(f"\033[31mNo atricle returned for keyword '{_id}', use 'webi -list' to list out avaliable articles.\033[0m")
+        exit()
+    print("\033[90mSource: "+url+"\033[0m")
     url = id_linkbase + newlink
     if url == id_linkbase:
         print(f"\033[31mId '{_id}' not found online. Try 'webi -list'\033[0m")

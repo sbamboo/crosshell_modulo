@@ -1,6 +1,10 @@
-import pickle, sys, json, os, argparse, inspect
+import pickle, sys, json, os, argparse, inspect, re
 
-from cslib.crosshellParsingEngine import tagSubstitionManager, pathTagManager
+from cslib.piptools import installPipDeps_fl
+from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager
+from cslib._crosshellGlobalTextSystem import standardHexPalette
+from cslib.externalLibs.filesys import filesys
+from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
 
 def normPathSep(path):
     """CSlib: Normalises path sepparators to the current OS."""
@@ -29,6 +33,223 @@ def absPathSepObj(obj):
     elif type(obj) == str:
         obj = os.path.abspath(obj)
     return obj
+
+class modularSettingsLinker():
+    '''CSlib: Links to a settings file to provide a module system'''
+    def __init__(self,settingsFile,encoding="utf-8",ensure=False,readerMode="Comments",discardNewlines=False):
+        self.file = settingsFile
+        self.modules = []
+        self.encoding = encoding
+        if ".yaml" in self.file:
+            self.filetype = "yaml"
+        elif ".json" in self.file or ".jsonc" in self.file or ".json5" in self.file:
+            self.filetype = "json"
+        if ensure == True:
+            if os.path.exists(self.file) != True:
+                toc = ""
+                if self.filetype == "json":
+                    toc = "{}"
+                open(self.file,'w',encoding=encoding).write(toc)
+        self.readerMode = readerMode
+        self.discardNewlines = discardNewlines
+        self.keptComments = None
+        if os.path.exists(self.file) == False: open(self.file,'x').write("")
+    def _getContent(self,_ovFile=None,_ovEnc=None) -> dict:
+        toUse = _ovFile if _ovFile != None else self.file
+        encoding = _ovEnc if _ovEnc != None else self.encoding
+        data = {}
+        if self.readerMode.lower() != "off":
+            data,self.keptComments = _fileHandler(self.filetype,"get",toUse,encoding=encoding,readerMode=self.readerMode,discardNewlines=self.discardNewlines)
+        else:
+            data = _fileHandler(self.filetype,"get",toUse,encoding=encoding,readerMode=self.readerMode)
+        if data == None: data = {}
+        return data
+    def _setContent(self,content,_ovFile=None,_ovEnc=None) -> None:
+        toUse = _ovFile if _ovFile != None else self.file
+        encoding = _ovEnc if _ovEnc != None else self.encoding
+        if self.readerMode.lower() != "off":
+            _fileHandler(self.filetype,"set",toUse,content,encoding=encoding,readerMode=self.readerMode,discardNewlines=self.discardNewlines,commentsToInclude=self.keptComments)
+        else:
+            _fileHandler(self.filetype,"set",toUse,content,encoding=encoding,readerMode=self.readerMode)
+    def _appendFromFile(self,filepath,_ovEnc=None) -> None:
+        """Obs! This function will overwrite any data with the new one, be carefull!"""
+        encoding = _ovEnc if _ovEnc != None else self.encoding
+        contentRaw = self._getContent(_ovFile=filepath,_ovEnc=self.encoding)
+        self._setContent(contentRaw,_ovFile=self.file,_ovEnc=encoding)
+    def _appendContent(self,content) -> None:
+        if self.filetype == "yaml":
+            data = self._getContent()
+            if data == None: data = {}
+            data.update(content)
+            self._setContent(data)
+    def _getModules(self) -> list:
+        return list(self._getContent().items())
+    def createFile(self,overwrite=False):
+        self.keptComments = None
+        filesys.ensureDirPath(os.path.dirname(self.file))
+        if overwrite == True:
+            if filesys.doesExist(self.file): filesys.deleteFile(self.file)
+            filesys.createFile(self.file)
+        else:
+            if filesys.notExist(self.file):
+                filesys.createFile(self.file)
+        if self.filetype == "json":
+            content = filesys.readFromFile(self.file)
+            if content == "" or content == None:
+                filesys.writeToFile("{}")
+    def removeFile(self):
+        self.keptComments = None
+        filesys.deleteFile(self.file)
+    def addModule(self,module,overwrite=False) -> None:
+        self.modules.append(module)
+        data = self._getContent()
+        if overwrite == True:
+            data[module] = {}
+        else:
+            if data.get(module) == None:
+                data[module] = {}
+        self._setContent(data)
+    def getModule(self,module) -> None:
+        data = self._getContent()
+        return data[module]
+    def remModule(self,module) -> None:
+        if module in self.modules:
+            i = self.modules.index(module)
+            self.modules.pop(i)
+        data = self._getContent()
+        if data.get(module) != None:
+            data.pop(module)
+        self._setContent(data)
+    def set(self,module,content,autocreate=False) -> None:
+        if module in self.modules:
+            data = self._getContent()
+            data[module] = content
+            self._setContent(data)
+        elif autocreate == True:
+            self.addModule(module)
+            data = self._getContent()
+            data[module] = content
+            self._setContent(data)
+    def rem(self,module,autocreate=False) -> None:
+        if module in self.modules:
+            data = self._getContent()
+            data.pop(module)
+            self._setContent(data)
+        elif autocreate == True:
+            self.addModule(module)
+            data = self._getContent()
+            data.pop(module)
+            self._setContent(data)
+    def get(self,module,autocreate=False) -> dict:
+        if module in self.modules:
+            data = self._getContent()
+            return data[module]
+        elif autocreate == True:
+            self.addModule(module)
+            data = self._getContent()
+            return data[module]
+        else:
+            return None
+    def update(self,module,content,autocreate=False) -> None:
+        if module in self.modules:
+            data = self._getContent()
+            data[module].update(content)
+            self._setContent(data)
+        elif autocreate == True:
+            self.addModule(module)
+            self.set(module,content)
+    def addProperty(self,module,keyPath,default,autocreate=False) -> None:
+        data = self.get(module,autocreate=autocreate)
+        data = setKeyPath(data,keyPath,default)
+        self.set(module,data,autocreate=autocreate)
+    def getProperty(self,module,keyPath,autocreate=False):
+        data = self.get(module,autocreate=autocreate)
+        return getKeyPath(data,keyPath)
+    def chnProperty(self,module,keyPath,default,autocreate=False) -> None:
+        data = self.get(module,autocreate=autocreate)
+        data = setKeyPath(data,keyPath,default,nonAppend=True)
+        self.set(module,data,autocreate=autocreate)
+    def uppProperty(self,module,keyPath,default,autocreate=False) -> None:
+        data = self.get(module,autocreate=autocreate)
+        data = setKeyPath(data,keyPath,default,update=True)
+        self.set(module,data,autocreate=autocreate)
+    def remProperty(self,module,keyPath,autocreate=False) -> None:
+        data = self.get(module,autocreate=autocreate)
+        data = remKeyPath(data,keyPath)
+        self.set(module,data,autocreate=autocreate)
+
+def recursiveMultipleReplacementTagWrapper(obj,tags=dict):
+    """CSlib: Evals an object in multiple replacementTagWrappers."""
+    if type(obj) == dict:
+        for k,v in obj.items():
+            obj[k] = recursiveMultipleTagWrapper(v,tags)
+    elif type(obj) == list or type(obj) == tuple:
+        for i,v in enumerate(obj):
+            obj[i] = recursiveMultipleTagWrapper(v,tags)
+    elif type(obj) == str:
+        for tag,tagVal in tags.items():
+            if obj == "{"+tag+"}":
+                obj = tagVal
+    return obj
+
+def ingestDefaults(defaultsFile,encoding="utf-8",instanceMapping=dict):
+    defaults = json.loads(open(defaultsFile,'r',encoding=encoding).read())
+    for file in defaults.keys():
+        if instanceMapping.get(file) != None:
+            for module, settings in defaults[file].items():
+                instanceMapping[file]["instance"].addModule(module)
+                for settK,settV in settings.items():
+                    if type(settV) == str and settV.startswith("@") and settV.count(":") == 2:
+                        split = settV.replace("@","",1).split(":")
+                        file2 = split[0]
+                        module2 = split[1]
+                        settK2 = split[2]
+                        if instanceMapping.get(file2) != None:
+                            if instanceMapping[file2]["instance"].get(module2) != None:
+                                settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
+                                settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
+                                instanceMapping[file]["instance"].addProperty(module,settK,settV2)
+                    else:
+                        settV = recursiveMultipleReplacementTagWrapper(settV,instanceMapping[file]["tags"])
+                        instanceMapping[file]["instance"].addProperty(module,settK,settV)
+def ingestDefaults_fd(defaults=dict,encoding="utf-8",instanceMapping=dict):
+    for file in defaults.keys():
+        if instanceMapping.get(file) != None:
+            for module, settings in defaults[file].items():
+                instanceMapping[file]["instance"].addModule(module)
+                for settK,settV in settings.items():
+                    if type(settV) == str and settV.startswith("@") and settV.count(":") == 2:
+                        split = settV.replace("@","",1).split(":")
+                        file2 = split[0]
+                        module2 = split[1]
+                        settK2 = split[2]
+                        if instanceMapping.get(file2) != None:
+                            if instanceMapping[file2]["instance"].get(module2) != None:
+                                settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
+                                settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
+                                instanceMapping[file]["instance"].addProperty(module,settK,settV2)
+                    else:
+                        settV = recursiveMultipleReplacementTagWrapper(settV,instanceMapping[file]["tags"])
+                        instanceMapping[file]["instance"].addProperty(module,settK,settV)
+
+def prefixAnyTags(string_with_tags,prefix):
+    pattern = r'\{(.*?)\}'
+    matches = re.findall(pattern, string_with_tags)
+    for m in matches:
+        string_with_tags = string_with_tags.replace("{"+m+"}","{"+prefix+m+"}")
+    return string_with_tags
+
+def deep_merge_dict_only(dict1, dict2):
+    """
+    Merge two dictionaries deeply.
+    """
+    merged = dict1.copy()
+    for key, value in dict2.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
 
 class UnserializableObjectReference():
     def __init__(self,reference=str):
@@ -123,6 +344,16 @@ class sessionStorage():
         self.storage["userVars"] = {}
     # endregion
 
+class sessionFlags():
+    def __init__(self):
+        self.flags = []
+    def enable(self, flag):
+        self.flags.append(flag)
+    def disable(self, flag):
+        self.flags.remove(flag)
+    def has(self, flag):
+        return flag in self.flags
+
 class crshSession():
     # The identification is used on import to ensure classes are compatible.
     global identification; identification = "f09682eb-5be1-4675-b9a0-68148b48e09c"
@@ -147,10 +378,14 @@ class crshSession():
         self.regionalUpdate = self.storage.regionalUpdate
         self.regionalReset = self.storage.regionalReset
 
+        self.flags = sessionFlags()
+
         self.registry = {}
         self.nonRegisterableTypes = nonRegisterableTypes
 
         self.regionalPrefix = self.storage.regionalPrefix = regionalVarPrefix
+
+        self.initDefaults = {}
 
         if initOnStart == True:
             self.init()
@@ -207,25 +442,24 @@ class crshSession():
         else:
             raise KeyError(f"No object with the name '{name}' found in the registry.")
 
-    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None):
-        """Initiates the session."""
-
-        # Define standard
-        _regionalVars = {
+    def populateDefaults(self):
+        self.flags.enable("--populatedDefaults")
+        self.initDefaults["regionalVars"] = {
             "SessionIdentifier": self.identification,
             "DefaultEncoding": "utf-8",
             "RootPathRetrivalMode": "inspect",
+            "SettingsReaderMode": "Off",
 
             "CSlibDir": None,
             "BaseDir": "{CSlibDir}/..",
             "CoreDir": "{BaseDir}/core",
             "AssetsDir": "{BaseDir}/assets",
             "PackagesFolder": "{BaseDir}/packages",
-            "CS_mPackPath": "{PackagesFolder}",
-            "CS_lPackPath": "{PackagesFolder}/_legacyPackages",
+            "mPackPath": "{PackagesFolder}",
+            "lPackPath": "{PackagesFolder}/_legacyPackages",
             "ReadersFolder": "{CoreDir}/readers",
-            "SettingsFile": "{AssetsDir}/settings.json",
-            "PersistanceFile": "{AssetsDir}/persistance.json",
+            "SettingsFile": "{AssetsDir}/settings.yaml",
+            "PersistanceFile": "{AssetsDir}/persistance.yaml",
             "sInputHistoryFile": "{AssetsDir}/.history",
             "CmdletScopeVarsFile": "{CoreDir}/cmdletScopeVars.json",
             "VersionFile": "{CoreDir}/version.yaml",
@@ -242,11 +476,20 @@ class crshSession():
             "Pargs": None,
             "StripAnsi": None,
             "PythonPath": sys.executable,
-            "PathTags": None
+            "PathTags": None,
+            "SubstTags": None,
+
+            "GetEncoding": None,
+
+            "__registerAsPaths": [ # __registerAsPaths is used to register the paths as pathTags, so any key in this list will be replaceable, for other keys.
+                "CSlibDir","BaseDir","CoreDir","AssetsDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder"
+            ],
+            "__registerAsTags": [ # __registerAsTags is used to register additional substituteTags, not usable when initiating regional-vars.
+                "DefaultEncoding", "VersionFile"
+            ]
         }
 
-        # Deffine Arguments
-        _arguments = [
+        self.initDefaults["arguments"] = [
             [
                 ["-sa", "--stripAnsi"],
                 {
@@ -303,12 +546,84 @@ class crshSession():
             ]
         ]
 
-        _cmdArgPlaceholders = {
+        self.initDefaults["cmdArgPlaceholders"] = {
             "§": " "
         }
 
+        self.initDefaults["pathTagBlacklistKeys"] = ["__registerAsPaths","__registerAsTags"]
+
+        self.initDefaults["defaults"] = {
+            "settings": {
+                "crsh": {
+                    "Console.DefPrefix": "> ",
+                    "Console.DefTitle": "Crosshell Modulo",
+                    "Formats.DefaultEncoding": "{CS_DefaultEncoding}",
+                    "Version.VerFile": "{CS_VersionFile}",
+                    "Version.FileFormatVer": "1",
+                    "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
+                    "CGTS.CustomMappings": {}
+                },
+                "crsh_debugger": {
+                    "Scope": "error"
+                }
+            },
+
+            "persistance": {
+                "crsh": {
+                    "Prefix": "@settings:crsh:Console.DefPrefix",
+                    "Title": "@settings:crsh:Console.DefTitle"
+                }
+            }
+        }
+
+        self.initDefaults["pipDeps"] = [
+            {
+                "moduleName": "yaml",
+                "pipName": "pyyaml"
+            },
+            {
+                "moduleName": "fuzzywuzzy"
+            }
+        ]
+
+        self.initDefaults["ingestDefaultTags"] = {
+            "CS_CGTS_StandardHexPalette": standardHexPalette,
+            "CS_DefaultEncoding": self.initDefaults["regionalVars"]["DefaultEncoding"],
+            "CS_VersionFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["VersionFile"],self.storage.regionalPrefix))
+        }
+
+    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None):
+        """Initiates the session."""
+
+        if self.flags.has("--populatedDefaults") == False:
+            self.populateDefaults()
+
+        # Define standard
+        _regionalVars = self.initDefaults["regionalVars"]
+
+        # Deffine Arguments
+        _arguments = self.initDefaults["arguments"]
+
+        _cmdArgPlaceholders = self.initDefaults["cmdArgPlaceholders"]
+
+        _pathTagBlacklistKeys = self.initDefaults["pathTagBlacklistKeys"]
+
+        defaults = self.initDefaults["defaults"]
+
+        pipDeps = self.initDefaults["pipDeps"]
+
+        _ingestDefaultTags = self.initDefaults["ingestDefaultTags"]
+
         if argumentDeffinionOvw != None: _arguments = argumentDeffinionOvw
         if cmdArgPlaceholders != None: _cmdArgPlaceholders.update(cmdArgPlaceholders)
+        if pathTagBlacklistKeys != None:
+            _pathTagBlacklistKeys.extend(pathTagBlacklistKeys)
+        if additionalSettings != None:
+            defaults = deep_merge_dict_only(defaults,additionalSettings)
+        if additionalPipDeps != None:
+            pipDeps.extend(additionalPipDeps)
+        if additionalIngestDefaultTags != None:
+            _ingestDefaultTags.update(additionalIngestDefaultTags)
 
         # Get some values
         ## cliargs
@@ -332,42 +647,6 @@ class crshSession():
         _regionalVars["Startfile"] = _startfile
         _regionalVars["Efile"] = _efile
 
-        # Define argparser
-        _argparser = argparse.ArgumentParser(
-            prog = "Crosshell",
-            description = "Crosshell Modulo"
-        )
-        _regionalVars["Argparser"] = _argparser
-        for arg in _arguments:
-            _argparser.add_argument(*arg[0], **arg[1])
-        _argparser.add_argument('additional', nargs='*', help="Unparsed arguments sent to crosshell.")
-
-        # Parse args
-        _regionalVars["Pargs"] = _argparser.parse_args(_cliArgs)
-
-        # Handle placeholders in command and add stripansi
-        cmdIndentifier = "cmd"
-        aliasIndentifier = "stripAnsi"
-        seenCmd = False
-        seenAnsi = False
-        for vl in _arguments:
-            if vl[1]["dest"] == cmdIndentifier and seenCmd == False:
-                for pl,val in _cmdArgPlaceholders.items():
-                    setattr(_regionalVars["Pargs"], cmdIndentifier, getattr(_regionalVars["Pargs"], cmdIndentifier).replace(pl,val) )
-                for i,arg in enumerate(_regionalVars["Args"]):
-                    if arg in vl[0]:
-                        if i+1 > len(_regionalVars["Args"])-1: pass
-                        else:
-                            for pl,val in _cmdArgPlaceholders.items():
-                                _regionalVars["Args"][i+1] = _regionalVars["Args"][i+1].replace(val,pl)
-                seenCmd = True
-                break
-        for vl in _arguments:
-            if vl[1]["dest"] == aliasIndentifier and seenAnsi == False:
-                _regionalVars["StripAnsi"] = getattr(_regionalVars["Pargs"], aliasIndentifier)
-                seenAnsi = True
-                break
-
         # Get CSlibDir
         _cslibdir = None
         if _regionalVars["RootPathRetrivalMode"] == "inspect":
@@ -390,7 +669,7 @@ class crshSession():
 
         # Fix substituionTags
         tempSubstTagMan = tagSubstitionManager()
-        hasPaths = ["CSlibDir"]
+        hasPaths = _regionalVars["__registerAsPaths"]
         def _hasTags(obj):
             hasTags = False
             if type(obj) == dict:
@@ -407,29 +686,86 @@ class crshSession():
                 if "{" in obj and "}" in obj:
                     hasTags = True
             return hasTags
-        for key,value in _regionalVars.items():
-            if _hasTags(value):
-                hasPaths.append(key)
-        def _applySubstTags(instance,obj,keyn="base"):
-            if type(obj) == dict:
-                for key,value in obj.items():
-                    obj[key] = _applySubstTags(instance,value,key)
-            elif type(obj) == list or type(obj) == "tuple":
-                for i,value in enumerate(obj):
-                    obj[i] = _applySubstTags(instance,value,keyn)
-            elif type(obj) == str:
-                value = normPathSepObj(absPathSepObj(tempSubstTagMan.eval(obj)))
-                if keyn in hasPaths:
-                    tempSubstTagMan.addTag(keyn,value)
+        def _applySubstTags(instance,obj,keyn="base",blacklistKeys=[]):
+            if keyn not in blacklistKeys:
+                if type(obj) == dict:
+                    for key,value in obj.items():
+                        obj[key] = _applySubstTags(instance,value,key,blacklistKeys)
+                elif type(obj) == list or type(obj) == "tuple":
+                    for i,value in enumerate(obj):
+                        obj[i] = _applySubstTags(instance,value,keyn,blacklistKeys)
+                elif type(obj) == str:
+                    if _hasTags(obj) == True:
+                        value = absPathSepObj(tempSubstTagMan.eval(obj))
+                    else:
+                        value = tempSubstTagMan.eval(obj)
+                    value = normPathSep(value)
+                    if keyn in hasPaths:
+                        tempSubstTagMan.addTag(keyn,value)
                     obj = value
             return obj
-        _regionalVars = _applySubstTags(tempSubstTagMan,_regionalVars)
+        _regionalVars = _applySubstTags(tempSubstTagMan,_regionalVars,blacklistKeys=_pathTagBlacklistKeys)
         initSubstTags = {}
         for key,value in tempSubstTagMan.substTags.items():
             initSubstTags[self.storage.regionalPrefix+key] = value
 
         _regionalVars["PathTags"] = initSubstTags
+
+        # Handle pip dependencies
+        _pipDepsCusPip = pipDepsCusPip if pipDepsCusPip != None else sys.executable
+        _tagMapping = {
+            "CusPip": _pipDepsCusPip
+        }
+        if pipDepsTags != None: _tagMapping.update(pipDepsTags)
+        installPipDeps_fl(
+            deps = pipDeps,
+            encoding = _regionalVars["DefaultEncoding"],
+            tagMapping = _tagMapping
+        )
+
+        # Define argparser
+        _argparser = argparse.ArgumentParser(
+            prog = "Crosshell",
+            description = "Crosshell Modulo"
+        )
+        _regionalVars["Argparser"] = _argparser
+        for arg in _arguments:
+            _argparser.add_argument(*arg[0], **arg[1])
+        _argparser.add_argument('additional', nargs='*', help="Unparsed arguments sent to crosshell.")
+
+        # Parse args
+        _regionalVars["Pargs"] = _argparser.parse_args(_cliArgs)
+
+        # Handle placeholders in command and add stripansi
+        cmdIndentifier = "cmd"
+        aliasIndentifier = "stripAnsi"
+        seenCmd = False
+        seenAnsi = False
+        for vl in _arguments:
+            if vl[1]["dest"] == cmdIndentifier and seenCmd == False:
+                for pl,val in _cmdArgPlaceholders.items():
+                    attr = getattr(_regionalVars["Pargs"], cmdIndentifier)
+                    if attr != None:
+                        setattr(_regionalVars["Pargs"], cmdIndentifier, attr.replace(pl,val) )
+                for i,arg in enumerate(_regionalVars["Args"]):
+                    if arg in vl[0]:
+                        if i+1 > len(_regionalVars["Args"])-1: pass
+                        else:
+                            for pl,val in _cmdArgPlaceholders.items():
+                                _regionalVars["Args"][i+1] = _regionalVars["Args"][i+1].replace(val,pl)
+                seenCmd = True
+                break
+        for vl in _arguments:
+            if vl[1]["dest"] == aliasIndentifier and seenAnsi == False:
+                _regionalVars["StripAnsi"] = getattr(_regionalVars["Pargs"], aliasIndentifier)
+                seenAnsi = True
+                break
         
+        # Add method to get defEncoding
+        def _getEncoding():
+            return self.regionalGet("DefaultEncoding")
+        _regionalVars["GetEncoding"] = _getEncoding
+
         # Append possible custom
         if regionalVars != None: _regionalVars.update(regionalVars)
 
@@ -443,6 +779,36 @@ class crshSession():
         self.register("ptm", pathTagManager(initSubstTags))
         self.getregister("ptm").ensureAl()
 
+        _substTags = {}
+        for k in self.regionalGet("__registerAsTags"):
+            if k in _regionalVars.keys():
+                _substTags[self.storage.regionalPrefix+k] = _regionalVars[k]
+        self.register("stm", tagSubstitionManager(_substTags))
+        self.regionalSet("SubstTags",_substTags)
+
+        self.register("set", modularSettingsLinker(self.regionalGet("SettingsFile"),encoding=self.regionalGet("DefaultEncoding"),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
+        self.getregister("set").createFile()
+        
+        self.register("per", modularSettingsLinker(self.regionalGet("PersistanceFile"),encoding=self.regionalGet("DefaultEncoding"),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
+        self.getregister("set").createFile()
+
+        # Populate settings and persistance
+        ingestDefaults_fd(
+            defaults=defaults,
+            encoding=self.regionalGet("DefaultEncoding"),
+            instanceMapping={
+                "settings": {
+                    "instance": self.getregister("set"),
+                    "tags": _ingestDefaultTags
+                },
+                "persistance": {
+                    "instance": self.getregister("per"),
+                    "tags": _ingestDefaultTags
+                }
+            }
+        )
+
+        # Return
         return self
 
     def start(self):

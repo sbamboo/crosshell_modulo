@@ -1,4 +1,4 @@
-import os
+import os, json, sys, subprocess, importlib
 
 # Python
 def getExecutingPython() -> str:
@@ -98,3 +98,21 @@ def fromPathAA(path):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.__dict__
+
+def installPipDeps(depsFile,encoding="utf-8",tagMapping=dict):
+    '''Note! This takes a json file with a "deps" key, the fd function takes a deps list!'''
+    deps = json.loads(open(depsFile,'r',encoding=encoding).read())["deps"]
+    for dep in deps:
+        for key,val in dep.items():
+            for tag,tagVal in tagMapping.items():
+                dep[key] = val.replace("{"+tag+"}",tagVal)
+            _ = autopipImport(**dep)
+    
+def installPipDeps_fl(deps=list,encoding="utf-8",tagMapping=dict):
+    '''Note! This takes a deps list, the file function takes a json with a "deps" key!'''
+    for dep in deps:
+        for key,val in dep.items():
+            for tag,tagVal in tagMapping.items():
+                dep[key] = val.replace("{"+tag+"}",tagVal)
+            _ = autopipImport(**dep)
+    

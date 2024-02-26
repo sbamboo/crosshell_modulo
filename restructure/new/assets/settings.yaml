@@ -1,0 +1,46 @@
+crsh:
+  Console:
+    DefPrefix: '> '
+    DefTitle: Crosshell Modulo
+  Formats:
+    DefaultEncoding: utf-8
+  Version:
+    VerFile: '{CS_CoreDir}\version.yaml'
+    FileFormatVer: '1'
+  CGTS:
+    ANSI_Hex_Palette:
+      '30': f#000000
+      '31': f#FF0000
+      '32': f#00FF00
+      '33': f#FFFF00
+      '34': f#0000FF
+      '35': f#FF00FF
+      '36': f#00FFFF
+      '37': f#FFFFFF
+      '90': f#555555
+      '91': f#FF5555
+      '92': f#55FF55
+      '93': f#FFFF55
+      '94': f#5555FF
+      '95': f#FF55FF
+      '96': f#55FFFF
+      '97': f#FFFFFF
+      '40': b#000000
+      '41': b#FF0000
+      '42': b#00FF00
+      '43': b#FFFF00
+      '44': b#0000FF
+      '45': b#FF00FF
+      '46': b#00FFFF
+      '47': b#FFFFFF
+      '100': b#555555
+      '101': b#FF5555
+      '102': b#55FF55
+      '103': b#FFFF55
+      '104': b#5555FF
+      '105': b#FF55FF
+      '106': b#55FFFF
+      '107': b#FFFFFF
+    CustomMappings: {}
+crsh_debugger:
+  Scope: error

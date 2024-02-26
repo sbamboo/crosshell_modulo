@@ -1,4 +1,6 @@
-from fuzzy import fuzzy_substring_search
+import re
+
+from cslib.fuzzy import fuzzy_substring_search
 
 
 def extractComments(json_or_yaml_string=str) -> (str,dict):
@@ -241,6 +243,7 @@ def _isAllowed(string,cmntType=None):
 
 def extractComments_v2(json_or_yaml=str, discard_newline=True) -> (str,dict):
     type_ = "json" if json_or_yaml.strip(" ").startswith("{") else "yaml"
+    if type_ == "json": raise Exception("JSON not supported yet.")
     if json_or_yaml == None:
         return json_or_yaml,None
     dataDict = {
@@ -386,9 +389,11 @@ def extractComments_v2(json_or_yaml=str, discard_newline=True) -> (str,dict):
             newsplit.append(line)
     for i,d in enumerate(extractedLines):
         extractedLines[i]["context"] = getContext(d)
-    return newsplit,extractedLines
+    return '\n'.join(newsplit),extractedLines
 
 def injectComments_v2(lines,extractedLines, attemptFuzzy=False, samelineSpacer="", discard_newline=True) -> str:
+    print(lines,"\n\n",len(lines))
+    raise Exception("STOP")
     for eline in extractedLines:
         try:
             contextName = eline["context"][0]
@@ -445,22 +450,23 @@ def injectComments_v2(lines,extractedLines, attemptFuzzy=False, samelineSpacer="
             if foundInd != None:
                 lines[foundInd] = str(lines[foundInd]) + str(samelineSpacer) + str(comment)
             else:
-                if eline["reff_top"][0] == lineIndex and eline["reff_dow"][0] == lineIndex:
-                    lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
-                elif eline["reff_top"][0] == lineIndex:
-                    ind = eline["reff_dow"][0]+1
-                    if ind <= len(lines)-1:
-                        lines[ind] = str(lines[ind]) + str(samelineSpacer) + str(comment)
-                    else:
-                        lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
-                elif eline["reff_dow"][0] == lineIndex:
-                    ind = eline["reff_top"][0]-1
-                    if ind >= 0:
-                        lines[ind] = str(lines[ind]) + str(samelineSpacer) + str(comment)
-                    else:
-                        lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
-                else:
-                    lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
+                #if eline["reff_top"][0] == lineIndex and eline["reff_dow"][0] == lineIndex:
+                #    lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
+                #elif eline["reff_top"][0] == lineIndex:
+                #    ind = eline["reff_dow"][0]+1
+                #    if ind <= len(lines)-1:
+                #        lines[ind] = str(lines[ind]) + str(samelineSpacer) + str(comment)
+                #    else:
+                #        lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
+                #elif eline["reff_dow"][0] == lineIndex:
+                #    ind = eline["reff_top"][0]-1
+                #    if ind >= 0:
+                #        lines[ind] = str(lines[ind]) + str(samelineSpacer) + str(comment)
+                #    else:
+                #        lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
+                #else:
+                #    lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
+                lines[lineIndex] = str(lines[lineIndex]) + str(samelineSpacer) + str(comment)
         # Only-comment
         elif contextName == "only-comment":
             midInd = len(lines)//2
@@ -501,20 +507,3 @@ def injectComments_v2(lines,extractedLines, attemptFuzzy=False, samelineSpacer="
             else:
                 lines = injectStringAtIndex_list(lines,lineIndex,comment)
     return '\n'.join(lines).replace("§newline§\n","\n").replace("\u00a7newline\u00a7\n","\n")
-
-import time
-while True:
-    res = extractComments_v2(
-        open(".\\settings4.yaml",'r').read()
-    )
-
-    import yaml
-    dict_ = yaml.safe_load('\n'.join(res[0]))
-
-    yaml_ = yaml.dump(dict_,sort_keys=False)
-
-    res2 = injectComments_v2(yaml_.split("\n"),res[1])
-
-    open(".\\settings4.yaml",'w').write(res2)
-
-    time.sleep(1)

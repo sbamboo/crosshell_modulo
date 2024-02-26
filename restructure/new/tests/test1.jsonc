@@ -1,0 +1,39 @@
+{
+    "company": "ABC Corporation",  // The name of the company
+    "location": {
+        "country": "United States",  // Country where the company is located
+        "city": "New York"           // City where the company headquarters is situated
+    },
+    "employees": [
+        {
+            "name": "John Doe",     // Employee's full name
+            "position": "Manager",  // Employee's job position
+            "department": "Sales"   // Employee's department
+        },
+        {
+            "name": "Jane Smith",   // Employee's full name
+            "position": "Engineer", // Employee's job position
+            "department": "R&D"     // Employee's department
+        },
+        // Adding more employee details...
+    ],
+    "products": [
+        {
+            "name": "Product A",          // Name of the product
+            "category": "Electronics",    // Product category
+            "price": 499.99               // Product price in USD
+        },
+        {
+            "name": "Product B",          // Name of the product
+            "category": "Home & Garden",  // Product category
+            "price": 29.99                // Product price in USD
+        },
+        // Adding more product details...
+    ],
+    "financials": {
+        "revenue": 5000000,       // Total revenue in USD
+        "expenses": 3500000,      // Total expenses in USD
+        "profit": 1500000         // Net profit in USD
+    },
+    // Additional information...
+}

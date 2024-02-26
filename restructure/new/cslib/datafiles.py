@@ -1,6 +1,6 @@
 import json, re, os
-from cslib.main import intpip
-from cslib.commentParsing import _stripJsonComments,injectStringAtIndex_dict,injectStringAtIndex_list
+from cslib.piptools import intpip
+from cslib.commentParsing import _stripJsonComments, extractComments_v2, injectComments_v2, extractComments_newlineSupport, injectComments_newlineSupport
 
 try:
     import yaml
@@ -14,55 +14,83 @@ Depends on pyyaml
 
 '''
 
-def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,keepComments=False,commentsToInclude=None,newlineSupport=False):
-    '''CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.'''
+def normPathSepObj(obj):
+    """CSlib: Normalises path sepparators to the current OS in a given object."""
+    if type(obj) == dict:
+        for k,v in obj.items():
+            obj[k] = normPathSepObj(v)
+    elif type(obj) == list or type(obj) == tuple:
+        for i,v in enumerate(obj):
+            obj[i] = normPathSepObj(v)
+    elif type(obj) == str:
+        obj = normPathSep(obj)
+    return obj
+
+def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,readerMode="Off",commentsToInclude=None,discardNewlines=False):
+    """CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.
+    
+    readerMode: 'Off'/'Comments'/'Newline'
+    
+    discardNewlines: Only works with readerMode 'Comments'"""
+    if readerMode.lower() == "off":
+        readerMode = False
+        readerEx = None
+        readerIn = None
+    elif readerMode.lower() == "comments":
+        readerMode = True
+        readerEx = extractComments_v2
+        readerIn = injectComments_v2
+    elif readerMode.lower() == "newline":
+        readerMode = True
+        readerEx = extractComments_newlineSupport
+        readerIn = injectComments_newlineSupport
     if not os.path.exists(file):
-        file = normalizePathSepMT(file)
+        file = normPathSepObj(file)
     if mode == "json":
         if operation == "get":
             content = _stripJsonComments(open(file,'r',encoding=encoding).read())
-            if keepComments == True:
-                if newlineSupport == True:
-                    content,extractedComments = extractComments_newlineSupport(content)
+            if readerMode != False:
+                if readerMode.lower() == "comments":
+                    content,extractedComments = readerEx(content,discardNewlines)
                 else:
-                    content,extractedComments = extractComments(content)
+                    content,extractedComments = readerEx(content)
             _dict = json.loads(content)
-            if safeSeps == True: return normalizePathSepMT(_dict)
+            if safeSeps == True: return normPathSepObj(_dict)
             else:
-                if keepComments == True:
-                    return _dict,extractComments
+                if readerMode != False:
+                    return _dict,extractedComments
                 else:
                     return _dict
         elif operation == "set":
             content_str = json.dumps(content)
-            if keepComments == True and commentsToInclude != None and type(commentsToInclude) == dict:
-                if newlineSupport == True:
-                    content_str = injectComments_newlineSupport(content_str, commentsToInclude)
+            if readerMode != False and commentsToInclude != None and type(commentsToInclude) == dict:
+                if readerMode.lower() == "comments":
+                    content_str = readerIn(content_str.split("\n"), commentsToInclude, discardNewlines)
                 else:
-                    content_str = injectComments(content_str, commentsToInclude)
+                    content_str = readerIn(content_str, commentsToInclude, discardNewlines)
             open(file,'w',encoding=encoding).write(content_str)
     elif mode == "yaml":
         if operation == "get":
             content = open(file, "r",encoding=encoding).read()
-            if keepComments == True:
-                if newlineSupport == True:
-                    content,extractedComments = extractComments_newlineSupport(content)
+            if readerMode != False:
+                if readerMode.lower() == "comments":
+                    content,extractedComments = readerEx(content,discardNewlines)
                 else:
-                    content,extractedComments = extractComments(content)
+                    content,extractedComments = readerEx(content)
             _dict = yaml.safe_load(content)
-            if safeSeps == True: return normalizePathSepMT(_dict)
+            if safeSeps == True: return normPathSepObj(_dict)
             else:
-                if keepComments == True:
+                if readerMode != False:
                     return _dict,extractedComments
                 else:
                     return _dict
         elif operation == "set":
             content_str = yaml.dump(content, sort_keys=yaml_sort)
-            if keepComments == True and commentsToInclude != None and type(commentsToInclude) == dict:
-                if newlineSupport == True:
-                    content_str = injectComments_newlineSupport(content_str, commentsToInclude)
+            if readerMode != False and commentsToInclude != None and type(commentsToInclude) == dict:
+                if readerMode.lower() == "comments":
+                    content_str = readerIn(content_str.split("\n"), commentsToInclude, discardNewlines)
                 else:
-                    content_str = injectComments(content_str, commentsToInclude)
+                    content_str = readerIn(content_str, commentsToInclude, discardNewlines)
             open(file,'w',encoding=encoding).write(content_str)
 
 class jsonYamlProviderSimpleIO():

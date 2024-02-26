@@ -30,7 +30,7 @@ crsh:
     Loaded:
       '1': en-us
     # Avaliable languages (No need to change)
-    _choices: "sv-se, asset_en-us"
+    _choices: sv-se, asset_en-us
     # The file storing the language list: [str]
     DefaultList: '{CS_BaseDir}\assets\langlist.json'
     # The filetypes used for diffrent files: [str]
@@ -133,7 +133,7 @@ crsh:
     Files:
       console-py:
         selection: null
-        _choices: "test"
+        _choices: test
       inpparse-py:
         selection: null
         _choices: null

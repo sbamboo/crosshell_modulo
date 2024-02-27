@@ -86,7 +86,6 @@ def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,i
     except CrosshellDebErr as e:
         raise
     except Exception as e:
-        raise # << DEBUG
         if 'main' not in locals() or not callable(locals()['main']):
             csSession.deb.perror("lng:cs.cmdletexec.reader.nomainfunc",{"reader":os.path.basename(readerPath),"readerPath":readerPath,"traceback":e})
         else:

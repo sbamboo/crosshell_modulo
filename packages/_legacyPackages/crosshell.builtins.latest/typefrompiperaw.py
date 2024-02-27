@@ -1,0 +1,1 @@
+print(type(csSession.data["ser"].getObj(argv[0])))

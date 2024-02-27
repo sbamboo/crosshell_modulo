@@ -1,0 +1,1 @@
+print(csSession.data["ser"].makePipeRaw(argv[0]))

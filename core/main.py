@@ -44,6 +44,7 @@ from cslib._crosshellModularityEngine import linkedFileModularise
 from cslib.smartInput import sInputPrompt
 from cslib.toad import toad
 from cslib.datafiles import setKeyPath
+from cslib.serialization import serializationWrapper
 import argparse
 
 # [Settings]
@@ -382,6 +383,7 @@ csSession.data["arg"] = CS_Args
 csSession.data["sfi"] = CS_Startfile
 csSession.data["efi"] = CS_Efile
 csSession.data["sta"] = CS_StripAnsi
+csSession.data["ser"] = serializationWrapper()
 csSession.deb = crshDebug
 CS_Registry["packages"] = CS_packageList
 CS_Registry["packageData"] = getPackageDataFromList(CS_packageList,CS_DefaultEncoding)

@@ -47,6 +47,9 @@
         "format": {
             "desc": "Returns a formatted string."
         },
+        "frompiperaw": {
+            "desc": "Takes first argument as %piperaw%<serialized-obj>%piperaw% and returns object."
+        },
         "get": {
             "desc": "Gets a variables value.",
             "args": "<name>"
@@ -159,6 +162,9 @@
         "title": {
             "desc": "Cmdlet for managing crosshells title.",
             "args": "<content> -set/-s -reset/-r"
+        },
+        "topiperaw": {
+            "desc": "Returns first argument as: %piperaw%<serialized-obj>%piperaw%."
         },
         "true": {
             "desc": "Returns true."

@@ -1,7 +1,7 @@
 import argparse
 
 # Create the argument parser
-parser = argparse.ArgumentParser(description="Package handler for Crosshell")
+parser = argparse.ArgumentParser(prog="packagehand.py",description="Package handler for Crosshell")
 
 # Define the command-line arguments
 parser.add_argument('-a', '--add', action='store_true', help="Install packages")

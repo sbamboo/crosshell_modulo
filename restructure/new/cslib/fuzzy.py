@@ -1,6 +1,5 @@
-from fuzzywuzzy import fuzz
-
 def fuzzy_substring_search(substring, string_list):
+    from fuzzywuzzy import fuzz
     best_match_index = None
     highest_ratio = -1  # Initialize with a value less than the minimum ratio
 

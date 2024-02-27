@@ -1,10 +1,11 @@
 import pickle, sys, json, os, argparse, inspect, re
 
 from cslib.piptools import installPipDeps_fl
-from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager
+from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager
 from cslib._crosshellGlobalTextSystem import standardHexPalette
 from cslib.externalLibs.filesys import filesys
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
+from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict
 
 def normPathSep(path):
     """CSlib: Normalises path sepparators to the current OS."""
@@ -198,6 +199,7 @@ def ingestDefaults(defaultsFile,encoding="utf-8",instanceMapping=dict):
         if instanceMapping.get(file) != None:
             for module, settings in defaults[file].items():
                 instanceMapping[file]["instance"].addModule(module)
+                _temp = instanceMapping[file]["instance"].getModule(module)
                 for settK,settV in settings.items():
                     if type(settV) == str and settV.startswith("@") and settV.count(":") == 2:
                         split = settV.replace("@","",1).split(":")
@@ -206,17 +208,22 @@ def ingestDefaults(defaultsFile,encoding="utf-8",instanceMapping=dict):
                         settK2 = split[2]
                         if instanceMapping.get(file2) != None:
                             if instanceMapping[file2]["instance"].get(module2) != None:
-                                settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
+                                #settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
+                                settV2 = getKeyPath(_temp,settK2)
                                 settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
-                                instanceMapping[file]["instance"].addProperty(module,settK,settV2)
+                                #instanceMapping[file]["instance"].addProperty(module,settK,settV2)
+                                _temp = setKeyPath(_temp, settK, settV2)
                     else:
                         settV = recursiveMultipleReplacementTagWrapper(settV,instanceMapping[file]["tags"])
-                        instanceMapping[file]["instance"].addProperty(module,settK,settV)
-def ingestDefaults_fd(defaults=dict,encoding="utf-8",instanceMapping=dict):
+                        #instanceMapping[file]["instance"].addProperty(module,settK,settV)
+                        _temp = setKeyPath(_temp, settK, settV)
+                instanceMapping[file]["instance"].set(module,_temp)
+def ingestDefaults_fd(defaults=dict,instanceMapping=dict):
     for file in defaults.keys():
         if instanceMapping.get(file) != None:
             for module, settings in defaults[file].items():
                 instanceMapping[file]["instance"].addModule(module)
+                _temp = instanceMapping[file]["instance"].getModule(module)
                 for settK,settV in settings.items():
                     if type(settV) == str and settV.startswith("@") and settV.count(":") == 2:
                         split = settV.replace("@","",1).split(":")
@@ -227,10 +234,13 @@ def ingestDefaults_fd(defaults=dict,encoding="utf-8",instanceMapping=dict):
                             if instanceMapping[file2]["instance"].get(module2) != None:
                                 settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
                                 settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
-                                instanceMapping[file]["instance"].addProperty(module,settK,settV2)
+                                #instanceMapping[file]["instance"].addProperty(module,settK,settV2)
+                                _temp = setKeyPath(_temp, settK, settV2)
                     else:
                         settV = recursiveMultipleReplacementTagWrapper(settV,instanceMapping[file]["tags"])
-                        instanceMapping[file]["instance"].addProperty(module,settK,settV)
+                        #instanceMapping[file]["instance"].addProperty(module,settK,settV)
+                        _temp = setKeyPath(_temp, settK, settV)
+                instanceMapping[file]["instance"].set(module,_temp)
 
 def prefixAnyTags(string_with_tags,prefix):
     pattern = r'\{(.*?)\}'
@@ -250,12 +260,6 @@ def deep_merge_dict_only(dict1, dict2):
         else:
             merged[key] = value
     return merged
-
-class UnserializableObjectReference():
-    def __init__(self,reference=str):
-        self.reference = reference
-    def __repr__(self):
-        return f'<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))}, referencing: {self.reference}>'
 
 class sessionStorage():
     def __init__(self,regionalPrefix=""):
@@ -308,6 +312,9 @@ class sessionStorage():
             return {
                 self.regionalPrefix+key: self.storage["regionalScope"]
             }
+    def regionalGetP(self, key=None):
+        if key.startswith(self.regionalPrefix):
+            return self.regionalGet(key.replace(self.regionalPrefix,"",1))
     # endregion
 
     # region: sessionStorage.tempmethods
@@ -348,11 +355,15 @@ class sessionFlags():
     def __init__(self):
         self.flags = []
     def enable(self, flag):
-        self.flags.append(flag)
+        if flag not in self.flags:
+            self.flags.append(flag)
     def disable(self, flag):
-        self.flags.remove(flag)
+        if flag in self.flags:
+            self.flags.remove(flag)
     def has(self, flag):
         return flag in self.flags
+    def hasnt(self, flag):
+        return flag not in self.flags
 
 class crshSession():
     # The identification is used on import to ensure classes are compatible.
@@ -377,6 +388,8 @@ class crshSession():
         self.regionalRemove = self.storage.regionalRemove
         self.regionalUpdate = self.storage.regionalUpdate
         self.regionalReset = self.storage.regionalReset
+        self.regionalExport = self.storage.regionalExport
+        self.regionalGetP = self.storage.regionalGetP
 
         self.flags = sessionFlags()
 
@@ -390,29 +403,79 @@ class crshSession():
         if initOnStart == True:
             self.init()
 
-    def exprt(self,filename,asJson=False):
+    def _prepExprt(self):
+        """INTERNAL: Preps the data for pickle-export.
+        Not used since switched to dill."""
+        if self.flags.hasnt("--preppedForExprt"):
+            self.regionalSet("Argparser",
+                argParse_to_dict(
+                    instance = self.regionalGet("Argparser"),
+                    parsed = self.regionalGet("Pargs"),
+                    orgArgs = self.regionalGet("Args")
+                )
+            )
+            self.flags.enable("--preppedForExprt")
+    
+    def _postImprt(self,reparse=False):
+        """INTERNAL: Post-handle the data from pickle-import.
+        Not used since switched to dill."""
+        if self.flags.has("--preppedForExprt"):
+            parser,parsed = argParse_from_dict(
+                import_ = self.regionalGet("Argparser"),
+                reparse = reparse
+            )
+            self.regionalSet("Argparser",parser)
+            self.regionalSet("Pargs",parsed)
+            self.flags.disable("--preppedForExprt")
+
+    def exprt(self,filename,_mode="dill"):
         """Exports the current session to a file."""
-        if asJson == True:
+        _mode = "pickle"
+        if _mode.lower() == "dill":
+            try:
+                import dill # local, should have been resolved by init
+                _mode = "dill"
+            except ImportError: pass
+        if _mode.lower() == "json":
             with open(filename, 'w') as f:
                 f.write( json.dumps(self.__dict__) )
         else:
             with open(filename, 'wb') as f:
-                pickle.dump(self,f)
+                if _mode.lower() == "dill":
+                    dill.dump(self,f)
+                else:
+                    self._prepExprt()
+                    pickle.dump(self,f)
 
-    def imprt(self,filename,asJson=False):
+    def imprt(self,filename,_mode="dill"):
         """Imports a session from a file."""
+        _mode = "pickle"
+        if _mode.lower() == "dill":
+            try:
+                import dill # local, should have been resolved by init
+                _mode = "dill"
+            except ImportError: pass
+        # fix main-missing
         if sys.modules.get("main") is None:
             sys.modules["main"] = sys.modules[__name__]
+        # import
         with open(filename, 'rb') as f:
-            if asJson == True:
+            if _mode.lower() == "json":
                 loaded_session_dict = json.load(f)
             else:
-                loaded_session_dict = pickle.load(f).__dict__
+                if _mode.lower() == "dill":
+                    loaded_session_dict = dill.load(f).__dict__
+                else:
+                    loaded_session_dict = pickle.load(f).__dict__
+            # Check has-identifier
             if None in [loaded_session_dict.get("identification"), self.__dict__.get("identification")]:
                 raise Exception("The session file is not compatible with this version of crosshell. (No identification found)")
+            # Check compat
             if loaded_session_dict["identification"] == self.__dict__["identification"]:
                 # Update the attributes of the current session with the loaded session
                 self.__dict__.update(loaded_session_dict)
+                if _mode.lower() == "pickle":
+                    self._postImprt()
             else:
                 raise Exception("The session file is not compatible with this version of crosshell. (Non-matching session.identtification)")
 
@@ -442,8 +505,35 @@ class crshSession():
         else:
             raise KeyError(f"No object with the name '{name}' found in the registry.")
 
+    def getEncoding(self):
+        return self.regionalGet("DefaultEncoding")
+
+    def ingestDefaults(self,defaults=None,ingestTags=None,_unsafe=False):
+        if _unsafe == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        if self.flags.has("--populatedDefaults") == False:
+            self.populateDefaults()
+        if defaults == None:
+            defaults = self.initDefaults["defaults"]
+        if ingestTags == None:
+            ingestTags = self.initDefaults["ingestDefaultTags"]
+        ingestDefaults_fd(
+            defaults=defaults,
+            instanceMapping={
+                "settings": {
+                    "instance": self.getregister("set"),
+                    "tags": ingestTags
+                },
+                "persistance": {
+                    "instance": self.getregister("per"),
+                    "tags": ingestTags
+                }
+            }
+        )
+
     def populateDefaults(self):
         self.flags.enable("--populatedDefaults")
+
         self.initDefaults["regionalVars"] = {
             "SessionIdentifier": self.identification,
             "DefaultEncoding": "utf-8",
@@ -476,10 +566,10 @@ class crshSession():
             "Pargs": None,
             "StripAnsi": None,
             "PythonPath": sys.executable,
-            "PathTags": None,
+            "base_PathTags": None,
             "SubstTags": None,
 
-            "GetEncoding": None,
+            "GetEncoding": self.getEncoding,
 
             "__registerAsPaths": [ # __registerAsPaths is used to register the paths as pathTags, so any key in this list will be replaceable, for other keys.
                 "CSlibDir","BaseDir","CoreDir","AssetsDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder"
@@ -583,6 +673,9 @@ class crshSession():
             },
             {
                 "moduleName": "fuzzywuzzy"
+            },
+            {
+                "moduleName": "dill"
             }
         ]
 
@@ -709,7 +802,7 @@ class crshSession():
         for key,value in tempSubstTagMan.substTags.items():
             initSubstTags[self.storage.regionalPrefix+key] = value
 
-        _regionalVars["PathTags"] = initSubstTags
+        _regionalVars["base_PathTags"] = initSubstTags
 
         # Handle pip dependencies
         _pipDepsCusPip = pipDepsCusPip if pipDepsCusPip != None else sys.executable
@@ -719,7 +812,6 @@ class crshSession():
         if pipDepsTags != None: _tagMapping.update(pipDepsTags)
         installPipDeps_fl(
             deps = pipDeps,
-            encoding = _regionalVars["DefaultEncoding"],
             tagMapping = _tagMapping
         )
 
@@ -760,11 +852,6 @@ class crshSession():
                 _regionalVars["StripAnsi"] = getattr(_regionalVars["Pargs"], aliasIndentifier)
                 seenAnsi = True
                 break
-        
-        # Add method to get defEncoding
-        def _getEncoding():
-            return self.regionalGet("DefaultEncoding")
-        _regionalVars["GetEncoding"] = _getEncoding
 
         # Append possible custom
         if regionalVars != None: _regionalVars.update(regionalVars)
@@ -776,40 +863,33 @@ class crshSession():
         self.regionalUpdate(_regionalVars)
 
         # Register things
-        self.register("ptm", pathTagManager(initSubstTags))
-        self.getregister("ptm").ensureAl()
+        self.register("base_ptm", pathTagManager(initSubstTags))
+        self.getregister("base_ptm").ensureAl()
 
         _substTags = {}
         for k in self.regionalGet("__registerAsTags"):
             if k in _regionalVars.keys():
                 _substTags[self.storage.regionalPrefix+k] = _regionalVars[k]
-        self.register("stm", tagSubstitionManager(_substTags))
-        self.regionalSet("SubstTags",_substTags)
+        self.register("base_stm", tagSubstitionManager(_substTags))
+
+        self.register("stm", collectionalTagManager(initSubstTags,_substTags))
+        self.regionalSet("SubstTags", self.getregister("stm").getAlTags() )
 
         self.register("set", modularSettingsLinker(self.regionalGet("SettingsFile"),encoding=self.regionalGet("DefaultEncoding"),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
         self.getregister("set").createFile()
         
         self.register("per", modularSettingsLinker(self.regionalGet("PersistanceFile"),encoding=self.regionalGet("DefaultEncoding"),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
-        self.getregister("set").createFile()
+        self.getregister("per").createFile()
 
         # Populate settings and persistance
-        ingestDefaults_fd(
-            defaults=defaults,
-            encoding=self.regionalGet("DefaultEncoding"),
-            instanceMapping={
-                "settings": {
-                    "instance": self.getregister("set"),
-                    "tags": _ingestDefaultTags
-                },
-                "persistance": {
-                    "instance": self.getregister("per"),
-                    "tags": _ingestDefaultTags
-                }
-            }
-        )
+        self.ingestDefaults(defaults,_ingestDefaultTags,_unsafe=True)
+
+        # Set flag
+        self.flags.enable("--haveBeenInited")
 
         # Return
         return self
 
     def start(self):
         """Starts the set prompt."""
+        

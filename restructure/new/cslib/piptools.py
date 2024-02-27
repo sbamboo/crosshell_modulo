@@ -108,7 +108,7 @@ def installPipDeps(depsFile,encoding="utf-8",tagMapping=dict):
                 dep[key] = val.replace("{"+tag+"}",tagVal)
             _ = autopipImport(**dep)
     
-def installPipDeps_fl(deps=list,encoding="utf-8",tagMapping=dict):
+def installPipDeps_fl(deps=list,tagMapping=dict):
     '''Note! This takes a deps list, the file function takes a json with a "deps" key!'''
     for dep in deps:
         for key,val in dep.items():

@@ -1,0 +1,1 @@
+- Make createAndReturn_startupW() use get max and incr values from some config, and clamp max if screen clamped, if so calc factor for confMax-clampedMax and divide incr with it

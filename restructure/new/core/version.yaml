@@ -1,0 +1,10 @@
+CSverFile: # These are for file compatibility reading
+  format: 1
+  changelog: "Adds the tags feature, changes 'id' to 'vernr'"
+
+# Version data
+name: "Crosshell_Modulo"
+vernr: "0.1.0"
+tags: "dev"
+vid: "0"
+channel: "Dev"

@@ -2,6 +2,8 @@ crsh:
   Console:
     DefPrefix: '> '
     DefTitle: Crosshell Modulo
+    VerboseStart: true
+    StripAnsi: false
   Formats:
     DefaultEncoding: utf-8
   Version:

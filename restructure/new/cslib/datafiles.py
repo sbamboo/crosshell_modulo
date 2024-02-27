@@ -1,6 +1,7 @@
 import json, re, os
 from cslib.piptools import intpip
 from cslib.commentParsing import _stripJsonComments, extractComments_v2, injectComments_v2, extractComments_newlineSupport, injectComments_newlineSupport
+from cslib.pathtools import normPathSep,normPathSepObj
 
 try:
     import yaml
@@ -13,18 +14,6 @@ CSlibs: Datafiles module, contains a jsonYamlProvider class for using such files
 Depends on pyyaml
 
 '''
-
-def normPathSepObj(obj):
-    """CSlib: Normalises path sepparators to the current OS in a given object."""
-    if type(obj) == dict:
-        for k,v in obj.items():
-            obj[k] = normPathSepObj(v)
-    elif type(obj) == list or type(obj) == tuple:
-        for i,v in enumerate(obj):
-            obj[i] = normPathSepObj(v)
-    elif type(obj) == str:
-        obj = normPathSep(obj)
-    return obj
 
 def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,readerMode="Off",commentsToInclude=None,discardNewlines=False):
     """CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.

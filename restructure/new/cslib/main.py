@@ -6,34 +6,8 @@ from cslib._crosshellGlobalTextSystem import standardHexPalette
 from cslib.externalLibs.filesys import filesys
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
 from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict
-
-def normPathSep(path):
-    """CSlib: Normalises path sepparators to the current OS."""
-    return path.replace("/",os.sep).replace("\\",os.sep)
-
-def normPathSepObj(obj):
-    """CSlib: Normalises path sepparators to the current OS in a given object."""
-    if type(obj) == dict:
-        for k,v in obj.items():
-            obj[k] = normPathSepObj(v)
-    elif type(obj) == list or type(obj) == tuple:
-        for i,v in enumerate(obj):
-            obj[i] = normPathSepObj(v)
-    elif type(obj) == str:
-        obj = normPathSep(obj)
-    return obj
-
-def absPathSepObj(obj):
-    """CSlib: Absolutes paths in a given object."""
-    if type(obj) == dict:
-        for k,v in obj.items():
-            obj[k] = absPathSepObj(v)
-    elif type(obj) == list or type(obj) == tuple:
-        for i,v in enumerate(obj):
-            obj[i] = absPathSepObj(v)
-    elif type(obj) == str:
-        obj = os.path.abspath(obj)
-    return obj
+from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
+from cslib.progressMsg import startupMessagingWProgress
 
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
@@ -261,6 +235,48 @@ def deep_merge_dict_only(dict1, dict2):
             merged[key] = value
     return merged
 
+def _returnPrio(orderdItems,items):
+    '''CSlib: Function to return prio list given alternatives and items.'''
+    # split to includes and excludes
+    includes = []
+    excludes = []
+    for item in items:
+        if not item.startswith("!"):
+            includes.append(item)
+        else:
+            excludes.append(item.replace("!",""))
+    # create prio list
+    prio = []
+    for item in includes:
+        if item in orderdItems:
+            if item not in excludes:
+                index = orderdItems.index(item)
+                prio.extend(orderdItems[:index+1])
+    # return 
+    return prio
+
+def listItemInList(sublist,toplist):
+    found = False
+    for item in sublist:
+        if item in toplist:
+            found = True
+            break
+    return found
+
+def crosshellVersionManager_getData(versionFile,formatVersion="1",encoding="utf-8"):
+    '''CSlib: gets the versionData from a compatible version file.'''
+    data = {}
+    if ".yaml" in versionFile:
+        data = _fileHandler("yaml","get",versionFile,encoding=encoding)
+    elif ".json" in versionFile or ".jsonc" in versionFile:
+        data = _fileHandler("yaml","get",versionFile,encoding=encoding)
+    forData = data.get("CSverFile")
+    verData = data
+    if verData.get("CSverFile") != None: verData.pop("CSverFile")
+    if int(forData.get("format")) != int(formatVersion):
+        raise Exception(f"Invalid format on versionfile, internal '{formatVersion}' whilst external is '{forData.get('format')}'")
+    return verData
+
 class sessionStorage():
     def __init__(self,regionalPrefix=""):
         self.regionalPrefix = regionalPrefix
@@ -364,6 +380,128 @@ class sessionFlags():
         return flag in self.flags
     def hasnt(self, flag):
         return flag not in self.flags
+    def get(self):
+        return self.flags
+    def __call__(self):
+        return self.flags
+
+class crosshellDebugger():
+    '''CSlib: Crosshell debugger, this is a text-print based debugging system.'''
+    def __init__(self,defaultScope="msg",stripAnsi=False,formatterInstance=None,languageProvider=None):
+        self.defScope = defaultScope
+        self.scope = defaultScope
+        self.stripAnsi = stripAnsi
+        # The scopes are are prio listed so if set to 'warn' info and msg will also be shown, to now show set !<mode>
+        self.allowedScopes = ["msg","info","warn","exception","error","debug","off"]
+        self.colors = {
+            "reset":"\033[0m",
+            "msg":"",
+            "info":"\033[90m",
+            "warn":"\033[33m",
+            "exception":"\033[91m",
+            "error":"\033[91m",
+            "debug":"\033[90m",
+            "off":"\033[31m"
+        }
+        self.titles = {
+            "msg":"[Crsh]: ",
+            "info":"[Crsh]: ",
+            "warn":"[Crsh<Warn>]: ",
+            "exception":"[Crsh<Exception>]: ",
+            "error":"[Crsh<Error>]: ",
+            "debug":"[CSDebug]: ",
+            "off":"[CSDebug<forcedOutput>]: "
+        }
+        self.languageProvider = languageProvider
+        self.defLanguageProvider = None
+        self.formatterInstance = formatterInstance
+        self.defFormatterInstance = formatterInstance
+    def setScope(self,scope=str):
+        if scope not in self.allowedScopes:
+            raise Exception(f"Scope {scope} is not allowed, use one of {self.allowedScopes}!")
+        else:
+            self.scope = scope
+    def resetScope(self):
+        self.scope = self.defScope
+    def setStripAnsi(self,state=bool):
+        self.stripAnsi = state
+    def setFormatterInstance(self,instance):
+        self.formatterInstance = instance
+    def resetFormatterInstance(self):
+        self.formatterInstance = self.defFormatterInstance
+    def setLanguageProvider(self,provider):
+        self.languageProvider = provider
+    def resetLanguageProvider(self):
+        self.languageProvider = self.defLanguageProvider
+    def get(self,text,onScope="msg",ct=None,lpReloadMode=None,noPrefix=False):
+        if ct != None:
+            for key,value in ct.items():
+                ct[key] = str(value)
+        if ";" in onScope:
+            onScope = onScope.split(";")
+        else:
+            onScope = [onScope]
+        scope = self.scope
+        if ";" in scope:
+            scope = scope.split(";")
+        else:
+            scope = [scope]
+        # list scopes and scopes bellow
+        scopes = _returnPrio(self.allowedScopes,scope)
+        # any in onScope inside scopes?
+        if listItemInList(onScope, scopes) == True:
+            #topScope = topPrio(onScope,self.allowedScopes)
+            topScope = onScope[0]
+            reset = self.colors['reset']
+            color = self.colors[topScope]
+            if self.stripAnsi == True:
+                reset = ""
+                color = ""
+            title = ""
+            if noPrefix == False:
+                title = self.titles[topScope]
+            if type(text) == str:
+                text = text.replace(", txt:",",txt:")
+                if text.startswith("lng:"):
+                    text = text.replace("lng:","")
+                    if self.languageProvider != None:
+                        tosend = text.split(",txt:")[0]
+                        _text = self.languageProvider.get(tosend,lpReloadMode,ct)
+                        if _text != None:
+                            text = _text
+                        else:
+                            if ",txt:" in text:
+                                text = text.split(",txt:")[1]
+                else:
+                    if ",txt:" in text:
+                        text = text.split(",txt:")[1]
+                    else:
+                        text = text.replace("lng:","")
+            else:
+                text = str(text)
+            text = f"{color}{title}{reset}{text}{reset}"
+            if self.formatterInstance != None:
+                text = self.formatterInstance.parse(text,_stripAnsi=self.stripAnsi,addCustomTags=ct)
+            return text
+    def print(self,text,onScope="msg",ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        text = self.get(text,onScope,ct,lpReloadMode,noPrefix)
+        if text != None:
+            if raiseEx == True:
+                raise CrosshellDebErr(text)
+            else:
+                print(text)
+    def pmsg(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"msg",ct,lpReloadMode,raiseEx,noPrefix)
+    def pinfo(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"info",ct,lpReloadMode,raiseEx,noPrefix)
+    def pwarn(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"warn",ct,lpReloadMode,raiseEx,noPrefix)
+    def perror(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"error",ct,lpReloadMode,raiseEx,noPrefix)
+    def pdebug(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"debug",ct,lpReloadMode,raiseEx,noPrefix)
+    def poff(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"off",ct,lpReloadMode,raiseEx,noPrefix)
 
 class crshSession():
     # The identification is used on import to ensure classes are compatible.
@@ -397,6 +535,8 @@ class crshSession():
         self.nonRegisterableTypes = nonRegisterableTypes
 
         self.regionalPrefix = self.storage.regionalPrefix = regionalVarPrefix
+
+        self.deb = crosshellDebugger()
 
         self.initDefaults = {}
 
@@ -508,8 +648,8 @@ class crshSession():
     def getEncoding(self):
         return self.regionalGet("DefaultEncoding")
 
-    def ingestDefaults(self,defaults=None,ingestTags=None,_unsafe=False):
-        if _unsafe == False and self.flags.has("--haveBeenInited") == False:
+    def ingestDefaults(self,defaults=None,ingestTags=None):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
         if self.flags.has("--populatedDefaults") == False:
             self.populateDefaults()
@@ -529,6 +669,17 @@ class crshSession():
                     "tags": ingestTags
                 }
             }
+        )
+
+    def createAndReturn_startupW(self,pgMax=10,pgIncr=1):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        return startupMessagingWProgress(
+            enabled = self.flags.hasnt("--noVerboseStart"),
+            stripAnsi = self.flags.has("--stripAnsi"),
+            debugger = self.deb,
+            pgMax = pgMax,
+            pgIncr = pgIncr
         )
 
     def populateDefaults(self):
@@ -565,9 +716,12 @@ class crshSession():
             "Argparser": None,
             "Pargs": None,
             "StripAnsi": None,
+            "VerboseStart": None,
             "PythonPath": sys.executable,
             "base_PathTags": None,
             "SubstTags": None,
+
+            "VersionData": None,
 
             "GetEncoding": self.getEncoding,
 
@@ -645,6 +799,8 @@ class crshSession():
         self.initDefaults["defaults"] = {
             "settings": {
                 "crsh": {
+                    "Console.VerboseStart": True,
+                    "Console.StripAnsi": False,
                     "Console.DefPrefix": "> ",
                     "Console.DefTitle": "Crosshell Modulo",
                     "Formats.DefaultEncoding": "{CS_DefaultEncoding}",
@@ -685,7 +841,7 @@ class crshSession():
             "CS_VersionFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["VersionFile"],self.storage.regionalPrefix))
         }
 
-    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None):
+    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None, launchWith_stripAnsi=False, launchWith_noVerboseStart=False):
         """Initiates the session."""
 
         if self.flags.has("--populatedDefaults") == False:
@@ -830,9 +986,9 @@ class crshSession():
 
         # Handle placeholders in command and add stripansi
         cmdIndentifier = "cmd"
-        aliasIndentifier = "stripAnsi"
+        aliasIndentifiers = {"stripAnsi":"StripAnsi","noverbstart":"!VerboseStart"}
         seenCmd = False
-        seenAnsi = False
+        seenAliases = []
         for vl in _arguments:
             if vl[1]["dest"] == cmdIndentifier and seenCmd == False:
                 for pl,val in _cmdArgPlaceholders.items():
@@ -848,10 +1004,22 @@ class crshSession():
                 seenCmd = True
                 break
         for vl in _arguments:
-            if vl[1]["dest"] == aliasIndentifier and seenAnsi == False:
-                _regionalVars["StripAnsi"] = getattr(_regionalVars["Pargs"], aliasIndentifier)
-                seenAnsi = True
-                break
+            dest = vl[1]["dest"]
+            if dest in list(aliasIndentifiers.keys()) and dest not in seenAliases:
+                key = aliasIndentifiers[dest]
+                invertBool = False
+                if key.startswith("!"):
+                    invertBool = True
+                    key = key.replace("!", "", 1)
+                if invertBool == True:
+                    _v = getattr(_regionalVars["Pargs"], dest)
+                    if type(_v) == bool:
+                        _regionalVars[key] = not _v
+                    else:
+                        _regionalVars[key] = _v
+                else:
+                    _regionalVars[key] = getattr(_regionalVars["Pargs"], dest)
+                seenAliases.append(dest)
 
         # Append possible custom
         if regionalVars != None: _regionalVars.update(regionalVars)
@@ -861,6 +1029,20 @@ class crshSession():
 
         # Apply
         self.regionalUpdate(_regionalVars)
+
+        # Handle launchWith
+        if launchWith_stripAnsi == True:
+            self.regionalSet("StripAnsi", True)
+            self.flags.enable("--stripAnsi")
+        else:
+            if self.regionalGet("StripAnsi") == True:
+                self.flags.enable("--stripAnsi")
+        if launchWith_noVerboseStart == True:
+            self.regionalSet("VerboseStart", False)
+            self.flags.enable("--noVerboseStart")
+        else:
+            if self.regionalGet("VerboseStart") == False:
+                self.flags.enable("--noVerboseStart")
 
         # Register things
         self.register("base_ptm", pathTagManager(initSubstTags))
@@ -882,7 +1064,36 @@ class crshSession():
         self.getregister("per").createFile()
 
         # Populate settings and persistance
-        self.ingestDefaults(defaults,_ingestDefaultTags,_unsafe=True)
+        ## enable allow flag
+        self.flags.enable("--enableUnsafeOperations")
+        ## Set
+        self.ingestDefaults(defaults,_ingestDefaultTags)
+        if launchWith_stripAnsi != True:
+            self.regionalSet("StripAnsi", self.getregister("set").getProperty("crsh","Console.StripAnsi"))
+            if self.regionalGet("StripAnsi") == True:
+                self.flags.enable("--stripAnsi")
+        if launchWith_noVerboseStart != True:
+            self.regionalSet("VerboseStart", self.getregister("set").getProperty("crsh","Console.VerboseStart"))
+            if self.regionalGet("VerboseStart") == False:
+                self.flags.enable("--noVerboseStart")
+        st = self.createAndReturn_startupW(30,3)
+        ## disable allow flag
+        self.flags.disable("--enableUnsafeOperations")
+
+        # Get versionData
+        _temp = self.getregister("set").getModule("crsh")
+        self.regionalSet(
+            "VersionData",
+            crosshellVersionManager_getData(
+                versionFile = 
+                    self.getregister("stm").eval(
+                        mode = "ptm",
+                        string = getKeyPath(_temp, "Version.VerFile")
+                    ),
+                formatVersion = getKeyPath(_temp, "Version.FileFormatVer"),
+                encoding = getKeyPath(_temp, "Formats.DefaultEncoding")
+            )
+        )
 
         # Set flag
         self.flags.enable("--haveBeenInited")

@@ -543,6 +543,14 @@ class crshSession():
         if initOnStart == True:
             self.init()
 
+    def __repr__(self):
+        if self.flags.has("--haveBeenInited"):
+            crshVer = self.regionalGet("VersionData")
+            crshVerId = f'{crshVer["name"]}:{crshVer["vernr"]}_{crshVer["channel"]}:{crshVer["vid"]}'
+            return f'<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))} with id {self.identification} for version {crshVerId}>'
+        else:
+            return f'<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))} with id {self.identification} for version UNSET>'
+
     def _prepExprt(self):
         """INTERNAL: Preps the data for pickle-export.
         Not used since switched to dill."""
@@ -645,42 +653,36 @@ class crshSession():
         else:
             raise KeyError(f"No object with the name '{name}' found in the registry.")
 
+    def formatReTagsStr(self,string=str,tags=dict,abs=False):
+        for tag,tagValue in tags.items():
+            if abs == True:
+                string = string.replace(os.path.abspath(tagValue),"{"+tag+"}")
+            else:
+                string = string.replace(tagValue,"{"+tag+"}")
+        return string
+
+    def formatReTagsObj(self,obj=object,tags=dict,abs=False):
+        if type(obj) == dict:
+            ndict = {}
+            for k,v in obj.items():
+                ndict[self.formatReTagsObj(k,tags,abs)] = self.formatReTagsObj(v,tags,abs)
+            obj = ndict
+        elif type(obj) == list:
+            nlist = []
+            for elem in obj:
+                nlist.append(self.formatReTagsObj(elem,tags,abs))
+            obj = nlist
+        elif type(obj) == tuple:
+            ntup = ()
+            for elem in obj:
+                ntup.append(self.formatReTagsObj(elem,tags,abs))
+            obj = ntup
+        elif type(obj) == str:
+            obj = self.formatReTagsStr(obj,tags,abs)
+        return obj
+
     def getEncoding(self):
         return self.regionalGet("DefaultEncoding")
-
-    def ingestDefaults(self,defaults=None,ingestTags=None):
-        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
-            raise Exception("This operation requires the session to have been inited. `init()`")
-        if self.flags.has("--populatedDefaults") == False:
-            self.populateDefaults()
-        if defaults == None:
-            defaults = self.initDefaults["defaults"]
-        if ingestTags == None:
-            ingestTags = self.initDefaults["ingestDefaultTags"]
-        ingestDefaults_fd(
-            defaults=defaults,
-            instanceMapping={
-                "settings": {
-                    "instance": self.getregister("set"),
-                    "tags": ingestTags
-                },
-                "persistance": {
-                    "instance": self.getregister("per"),
-                    "tags": ingestTags
-                }
-            }
-        )
-
-    def createAndReturn_startupW(self,pgMax=10,pgIncr=1):
-        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
-            raise Exception("This operation requires the session to have been inited. `init()`")
-        return startupMessagingWProgress(
-            enabled = self.flags.hasnt("--noVerboseStart"),
-            stripAnsi = self.flags.has("--stripAnsi"),
-            debugger = self.deb,
-            pgMax = pgMax,
-            pgIncr = pgIncr
-        )
 
     def populateDefaults(self):
         self.flags.enable("--populatedDefaults")
@@ -840,6 +842,50 @@ class crshSession():
             "CS_DefaultEncoding": self.initDefaults["regionalVars"]["DefaultEncoding"],
             "CS_VersionFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["VersionFile"],self.storage.regionalPrefix))
         }
+
+    def ingestDefaults(self,defaults=None,ingestTags=None):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        if self.flags.has("--populatedDefaults") == False:
+            self.populateDefaults()
+        if defaults == None:
+            defaults = self.initDefaults["defaults"]
+        if ingestTags == None:
+            ingestTags = self.initDefaults["ingestDefaultTags"]
+        ingestDefaults_fd(
+            defaults=defaults,
+            instanceMapping={
+                "settings": {
+                    "instance": self.getregister("set"),
+                    "tags": ingestTags
+                },
+                "persistance": {
+                    "instance": self.getregister("per"),
+                    "tags": ingestTags
+                }
+            }
+        )
+
+    def createAndReturn_startupW(self,pgMax=10,pgIncr=1):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        return startupMessagingWProgress(
+            enabled = self.flags.hasnt("--noVerboseStart"),
+            stripAnsi = self.flags.has("--stripAnsi"),
+            debugger = self.deb,
+            pgMax = pgMax,
+            pgIncr = pgIncr
+        )
+
+    def setStripAnsi(self,value=bool):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        self.regionalSet("StripAnsi",value)
+        
+    def setVerbStart(self,value=bool):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        self.regionalSet("VerboseStart",value)
 
     def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None, launchWith_stripAnsi=False, launchWith_noVerboseStart=False):
         """Initiates the session."""
@@ -1033,16 +1079,8 @@ class crshSession():
         # Handle launchWith
         if launchWith_stripAnsi == True:
             self.regionalSet("StripAnsi", True)
-            self.flags.enable("--stripAnsi")
-        else:
-            if self.regionalGet("StripAnsi") == True:
-                self.flags.enable("--stripAnsi")
         if launchWith_noVerboseStart == True:
             self.regionalSet("VerboseStart", False)
-            self.flags.enable("--noVerboseStart")
-        else:
-            if self.regionalGet("VerboseStart") == False:
-                self.flags.enable("--noVerboseStart")
 
         # Register things
         self.register("base_ptm", pathTagManager(initSubstTags))

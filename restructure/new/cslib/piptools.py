@@ -1,4 +1,4 @@
-import os, json, sys, subprocess, importlib
+import os, json, sys, subprocess, importlib, platform
 
 # Python
 def getExecutingPython() -> str:
@@ -116,3 +116,32 @@ def installPipDeps_fl(deps=list,tagMapping=dict):
                 dep[key] = val.replace("{"+tag+"}",tagVal)
             _ = autopipImport(**dep)
     
+def isPythonRuntime(filepath=str(),cusPip=None):
+    exeFileEnds = [".exe"]
+    if os.path.exists(filepath):
+        try:
+            # [Code]
+            # Non Windows
+            if platform.system() != "Windows":
+                try:
+                    magic = importlib.import_module("magic")
+                except:
+                    command = "install magic"
+                    if cusPip != None:
+                        #os.system(f"{cusPip} {command}")
+                        intpip(command,pipOvw=cusPip)
+                    else:
+                        intpip(command)
+                    magic = importlib.import_module("magic")
+                detected = magic.detect_from_filename(filepath)
+                return "application" in str(detected.mime_type)
+            # Windows
+            else:
+                fending = str("." +''.join(filepath.split('.')[-1]))
+                if fending in exeFileEnds:
+                    return True
+                else:
+                    return False
+        except Exception as e: print("\033[31mAn error occurred!\033[0m",e)
+    else:
+        raise Exception(f"File not found: {filepath}")

@@ -90,8 +90,8 @@ class collectionalTagManager():
     def _checkMode(self,mode):
         coal = []
         for p in self.modes.values(): coal.extend(p)
-        if mode.lower() not in self.modes:
-            raise Exception(f"Invalid mode, must be one of: {coal}")
+        if mode.lower() not in coal:
+            raise Exception(f"Invalid mode, must be one of: {coal} (Given: {mode.lower()})")
         for k,v in self.modes.items():
             if mode.lower() in v:
                 return k

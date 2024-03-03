@@ -10,6 +10,22 @@ from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
 from cslib.progressMsg import startupMessagingWProgress
 from cslib.exceptions import CrosshellDebErr
 
+class pathObject():
+    def __init__(self,defaults=None):
+        if defaults != None:
+            data = defaults
+        else:
+            data = []
+        self.data = data
+    def set(self,data=list):
+        self.data = data
+    def get(self):
+        return self.data
+    def extend(self,data):
+        self.data.extend(data)
+    def append(self,data):
+        self.data.append(data)
+
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
     def __init__(self,settingsFile,encoding="utf-8",ensure=False,readerMode="Comments",discardNewlines=False):
@@ -154,14 +170,217 @@ class modularSettingsLinker():
         data = remKeyPath(data,keyPath)
         self.set(module,data,autocreate=autocreate)
 
+def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False,encoding="utf-8"):
+    '''CSlib: Function to populate a language list.'''
+    orgLangList = _fileHandler(listFormat,"get",languageListFile,encoding=encoding)
+    LangList = orgLangList.copy()
+    try:
+        for path in langPath.get():
+            if filesys.doesExist(path):
+                objects = filesys.scantree(path)
+                for object in objects:
+                    fending = filesys.getFileExtension(object.name)
+                    name = filesys.getFileName(object.name)
+                    if fending == langFormat:
+                        if keepExisting == True:
+                            if LangList.get(name) == None:
+                                LangList[name] = object.path
+                        else:
+                            LangList[name] = object.path
+    except:
+        LangList = orgLangList
+    _fileHandler(listFormat,"set",languageListFile,LangList,encoding=encoding)
+
+def recheckLanguageList(languageListFile,listFormat=None,returnDontRemove=False,encoding="utf-8"):
+    '''CSlib: Checks over a languagelist so al the entries exist, and removses those who don't'''
+    if returnDontRemove == True:
+        missing = []
+    else:
+        languageList = _fileHandler(listFormat, "get", languageListFile,encoding=encoding)
+        newLanguageList = languageList.copy()
+    for entry,path in languageList.items():
+        if filesys.notExist(path):
+            if returnDontRemove == True:
+                missing.append({entry:path})
+            else:
+                newLanguageList.pop(entry)
+    if returnDontRemove == True:
+        return missing
+    else:
+        _fileHandler(listFormat, "set", languageListFile, newLanguageList,encoding=encoding)
+
+def _handleAnsi(text):
+    '''CSlib: Smal function to handle the &<ansi>m format.'''
+    return re.sub(r'&(\d+)m', r'\033[\1m', text)
+
+class crosshellLanguageProvider():
+    '''CSlib: Crosshell language system.'''
+    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False):
+        # Save
+        self.languageListFile = languageListFile
+        if os.path.exists(self.languageListFile) == False:
+            if listFormat == "json":
+                open(self.languageListFile,'x').write("{}")
+            else:
+                open(self.languageListFile,'x').write("")
+        self.defLanguage = self.parseSingleLanguage(defaultLanguage)
+        self.listFormat = listFormat
+        self.langFormat = langFormat
+        self.pathtagManInstance = pathtagManInstance
+        self.langPath = langPath
+        self.encoding = encoding
+        self.sameSuffixLoading = sameSuffixLoading
+        # Retrive languageList after rechecking it
+        recheckLanguageList(self.languageListFile,self.listFormat,encoding=self.encoding)
+        self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding)
+        # Set default language
+        self.languagePrios = defaultLanguage
+        self.language = self.defLanguage
+        # setup choices
+        self.choices = []
+        self.populateChoices()
+        # populate priority listing with any same-suffix names (if enabled)
+        if sameSuffixLoading == True:
+            self.loadSameSuffixedLanguages()
+        # Load language
+        self.load()
+    def parseSingleLanguage(self,unparsed):
+        if type(unparsed) == str:
+            return {"1":unparsed}
+        else:
+            return unparsed
+    def populateChoices(self):
+        for key in self.languageList.keys():
+            if key not in self.languagePrios.values():
+                self.choices.append(key)
+    def loadSameSuffixedLanguages(self):
+        for name in self.languageList.keys():
+            _suffix = name.split("_")
+            suffix = _suffix[-1].strip(" ")
+            current = self.languagePrios.values()
+            if suffix != name and suffix in current and name not in current:
+                heigestkey = None
+                for key in self.languagePrios.keys():
+                    try:
+                        int(key)
+                        if heigestkey == None:
+                            heigestkey = int(key)
+                        elif int(key) > heigestkey:
+                            heigestkey = int(key)
+                    except: pass
+                self.languagePrios[str(heigestkey+1)] = name
+    def loadLanguagePriorityList(self):
+        mergedLanguage = {}
+        languages = [value for key, value in sorted(self.languagePrios.items(), key=lambda x: int(x[0]))]
+        languages = languages[::-1] # Reverse
+        for lang in languages:
+            langData = self._load(self.languageList,lang,self.pathtagManInstance,self.langFormat)
+            mergedLanguage.update(langData)
+        return mergedLanguage
+    def populateList(self,keepExisting=False,reload=True):
+        if self.langPath != None:
+            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding)
+            if reload == True:
+                self.relist()
+                self.load()
+    def relist(self):
+        '''Reloads the languageList.'''
+        self.languageList = _fileHandler("json","get",self.languageListFile,encoding=self.encoding)
+    def _ptmEval(self,instance,inp,extras=None):
+        if instance.idef == "collection":
+            return instance.evalAl(inp,extras)
+        else:
+            return instance.eval(inp,extras)
+    def _load(self,languagelist,language,pathtagManInstance,langFormat):
+        if languagelist.get(language) != None:
+            if pathtagManInstance == None:
+                languageData = _fileHandler(langFormat,"get",languagelist[language],encoding=self.encoding)
+            else:
+                languageData = _fileHandler(langFormat,"get",self._ptmEval(self.pathtagManInstance,languagelist[language]),encoding=self.encoding)
+        else:
+            languageData = {}
+        return languageData
+    def load(self):
+        '''Retrives the languageFile from the languageList and proceeds to load the language.'''
+        self.languageData = self.loadLanguagePriorityList()
+    def setLang(self,language):
+        '''Set the language.'''
+        self.language = self.parseSingleLanguage(language)
+        self.load()
+    def resLang(self):
+        '''Reset the language.'''
+        self.language = self.defLanguage.copy()
+        self.load()
+    def _handleAnsi(self,text):
+        return _handleAnsi(text)
+    def _handlePathTags(self,text,extraPathTags=None):
+        return self._ptmEval(self.pathtagManInstance,text,extraPathTags)
+    def _handle(self,text,extraPathTags=None):
+        if text != None:
+            text = self._handleAnsi(text)
+            text = self._handlePathTags(text,extraPathTags)
+        return text
+    def _handle_rollings(self,req):
+        matches = []
+        for key in self.languageData.keys():
+            if key.startswith(req):
+                matches.append(key)
+        if matches == []:
+            return req
+        else:
+            return self.languageData.get(random.choice(matches))
+    def print(self,textId,defaultText=None,reloadMode="None",ept=None):
+        '''Prints a text from the current language, and if needed reloads the language. reloadMode can be 'lang', 'list' or 'both' '''
+        if reloadMode == "lang":
+            self.load()
+        elif reloadMode == "list":
+            self.relist()
+        elif reloadMode == "both":
+            self.relist()
+            self.load()
+        try:
+            if textId.endswith("_rolling_"):
+                text = self._handle_rollings(textId)
+            else:
+                text = self.languageData.get(textId)
+            text = self._handle(text,ept)
+            if text == None and type(text) == str:
+                print(self._handle(defaultText,ept))
+            else:
+                print(text)
+        except:
+            print(self._handle(defaultText,ept))
+    def get(self,textId,reloadMode="None",ept=None):
+        '''Gets a text from the current language, and if needed reloads the language. reloadMode can be 'lang', 'list' or 'both' '''
+        if reloadMode == "lang":
+            self.load()
+        elif reloadMode == "list":
+            self.relist()
+        elif reloadMode == "both":
+            self.relist()
+            self.load()
+        if textId.endswith("_rolling_"):
+            text = self._handle_rollings(textId)
+        else:
+            text = self.languageData.get(textId)
+        text = self._handle(text,ept)
+        return text
+    def getLanguageData(self) -> dict:
+        _ld = {}
+        _ld["name"] = self.get("lang_name")
+        _ld["author"] = self.get("lang_author")
+        _ld["code"] = self.get("lang_code")
+        _ld["format"] = self.get("lang_format")
+        return _ld
+
 def recursiveMultipleReplacementTagWrapper(obj,tags=dict):
     """CSlib: Evals an object in multiple replacementTagWrappers."""
     if type(obj) == dict:
         for k,v in obj.items():
-            obj[k] = recursiveMultipleTagWrapper(v,tags)
+            obj[k] = recursiveMultipleReplacementTagWrapper(v,tags)
     elif type(obj) == list or type(obj) == tuple:
         for i,v in enumerate(obj):
-            obj[i] = recursiveMultipleTagWrapper(v,tags)
+            obj[i] = recursiveMultipleReplacementTagWrapper(v,tags)
     elif type(obj) == str:
         for tag,tagVal in tags.items():
             if obj == "{"+tag+"}":
@@ -312,9 +531,20 @@ class sessionStorage():
         self.storage["regionalScope"][key] = value
     def regionalGet(self, key=None):
         if key == None:
-            return self.storage["regionalScope"]
+            toExprt = {}
+            for k,v in self.storage["regionalScope"].items():
+                if k.strip().startswith("*"):
+                    k = k.replace("*","",1)
+                toExprt[k] = v
+            return toExprt
         else:
-            return self.storage["regionalScope"][key]
+            if key not in self.storage["regionalScope"].keys():
+                key = key.replace("*","",1)
+            try:
+                _v = self.storage["regionalScope"][key]
+            except KeyError:
+                _v = self.storage["regionalScope"]["*"+key]
+            return _v
     def regionalRemove(self, key):
         del self.storage["regionalScope"][key]
     def regionalUpdate(self, newDict):
@@ -326,7 +556,7 @@ class sessionStorage():
         if key.strip().startswith("*"):
             key = key.replace("*","",1)
         else:
-            key = self.regionalExport + key
+            key = self.regionalPrefix + key
         return key
     def regionalExport(self, key=None):
         if key == None:
@@ -735,6 +965,11 @@ class crshSession():
             "BuiltInReaders": {
                 "PLATFORM_EXECUTABLE": "{ReadersFolder}/platexecs.py"
             },
+            "LangPaths": {
+                "AssetsLangPath": "{AssetsDir}/lang",
+                "CoreLangPath": "{CoreDir}/lang"
+            },
+            "LangListFile": "{AssetsDir}/langlist.json",
 
             "Args": None,
             "Startfile": None,
@@ -752,11 +987,13 @@ class crshSession():
             "GetEncoding": self.getEncoding,
             "*fprint": self.fprint,
 
+            "LangpathObj": None,
+
             "StartupWProgress_steps": 30,
             "StartupWProgress_incr": 3,
 
             "__registerAsPaths": [ # __registerAsPaths is used to register the paths as pathTags, so any key in this list will be replaceable, for other keys.
-                "CSlibDir","BaseDir","CoreDir","AssetsDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder"
+                "CSlibDir","BaseDir","CoreDir","AssetsDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder","AssetsLangPath","CoreLangPath"
             ],
             "__registerAsTags": [ # __registerAsTags is used to register additional substituteTags, not usable when initiating regional-vars.
                 "DefaultEncoding", "VersionFile"
@@ -849,6 +1086,13 @@ class crshSession():
                     "Version.VerFile": "{CS_VersionFile}",
                     "Version.FileFormatVer": "1",
                     "Parse.Text.Webcolors": True,
+                    
+                    "Language.Loaded": {"1":"en-us"},
+                    "Language._choices": [],
+                    "Language.DefaultList": "{CS_LangListFile}",
+                    "Language.ListFormat": "json",
+                    "Language.LangFormat": "json",
+                    "Language.LoadSameSuffixedLangs": True,
                     "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
                     "CGTS.CustomMappings": {}
                 },
@@ -881,7 +1125,8 @@ class crshSession():
         self.initDefaults["ingestDefaultTags"] = {
             "CS_CGTS_StandardHexPalette": standardHexPalette,
             "CS_DefaultEncoding": self.initDefaults["regionalVars"]["DefaultEncoding"],
-            "CS_VersionFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["VersionFile"],self.storage.regionalPrefix))
+            "CS_VersionFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["VersionFile"],self.storage.regionalPrefix)),
+            "CS_LangListFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["LangListFile"],self.storage.regionalPrefix))
         }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
@@ -1043,7 +1288,7 @@ class crshSession():
         _regionalVars = _applySubstTags(tempSubstTagMan,_regionalVars,blacklistKeys=_pathTagBlacklistKeys)
         initSubstTags = {}
         for key,value in tempSubstTagMan.substTags.items():
-            initSubstTags[self.storage.regionalPrefix+key] = value
+            initSubstTags[self.storage.addPrefToKey(key)] = value
 
         _regionalVars["base_PathTags"] = initSubstTags
 
@@ -1144,7 +1389,7 @@ class crshSession():
         _substTags = {}
         for k in self.regionalGet("__registerAsTags"):
             if k in _regionalVars.keys():
-                _substTags[self.storage.regionalPrefix+k] = _regionalVars[k]
+                _substTags[self.storage.addPrefToKey(k)] = _regionalVars[k]
         self.register("base_stm", tagSubstitionManager(_substTags))
 
         self.register("stm", collectionalTagManager(initSubstTags,_substTags))
@@ -1209,6 +1454,35 @@ class crshSession():
         self.register("txt", _textInst)
 
         st.verb("Does it work? {#DA70D6}*Toad*{r}") # VERBOSE START
+
+        self.register("fprint",self.regionalGet("fprint"))
+
+        self.regionalSet(
+            "LangpathObj",
+            pathObject(
+                self.regionalGet("LangPaths").values()
+            )
+        )
+
+        _cslp = crosshellLanguageProvider(
+            languageListFile = self.getregister("stm").eval("ptm",self.getregister("set").getProperty("crsh","Language.DefaultList")),
+            defaultLanguage = self.getregister("set").getProperty("crsh","Language.Loaded"),
+            listFormat = self.getregister("set").getProperty("crsh","Language.ListFormat"),
+            langFormat = self.getregister("set").getProperty("crsh","Language.LangFormat"),
+            pathtagManInstance = self.getregister("stm"),
+            langPath = self.regionalGet("LangpathObj"),
+            encoding = self.getEncoding(),
+            sameSuffixLoading = self.getregister("set").getProperty("crsh","Language.LoadSameSuffixedLangs")
+        )
+
+        self.deb.setLanguageProvider(_cslp)
+        self.register("lng",_cslp)
+
+        st.verb(f"Populating languageList... (len: {len(_cslp.languageList)})",l="cs.startup.populanglist._nonadrss_",ct={"len":len(_cslp.languageList)}) # VERBOSE START
+
+        _cslp.populateList()
+
+        self.getregister("set").chnProperty("crsh","Language._choices",_cslp.choices)
 
         # Set flag
         self.flags.enable("--haveBeenInited")

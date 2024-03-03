@@ -1,9 +1,10 @@
 # FileSys: Library to work with filesystems.
-# Made by: Simon Kalmi Claesson and modified to work crosshell
-# Version: 1.1_crsh
+# Made by: Simon Kalmi Claesson
+# Version: 1.2
 
 # Imports
 import os
+import re
 import shutil
 import platform
 try:
@@ -11,15 +12,44 @@ try:
 except ImportError:
     from scandir import scandir
 
-# Import conUtils required functions
-from cslib.externalLibs.conUtils import IsWindows,IsLinux,IsMacOS
-
-# Import intpip
-from cslib.piptools import intpip
+# Simple alternative to conUtils
+class altConUtils():
+    def IsWindows():
+        # Get platform and return boolean value depending of platform
+        platformv = platform.system()
+        if platformv == "Linux":
+            return False
+        elif platformv == "Darwin":
+            return False
+        elif platformv == "Windows":
+            return True
+        else:
+            return False
+    def IsLinux():
+        # Get platform and return boolean value depending of platform
+        platformv = platform.system()
+        if platformv == "Linux":
+            return True
+        elif platformv == "Darwin":
+            return False
+        elif platformv == "Windows":
+            return False
+        else:
+            return False
+    def IsMacOS():
+        # Get platform and return boolean value depending of platform
+        platformv = platform.system()
+        if platformv == "Linux":
+            return False
+        elif platformv == "Darwin":
+            return True
+        elif platformv == "Windows":
+            return False
+        else:
+            return False
 
 # Class containing functions
 class filesys():
-    '''CSlib.externalLibs.filesys: Main filesys class containing functions'''
 
     defaultencoding = "utf-8"
 
@@ -31,8 +61,8 @@ class filesys():
         This class contains functions to perform filessytem actions like creating and removing files/directories.
         Functions included are:
           - help: Shows this help message.
-          - replaceSeps: Function to replace path separators using os.sep (Taking "path=<str>")
           - errorhandler: Internal function to handle errors. (Taking "action=<str_action>", "path=<str_path>" and "noexist=<bool>")
+          - replaceSeps: Function to replace path separators using os.sep (Taking "path=<str>")
           - renameFile: Renames a file. (Taking "filepath=<str>", "newFilepath=<str>")
           - renameDir: Renames a directory. (Taking "folderpath=<str>", "newFolderpath=<str>")
           - doesExist: Checks if a file/directory exists. (Taking "path=<str>")
@@ -60,35 +90,33 @@ class filesys():
           - isExecutable: Checks if a file is an executable. (Taking "filepath=<str>" and optionally "fileEndings=<list>")
           - getMagicMime: Gets the magic-mime info of a file. (Taking "filepath=<str>")
           - openFolder: Opens a folder in the host's filemanager. (Taking "path=<str>") Might not work on al systems!
+          - makeWinPathSafe: Makes a string safe to be used in a windows path. (Taking "string=<str>")
         For al functions taking encoding, the argument is an overwrite for the default encoding "filesys.defaultencoding" that is set to {filesys.defaultencoding}.
         '''
         if ret != True: print(helpText)
         else: return helpText
 
-    # Function to replace path seperators with os.sep
     def replaceSeps(path=str()):
-        '''CSlib.externalLibs.filesys: Replaces the path separators with os.sep'''
+        '''Replaces the path separators with os.sep'''
         spath = path
         if "/" in path:
             spath = path.replace("/", os.sep)
-        elif "\\" in path:
+        if "\\" in path:
             spath = path.replace("\\", os.sep)
         return spath
 
     # Function to check if a file/directory exists
     def doesExist(path=str()):
-        '''CSlib.externalLibs.filesys: Checks if a file/directory exists.'''
         return bool(os.path.exists(path))
         
     # Function to check if a file/directory does not exist
     def notExist(path=str()):
-        '''CSlib.externalLibs.filesys: Checks if a file/directory does not exist.'''
         if os.path.exists(path): return False
         else: return True
 
     # Function to create a path, folder per folder
     def ensureDirPath(path=str()):
-        '''CSlib.externalLibs.filesys: Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH'''
+        '''Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH'''
         path = filesys.replaceSeps(path)
         sections = path.split(os.sep)
         firstSection = sections[0]
@@ -107,25 +135,20 @@ class filesys():
 
     # Function to check if object is file
     def isFile(path=str()):
-        '''CSlib.externalLibs.filesys: Checks if a path is a file.'''
         return bool(os.path.isfile(path))
 
     # Function to check if object is directory
     def isDir(path=str()):
-        '''CSlib.externalLibs.filesys: Checks if a path is a directory.'''
         return bool(os.path.isdir(path))
 
     # Function to get the filename of file (Excluding file extension)
     def getFileName(path=str()):
-        '''CSlib.externalLibs.filesys: Gets the filename of a file, excluding file extension.'''
         if "." in path:
             return ('.'.join(os.path.basename(path).split(".")[:-1])).strip(".")
         else:
             return os.path.basename(path)
-    
-    # Function to get the fileextension of a file
+
     def getFileExtension(path=str()):
-        '''CSlib.externalLibs.filesys: Gets the fileextension of a file.'''
         if "." in path:
             return os.path.basename(path).split(".")[-1]
         else:
@@ -133,7 +156,6 @@ class filesys():
 
     # Error handler function where noexists flips functionality, checks for filetype and existance
     def errorHandler(action,path,noexist=False):
-        '''CSlib.externalLibs.filesys: INTERNAL, error handler that checks for filetype and existance, "noexist" flag flipps functionality.'''
         output = True
         # Noexists checks
         if noexist:
@@ -158,7 +180,6 @@ class filesys():
 
     # Function to rename a file
     def renameFile(filepath=str(),newFilepath=str()):
-        '''CSlib.externalLibs.filesys: Renames a file, taking oldpath and newpath.'''
         # Validate
         valid1 = filesys.errorHandler("file",filepath)
         valid2 = filesys.errorHandler("file",newFilepath,noexist=True)
@@ -169,11 +190,10 @@ class filesys():
         else:
             try:
                 os.rename(filepath,newFilepath)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling renameFile!\033[0m",e)
 
     # Function to rename a folder
     def renameDir(folderpath=str(),newFolderpath=str()):
-        '''CSlib.externalLibs.filesys: Renames a directory, taking oldpath and newpath.'''
         # Validate
         valid1 = filesys.errorHandler("dir",folderpath)
         valid2 = filesys.errorHandler("dir",newFolderpath,noexist=True)
@@ -184,11 +204,10 @@ class filesys():
         else:
             try:
                 shutil.move(folderpath,newFolderpath)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling renameDir!\033[0m",e)
 
     # Function to create file
     def createFile(filepath=str(), overwrite=False, encoding=None):
-        '''CSlib.externalLibs.filesys: Create a file and optionally overwrite existing one.'''
         # Validate
         valid = filesys.errorHandler("file",filepath,noexist=True)
         # Overwrite to file
@@ -199,65 +218,60 @@ class filesys():
                 try:
                     f = open(filepath, "x", encoding=encoding)
                     f.close()
-                except: raise Exception("\033[31mAn error occured!\033[0m")
+                except Exception as e: print("\033[31mAn error occurred calling createFile with existing file!\033[0m",e)
         # Create new file
         else:
             try:
                 f = open(filepath, "w", encoding=encoding)
                 f.close()
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling creatFile!\033[0m",e)
     
     # Function to create directory
     def createDir(folderpath=str()):
-        '''CSlib.externalLibs.filesys: Creates a directory.'''
         # Validate
         valid = filesys.errorHandler("dir",folderpath,noexist=True)
         # Make directory
         if valid == True:
             try: os.mkdir(folderpath)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling createDir!\033[0m",e)
         else:
             print(valid); exit()
     
     # Function to delete a file
     def deleteFile(filepath=str()):
-        '''CSlib.externalLibs.filesys: Deletes a file.'''
         # Validate
         valid = filesys.errorHandler("file",filepath)
         # Delete file
         if valid == True:
             try: os.remove(filepath)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling deleteFile!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to delete directory
     def deleteDir(folderpath=str()):
-        '''CSlib.externalLibs.filesys: Deletes a directory, must be empty.'''
         # Validate
         valid = filesys.errorHandler("dir",folderpath)
         # Delete directory
         if valid == True:
             try: os.rmdir(folderpath)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling deleteDir!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to delete directory NON EMPTY
     def deleteDirNE(folderpath=str()):
-        '''CSlib.externalLibs.filesys: Alternative delete function for directories, for non-empty directories.'''
         # Validate
         valid = filesys.errorHandler("dir",folderpath)
         # Delete directory
         if valid == True:
             try: shutil.rmtree(folderpath)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling deleteDirNE!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to write to a file
     def writeToFile(inputs=str(),filepath=str(), append=False, encoding=None, autocreate=False):
-        '''CSlib.externalLibs.filesys: Writes inputString to a file, alternatively appends and autocreates.'''
         if encoding != None: encoding = filesys.defaultencoding
         # AutoCreate
         if autocreate == True:
@@ -271,20 +285,19 @@ class filesys():
                     f = open(filepath, "a", encoding=encoding)
                     f.write(inputs)
                     f.close()
-                except: raise Exception("\033[31mAn error occured!\033[0m")
+                except Exception as e: print("\033[31mAn error occurred calling writeToFile when appending!\033[0m",e)
             # Overwrite existing file
             else:
                 try:
                     f = open(filepath, "w", encoding=encoding)
                     f.write(inputs)
                     f.close()
-                except: raise Exception("\033[31mAn error occured!\033[0m")
+                except Exception as e: print("\033[31mAn error occurred calling writeToFile white overwriting existing file!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to get file contents from file
     def readFromFile(filepath=str(),encoding=None):
-        '''CSlib.externalLibs.filesys: Get the content of a file.'''
         if encoding != None: encoding = filesys.defaultencoding
         # Validate
         valid = filesys.errorHandler("file",filepath)
@@ -295,45 +308,40 @@ class filesys():
                 content = f.read()
                 f.close()
                 return content
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling readFromFile!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to get current working directory
     def getWorkingDir():
-        '''CSlib.externalLibs.filesys: Get the current working directory.'''
         return os.getcwd()
     
     # Function to change working directory
     def setWorkingDir(dir=str()):
-        '''CSlib.externalLibs.filesys: Set the working directory.'''
         os.chdir(dir)
 
     # Function to copy a file
     def copyFile(sourcefile=str(),destination=str()):
-        '''CSlib.externalLibs.filesys: Copies a file.'''
         valid = filesys.errorHandler("file",sourcefile)
         if valid == True:
             try:
                 shutil.copy2(sourcefile, destination)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling copyFile!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to copy a folder
     def copyFolder(sourceDirectory=str(),destinationDirectory=str()):
-        '''CSlib.externalLibs.filesys: Copies a folder, DESTINATION MAY NOT ALREADY!'''
         valid = filesys.errorHandler("dir",sourceDirectory)
         if valid == True:
             try:
                 shutil.copytree(sourceDirectory, destinationDirectory)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling copyFolder!\033[0m",e)
         else:
             print(valid); exit()
 
     # Another function to copy a folder, custom made to allow the destination to exists
     def copyFolder2(sourceDirectory=str(),destinationDirectory=str(),debug=False):
-        '''CSlib.externalLibs.filesys: Alternative folder copy function, use when the destination already exists.'''
         # Validate
         valid = filesys.errorHandler("dir", sourceDirectory)
         if valid == True:
@@ -358,7 +366,7 @@ class filesys():
                 # Make sure al the folders in the path exists
                 splitdir = folderpath.split(os.sep)
                 # goto root and remove root from splitdir
-                if IsWindows():
+                if altConUtils.IsWindows():
                     if splitdir[0][-1] != "\\": splitdir[0] = splitdir[0] + '\\'
                     os.chdir(splitdir[0])
                     splitdir.pop(0)
@@ -390,29 +398,26 @@ class filesys():
 
     # Function to zip a file
     def archive(sourceDirectory=str(),destination=str(),format=str()):
-        '''CSlib.externalLibs.filesys: Creates an archive of a file/directory taking format aswell. (For supported formats see shutil documentation)'''
         valid = filesys.errorHandler("dir", destination)
         if valid == True:
             try:
                 shutil.make_archive(('.'.join(destination.split(".")[:-1]).strip("'")), format=format, root_dir=sourceDirectory)
-            except:  raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e:  print("\033[31mAn error occurred calling archive!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to unzip a file
     def unArchive(archiveFile=str(),destination=str()):
-        '''CSlib.externalLibs.filesys: Extracts an archive.'''
         valid = filesys.errorHandler("file", archiveFile)
         if valid == True:
             try:
                 shutil.unpack_archive(archiveFile, destination)
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred unArchive!\033[0m",e)
         else:
             print(valid); exit()
         
     # Function to scantree using scantree()
     def scantree(path=str()):
-        '''CSlib.externalLibs.filesys: Returns a scantree of a path.'''
         valid = filesys.errorHandler("dir", path)
         if valid == True:
             try:
@@ -422,13 +427,12 @@ class filesys():
                         yield from filesys.scantree(entry.path)
                     else:
                         yield entry
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling scantree!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to check if a file is an executable
-    def isExecutable(filepath=str(),fileEndings=None,onPipInstallCusPip=None):
-        '''CSlib.externalLibs.filesys: Checks if a file is an executable, alternatively takes a list of fileEndings defaulted to be an executable, on non-windows platforms it uses magic to determine it.'''
+    def isExecutable(filepath=str(),fileEndings=None):
         exeFileEnds = [".exe",".cmd",".com",".py"]
         if fileEndings != None: exeFileEnds = fileEndings
         valid = filesys.errorHandler("file", filepath)
@@ -436,67 +440,94 @@ class filesys():
             try:
                 # [Code]
                 # Non Windows
-                if IsLinux() or IsMacOS():
+                if altConUtils.IsLinux() or altConUtils.IsMacOS():
                     try: import magic
                     except:
-                        intpip("install file-magic",pipOvw=onPipInstallCusPip)
-                        import magic
+                        os.system("pip3 install file-magic")
                     detected = magic.detect_from_filename(filepath)
                     return "application" in str(detected.mime_type)
                 # Windows
-                if IsWindows():
+                if altConUtils.IsWindows():
                     fending = str("." +''.join(filepath.split('.')[-1]))
                     if fending in exeFileEnds:
                         return True
                     else:
                         return False
-            except: raise Exception("\033[31mAn error occured!\033[0m")
+            except Exception as e: print("\033[31mAn error occurred calling isExecutable!\033[0m",e)
         else:
             print(valid); exit()
 
     # Function to get magic-mime info:
     def getMagicMime(filepath=str()):
-        '''CSlib.externalLibs.filesys: INTERNAL, gets the magic-mime info of a path.'''
         import magic # Internal import since module should only be loaded if function is called.
         detected = magic.detect_from_filename(filepath)
         return detected.mime_type
 
     # Function to open a folder in the host's filemanager
-    def openFolder(path=str(),onPipInstallCusPip=None):
-        '''CSlib.externalLibs.filesys: Opens a folder in the host's filemanager on supported platforms.'''
+    def openFolder_legacy(path=str()):
         # Local imports:
         try: import distro
         except:
-            intpip("install distro",pipOvw=onPipInstallCusPip)
+            os.system("python3 -m pip install distro")
             import distro
         # Launch manager
-        if IsWindows(): os.system(f"explorer {path}")
-        elif IsMacOS(): os.system(f"open {path}")
-        elif IsLinux():
+        if altConUtils.IsWindows(): os.system(f"explorer {path}")
+        elif altConUtils.IsMacOS(): os.system(f"open {path}")
+        elif altConUtils.IsLinux():
             #Rassberry pi
             if distro.id() == "raspbian": os.system(f"pcmanfm {path}")
 
 
+    def openFolder(path=str()):
+        # Define a list of known file managers and their commands
+        linux_file_managers = {
+            "nautilus": "nautilus",
+            "nemo": "nemo",
+            "pcmanfm": "pcmanfm",
+            "thunar": "thunar",
+            # Add more file managers and their corresponding commands here
+        }
+
+        # Detect the Linux distribution
+        if altConUtils.IsLinux():
+            # Try to find a suitable file manager
+            for manager, command in linux_file_managers.items():
+                if os.system(f"which {command} > /dev/null 2>&1") == 0:
+                    os.system(f"{command} {path}")
+                    break
+            else:
+                print("No supported file manager found. Please install one.")
+
+        # For Windows and macOS
+        elif altConUtils.IsWindows():
+            os.system(f"explorer {path}")
+        elif altConUtils.IsMacOS():
+            os.system(f"open {path}")
+
+    def makeWinPathSafe(string):
+        # Define a regular expression pattern to match invalid characters in Windows file paths
+        invalid_chars_pattern = r'[<>:"/\\|?*]'
+
+        # Replace invalid characters with underscores
+        safe_str = re.sub(invalid_chars_pattern, '_', string)
+
+        return safe_str
+
 # Class with "powershell-styled" functions
 class pwshStyled():
-    '''CSlib.externalLibs.filesys: Alternative class for pwshStyled usage.'''
 
     # Alias to doesExist
     def testPath(path=str()):
-        '''CSlib.externalLibs.filesys: Alternative to doesExist.'''
         return filesys.doesExist(path)
 
     # Alias to readFromFile
     def getContent(filepath=str(),encoding=None):
-        '''CSlib.externalLibs.filesys: Alternative to readFromFile.'''
         return filesys.readFromFile(filepath=filepath,encoding="utf-8")
     
     # Alias to writeToFile
     def outFile(inputs=str(),filepath=str(),append=False,encoding=None):
-        '''CSlib.externalLibs.filesys: Alternative to writeToFile.'''
         filesys.writeToFile(inputs=str(),filepath=str(),append=False,encoding=None)
 
     # Alias to createFile
     def touchFile(filepath=str(),encoding=None):
-        '''CSlib.externalLibs.filesys: Alternative to createFile.'''
         filesys.createFile(filepath=filepath, overwrite=False, encoding=encoding)

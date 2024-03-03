@@ -47,5 +47,13 @@ crsh:
   Parse:
     Text:
       Webcolors: true
+  Language:
+    Loaded:
+      '1': en-us
+    _choices: []
+    DefaultList: '{CS_AssetsDir}\langlist.json'
+    ListFormat: json
+    LangFormat: json
+    LoadSameSuffixedLangs: true
 crsh_debugger:
   Scope: error

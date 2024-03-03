@@ -2,6 +2,4 @@
 from cslib.main import *
 
 # [Create Session]
-csSession = crshSession()
-
-print(csSession)
+csSession = crshSession(initOnStart=True)

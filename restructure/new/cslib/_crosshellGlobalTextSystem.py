@@ -185,7 +185,10 @@ class crosshellGlobalTextSystem():
             customTags.update(addCustomTags)
         # Pathtags
         if self.pathtagInstance != None:
-            inputText = self.pathtagInstance.eval(inputText)
+            if self.pathtagInstance.idef == "collection":
+                inputText = self.pathtagInstance.evalAl(inputText)
+            else:
+                inputText = self.pathtagInstance.eval(inputText)
         # Standard Tags
         inputText = formatStringTags(inputText,self.allowedVariables,customTags)
         # Palette / Strip ANSI

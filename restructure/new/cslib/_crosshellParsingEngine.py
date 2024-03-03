@@ -1,5 +1,28 @@
 from cslib.externalLibs.filesys import filesys
 
+def exclude_nonToFormat(input_string):
+    # Find all substrings inside innermost double slashes
+    pattern = r'//([^/]+)//'
+    matches = re.findall(pattern, input_string)
+
+    if not matches:
+        # If no innermost double slashes found, return the input string as is
+        return (input_string, [])
+
+    # Replace all innermost double slashes with §cs.toNotFormat§
+    replaced_string = re.sub(pattern, '§cs.toNotFormat§', input_string)
+
+    return (replaced_string, matches)
+
+
+def include_nonToFormat(input_string, substrings):
+    for substring in substrings:
+        # Remove // from the beginning and end of the substring
+        clean_substring = substring.strip('/')
+        # Replace "§cs.toNotFormat§" with the cleaned substring
+        input_string = input_string.replace("§cs.toNotFormat§", clean_substring, 1)
+    return input_string
+
 def tagSubstition_parse(string,toParse=dict) -> str:
     """CSlib.CSPE: Function to parse only a given set of tags, once!"""
     for tagName,tagValue in toParse.items():
@@ -22,6 +45,7 @@ class tagSubstitionManager():
         self.defSubsttags = defaultSubsttags
         self.substTags = self.defSubsttags.copy()
         self.evalFailMsg = "If defined, extraSubstTags must be of type dict!"
+        self.idef = "substituion"
     def addTag(self,tag,value):
         self.substTags[tag] = value
     def remTag(self,tag):
@@ -48,6 +72,7 @@ class pathTagManager(tagSubstitionManager):
     def __init__(self,defaultSubsttags=dict):
         super().__init__(defaultSubsttags)
         self.evalFailMsg = "If defined, extraPathTags must be of type dict!"
+        self.idef = "pathtag"
     def ensureAl(self):
         for _,tagValue in self.substTags.items():
             if filesys.notExist(tagValue) == True:
@@ -61,6 +86,7 @@ class collectionalTagManager():
             "stm": ["stm","sub"],
             "ptm": ["ptm","path"]
         }
+        self.idef = "collection"
     def _checkMode(self,mode):
         coal = []
         for p in self.modes.values(): coal.extend(p)
@@ -96,3 +122,7 @@ class collectionalTagManager():
         if _v != None:
             _t.update(_v)
         return _t
+    
+    def evalAl(self,string,extraSubstTags=None):
+        string = self.eval("stm",string,extraSubstTags)
+        return self.eval("ptm",string,extraSubstTags)

@@ -1,13 +1,14 @@
 import pickle, sys, json, os, argparse, inspect, re
 
 from cslib.piptools import installPipDeps_fl
-from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager
-from cslib._crosshellGlobalTextSystem import standardHexPalette
+from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
+from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem
 from cslib.externalLibs.filesys import filesys
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
 from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict
 from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
 from cslib.progressMsg import startupMessagingWProgress
+from cslib.exceptions import CrosshellDebErr
 
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
@@ -286,12 +287,15 @@ class sessionStorage():
             "regionalScope": {}
         }
     # region: sessionStorage.mainmethods
-    def reset(self, key):
-        self.storage = {
-            "tempData": {},
-            "userVars": {},
-            "regionalScope": {}
-        }
+    def reset(self, key=None):
+        if key == None:
+            self.storage = {
+                "tempData": {},
+                "userVars": {},
+                "regionalScope": {}
+            }
+        else:
+            self.storage[key] = {}
     def __setitem__(self, key, value):
         self.storage[key] = value
     def __getitem__(self, key):
@@ -318,15 +322,21 @@ class sessionStorage():
         return self.storage["regionalScope"]
     def regionalReset(self):
         self.storage["regionalScope"] = {}
+    def addPrefToKey(self,key):
+        if key.strip().startswith("*"):
+            key = key.replace("*","",1)
+        else:
+            key = self.regionalExport + key
+        return key
     def regionalExport(self, key=None):
         if key == None:
             toExprt = {}
             for key,value in self.storage["regionalScope"].items():
-                toExprt[self.regionalPrefix+key] = value
+                toExprt[self.addPrefToKey(key)] = value
             return toExprt
         else:
             return {
-                self.regionalPrefix+key: self.storage["regionalScope"]
+                self.addPrefToKey(key): self.storage["regionalScope"]
             }
     def regionalGetP(self, key=None):
         if key.startswith(self.regionalPrefix):
@@ -496,6 +506,8 @@ class crosshellDebugger():
         self.print(text,"info",ct,lpReloadMode,raiseEx,noPrefix)
     def pwarn(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
         self.print(text,"warn",ct,lpReloadMode,raiseEx,noPrefix)
+    def pexception(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
+        self.print(text,"exception",ct,lpReloadMode,raiseEx,noPrefix)
     def perror(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
         self.print(text,"error",ct,lpReloadMode,raiseEx,noPrefix)
     def pdebug(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
@@ -684,6 +696,18 @@ class crshSession():
     def getEncoding(self):
         return self.regionalGet("DefaultEncoding")
 
+    def fprint(self,text,file=None,flush=False,end=None,cusPrint=None):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        toformat, excludes = exclude_nonToFormat(text)
+        formatted = self.getregister("txt").parse(toformat)
+        text = include_nonToFormat(formatted,excludes)
+        if cusPrint == None: cusPrint = print
+        if end == None:
+            cusPrint(text,file=file,flush=flush)
+        else:
+            cusPrint(text,end=end,file=file,flush=flush)
+
     def populateDefaults(self):
         self.flags.enable("--populatedDefaults")
 
@@ -726,6 +750,10 @@ class crshSession():
             "VersionData": None,
 
             "GetEncoding": self.getEncoding,
+            "*fprint": self.fprint,
+
+            "StartupWProgress_steps": 30,
+            "StartupWProgress_incr": 3,
 
             "__registerAsPaths": [ # __registerAsPaths is used to register the paths as pathTags, so any key in this list will be replaceable, for other keys.
                 "CSlibDir","BaseDir","CoreDir","AssetsDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder"
@@ -733,6 +761,11 @@ class crshSession():
             "__registerAsTags": [ # __registerAsTags is used to register additional substituteTags, not usable when initiating regional-vars.
                 "DefaultEncoding", "VersionFile"
             ]
+        }
+
+        self.initDefaults["argParser_creationKwargs"] = {
+            "prog": "Crosshell",
+            "description": "Crosshell Modulo"
         }
 
         self.initDefaults["arguments"] = [
@@ -792,8 +825,15 @@ class crshSession():
             ]
         ]
 
+        self.initDefaults["cmdIdentifier"] = "cmd"
+
         self.initDefaults["cmdArgPlaceholders"] = {
             "§": " "
+        }
+
+        self.initDefaults["aliasIdentifiers"] = {
+            "stripAnsi": "StripAnsi",
+            "noverbstart": "!VerboseStart"
         }
 
         self.initDefaults["pathTagBlacklistKeys"] = ["__registerAsPaths","__registerAsTags"]
@@ -808,6 +848,7 @@ class crshSession():
                     "Formats.DefaultEncoding": "{CS_DefaultEncoding}",
                     "Version.VerFile": "{CS_VersionFile}",
                     "Version.FileFormatVer": "1",
+                    "Parse.Text.Webcolors": True,
                     "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
                     "CGTS.CustomMappings": {}
                 },
@@ -870,8 +911,8 @@ class crshSession():
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
         return startupMessagingWProgress(
-            enabled = self.flags.hasnt("--noVerboseStart"),
-            stripAnsi = self.flags.has("--stripAnsi"),
+            enabled = self.regionalGet("VerboseStart"),
+            stripAnsi = self.flags.has("StripAnsi"),
             debugger = self.deb,
             pgMax = pgMax,
             pgIncr = pgIncr
@@ -1019,8 +1060,7 @@ class crshSession():
 
         # Define argparser
         _argparser = argparse.ArgumentParser(
-            prog = "Crosshell",
-            description = "Crosshell Modulo"
+            **self.initDefaults["argParser_creationKwargs"]
         )
         _regionalVars["Argparser"] = _argparser
         for arg in _arguments:
@@ -1031,10 +1071,11 @@ class crshSession():
         _regionalVars["Pargs"] = _argparser.parse_args(_cliArgs)
 
         # Handle placeholders in command and add stripansi
-        cmdIndentifier = "cmd"
-        aliasIndentifiers = {"stripAnsi":"StripAnsi","noverbstart":"!VerboseStart"}
+        cmdIndentifier = self.initDefaults["cmdIdentifier"]
+        aliasIndentifiers = self.initDefaults["aliasIdentifiers"]
         seenCmd = False
         seenAliases = []
+        self.tmpSet("changedValues",[]) # init temporary list of changed values
         for vl in _arguments:
             if vl[1]["dest"] == cmdIndentifier and seenCmd == False:
                 for pl,val in _cmdArgPlaceholders.items():
@@ -1063,8 +1104,18 @@ class crshSession():
                         _regionalVars[key] = not _v
                     else:
                         _regionalVars[key] = _v
+                    # add value to temp-list
+                    self.tmpSet(
+                        "changedValues",
+                        [key,*self.tmpGet("changedValues")]
+                    )
                 else:
                     _regionalVars[key] = getattr(_regionalVars["Pargs"], dest)
+                    # add value to temp-list
+                    self.tmpSet(
+                        "changedValues",
+                        [key,*self.tmpGet("changedValues")]
+                    )
                 seenAliases.append(dest)
 
         # Append possible custom
@@ -1079,8 +1130,12 @@ class crshSession():
         # Handle launchWith
         if launchWith_stripAnsi == True:
             self.regionalSet("StripAnsi", True)
+            # Append to changedValues temp-list
+            self.tmpSet("changedValues",self.tmpGet("changedValues").append("StripAnsi"))
         if launchWith_noVerboseStart == True:
             self.regionalSet("VerboseStart", False)
+            # Append to changedValues temp-list
+            self.tmpSet("changedValues",self.tmpGet("changedValues").append("VerboseStart"))
 
         # Register things
         self.register("base_ptm", pathTagManager(initSubstTags))
@@ -1106,17 +1161,23 @@ class crshSession():
         self.flags.enable("--enableUnsafeOperations")
         ## Set
         self.ingestDefaults(defaults,_ingestDefaultTags)
-        if launchWith_stripAnsi != True:
+        if "StripAnsi" not in self.tmpGet("changedValues"): # Read temp-list
             self.regionalSet("StripAnsi", self.getregister("set").getProperty("crsh","Console.StripAnsi"))
-            if self.regionalGet("StripAnsi") == True:
-                self.flags.enable("--stripAnsi")
-        if launchWith_noVerboseStart != True:
+        if "VerboseStart" not in self.tmpGet("changedValues"): # Read temp-list
             self.regionalSet("VerboseStart", self.getregister("set").getProperty("crsh","Console.VerboseStart"))
-            if self.regionalGet("VerboseStart") == False:
-                self.flags.enable("--noVerboseStart")
-        st = self.createAndReturn_startupW(30,3)
+        # remove temp-list
+            self.tmpRemove("changedValues")
+        st = self.createAndReturn_startupW(
+            pgMax = self.regionalGet("StartupWProgress_steps"),
+            pgIncr= self.regionalGet("StartupWProgress_incr")
+        )
+        self.deb.setScope(
+            self.getregister("set").getProperty("crsh_debugger","Scope")
+        )
         ## disable allow flag
         self.flags.disable("--enableUnsafeOperations")
+
+        st.verb("Loading versiondata...") # VERBOSE START
 
         # Get versionData
         _temp = self.getregister("set").getModule("crsh")
@@ -1132,6 +1193,22 @@ class crshSession():
                 encoding = getKeyPath(_temp, "Formats.DefaultEncoding")
             )
         )
+
+        st.verb("Loading formatter...") # VERBOSE START
+
+        _temp = self.getregister("set").getModule("crsh")
+        _textInst = crosshellGlobalTextSystem(
+            pathtagInstance = self.getregister("stm"),
+            palette = getKeyPath(_temp,"CGTS.ANSI_Hex_Palette"),
+            parseWebcolor = getKeyPath(_temp,"Parse.Text.Webcolors"),
+            customTags = getKeyPath(_temp,"CGTS.CustomMappings")
+        )
+
+        _textInst.stripAnsi = self.regionalGet("StripAnsi")
+        self.deb.setFormatterInstance( _textInst )
+        self.register("txt", _textInst)
+
+        st.verb("Does it work? {#DA70D6}*Toad*{r}") # VERBOSE START
 
         # Set flag
         self.flags.enable("--haveBeenInited")

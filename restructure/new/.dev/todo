@@ -1,1 +1,5 @@
 - Make createAndReturn_startupW() use get max and incr values from some config, and clamp max if screen clamped, if so calc factor for confMax-clampedMax and divide incr with it
+
+- make modularSettingsClass have optional stm/ptm class and use on getKeyPath as arg, and then remove the current parse-passes
+
+- make modularSettingsClass take optional "instanceSettings" classInstance instead of file and if given will use that instead.

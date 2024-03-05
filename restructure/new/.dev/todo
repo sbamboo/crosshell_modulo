@@ -2,4 +2,6 @@
 
 - make modularSettingsClass have optional stm/ptm class and use on getKeyPath as arg, and then remove the current parse-passes
 
-- make modularSettingsClass take optional "instanceSettings" classInstance instead of file and if given will use that instead.
+- ensure everything uses getEncoding()
+
+- make "stateInstance" class to allow for file-less modes where the states are also exported on session-export. Implement this for example in the modularSettingsLinker.

@@ -938,6 +938,9 @@ class crshSession():
         else:
             cusPrint(text,end=end,file=file,flush=flush)
 
+    def hasUnicodeAvaliable(self):
+        return hasattr(sys.stdout, 'encoding') and sys.stdout.encoding.lower() in ['utf-8', 'utf_8', 'utf8']
+
     def populateDefaults(self):
         self.flags.enable("--populatedDefaults")
 
@@ -986,6 +989,7 @@ class crshSession():
 
             "GetEncoding": self.getEncoding,
             "*fprint": self.fprint,
+            "SupportsUnicode": self.hasUnicodeAvaliable,
 
             "LangpathObj": None,
 
@@ -1152,15 +1156,16 @@ class crshSession():
             }
         )
 
-    def createAndReturn_startupW(self,pgMax=10,pgIncr=1):
+    def createAndReturn_startupW(self,pgMax=10,pgIncr=1,unicodeSymbols=True):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
         return startupMessagingWProgress(
-            enabled = self.regionalGet("VerboseStart"),
-            stripAnsi = self.flags.has("StripAnsi"),
             debugger = self.deb,
+            enabled = self.regionalGet("VerboseStart"),
+            stripAnsi = self.regionalGet("StripAnsi"),
             pgMax = pgMax,
-            pgIncr = pgIncr
+            pgIncr = pgIncr,
+            unicodeSymbols=unicodeSymbols
         )
 
     def setStripAnsi(self,value=bool):
@@ -1178,6 +1183,9 @@ class crshSession():
 
         if self.flags.has("--populatedDefaults") == False:
             self.populateDefaults()
+
+        # Enable ansi on windows
+        os.system("")
 
         # Define standard
         _regionalVars = self.initDefaults["regionalVars"]
@@ -1395,10 +1403,10 @@ class crshSession():
         self.register("stm", collectionalTagManager(initSubstTags,_substTags))
         self.regionalSet("SubstTags", self.getregister("stm").getAlTags() )
 
-        self.register("set", modularSettingsLinker(self.regionalGet("SettingsFile"),encoding=self.regionalGet("DefaultEncoding"),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
+        self.register("set", modularSettingsLinker(self.regionalGet("SettingsFile"),encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
         self.getregister("set").createFile()
         
-        self.register("per", modularSettingsLinker(self.regionalGet("PersistanceFile"),encoding=self.regionalGet("DefaultEncoding"),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
+        self.register("per", modularSettingsLinker(self.regionalGet("PersistanceFile"),encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
         self.getregister("per").createFile()
 
         # Populate settings and persistance
@@ -1406,6 +1414,9 @@ class crshSession():
         self.flags.enable("--enableUnsafeOperations")
         ## Set
         self.ingestDefaults(defaults,_ingestDefaultTags)
+        self.regionalSet("DefaultEncoding",self.getregister("set").getProperty("crsh","Formats.DefaultEncoding"))
+        self.getregister("set").encoding = self.getEncoding()
+        self.getregister("per").encoding = self.getEncoding()
         if "StripAnsi" not in self.tmpGet("changedValues"): # Read temp-list
             self.regionalSet("StripAnsi", self.getregister("set").getProperty("crsh","Console.StripAnsi"))
         if "VerboseStart" not in self.tmpGet("changedValues"): # Read temp-list
@@ -1414,7 +1425,8 @@ class crshSession():
             self.tmpRemove("changedValues")
         st = self.createAndReturn_startupW(
             pgMax = self.regionalGet("StartupWProgress_steps"),
-            pgIncr= self.regionalGet("StartupWProgress_incr")
+            pgIncr= self.regionalGet("StartupWProgress_incr"),
+            unicodeSymbols = self.regionalGet("SupportsUnicode")()
         )
         self.deb.setScope(
             self.getregister("set").getProperty("crsh_debugger","Scope")
@@ -1435,7 +1447,7 @@ class crshSession():
                         string = getKeyPath(_temp, "Version.VerFile")
                     ),
                 formatVersion = getKeyPath(_temp, "Version.FileFormatVer"),
-                encoding = getKeyPath(_temp, "Formats.DefaultEncoding")
+                encoding = self.getEncoding()
             )
         )
 

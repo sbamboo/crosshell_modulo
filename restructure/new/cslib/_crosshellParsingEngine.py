@@ -1,3 +1,4 @@
+import re
 from cslib.externalLibs.filesys import filesys
 
 def exclude_nonToFormat(input_string):
@@ -126,3 +127,12 @@ class collectionalTagManager():
     def evalAl(self,string,extraSubstTags=None):
         string = self.eval("stm",string,extraSubstTags)
         return self.eval("ptm",string,extraSubstTags)
+
+def removeAnsiSequences(inputString):
+    '''CSlib.CGTS: Strips ansi sequences from a string.'''
+    inputString = inputString.replace('',"\x1B")
+    # Define a regular expression pattern to match ANSI escape sequences
+    ansiPattern = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+    # Use re.sub to replace ANSI sequences with an empty string
+    cleanedString = ansiPattern.sub('', inputString)
+    return cleanedString

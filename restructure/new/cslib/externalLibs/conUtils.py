@@ -167,3 +167,57 @@ def IsOs(platformName=str) -> bool:
         return IsWindows()
     else:
         return False
+    
+def getConSize(cachePath=None,ask=True,defW=120,defH=30,_asker=input,_printer=print):
+    "Gets consize and if unavaliable asks for config to cache."
+    if cachePath == None:
+        cachePath = os.getcwd()
+    cachePath = os.path.join(cachePath,"conUtils_conSize.cache")
+    w = None,
+    h = None,
+    try:
+        w,h = os.get_terminal_size()
+        valid = True
+    except OSError:
+        try:
+            _ask = ask
+            s = None
+            if os.path.exists(cachePath):
+                try: s = open(cachePath,'r').read()
+                except: pass
+            if s != None and "," in s:
+                try:
+                    w,h = s.strip().split(",")
+                    w,h = int(w),int(h)
+                    _ask = False
+                except: pass
+            if _ask == True:
+                _printer("Couldn't get consize, want to set it? [<width:int>,<height:int>]")
+                _printer(f"Will save to: {cachePath}")
+                _printer(f"If not press enter to use defaults: {defW,defH}")
+                inp = _asker("<w>,<h>: ")
+                if inp.strip() == "":
+                    w,h = defW,defH
+                    valid = False
+                else:
+                    try:
+                        w,h = [int(a.strip()) for a in inp.split(",")]
+                        valid = True
+                    except: pass
+                try:
+                    open(cachePath,'w').write(f"{w},{h}")
+                except Exception as e:
+                    _printer(f"Error while writing cache: {e}")
+            else:
+                if w == None or h == None:
+                    valid = False
+                else:
+                    valid = True
+        except Exception as e:
+            valid = e
+    except Exception as e:
+        valid = e
+    if valid == True:
+        return (w,h)
+    else:
+        return (defW,defH)

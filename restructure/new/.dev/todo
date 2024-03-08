@@ -2,6 +2,22 @@
 
 - make modularSettingsClass have optional stm/ptm class and use on getKeyPath as arg, and then remove the current parse-passes
 
-- ensure everything uses getEncoding()
-
 - make "stateInstance" class to allow for file-less modes where the states are also exported on session-export. Implement this for example in the modularSettingsLinker.
+
+- Rewrite package loader with the steps:
+    1. Path discovery
+    2. Package discovery
+    3. Data loader (with setting for cmdlets or modules, so you can choose what to load, to support future "fine-adjust" refresh cmd)
+
+  Modulo package loaders can also be defined to use a few built in loader types:
+    1. "mapping_1-1"
+    2. "mapping_1-M"
+    3. "register"
+    4. "register_cmdlets"
+
+  For example might core only define the reader-loader and cmdlet-loader while for example "dynprefix" could be defined by crosshell.
+
+  Also optimize the loaders for example legacy with max-depth and auto-dot-skip in the recursion loop.
+  And modulo to not be recursince unless specified in loadetype.
+
+  This means a dict for defining loaders that contain "loaderType" and "recursive" types.

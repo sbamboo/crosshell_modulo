@@ -68,6 +68,19 @@ class tagSubstitionManager():
                 raise Exception(self.evalFailMsg)
             toParse.update(extraSubstTags)
         return tagSubstition_parse(string,toParse)
+    def evalData(self,data,extraSubstTags=None):
+        _type = type(data)
+        if _type == str:
+            return self.eval(data,extraSubstTags)
+        elif _type == dict:
+            for k,v in data.items():
+                k = self.eval(k,extraSubstTags)
+                data[k] = self.evalData(v,extraSubstTags)
+            return data
+        elif _type == list or _type == tuple:
+            for i,v in enumerate(data):
+                data[i] = self.evalData(v,extraSubstTags)
+            return data
 
 class pathTagManager(tagSubstitionManager):
     def __init__(self,defaultSubsttags=dict):
@@ -116,6 +129,8 @@ class collectionalTagManager():
         self._a(mode).updateTag(tagDict)
     def eval(self,mode,string,extraSubstTags=None):
         return self._a(mode).eval(string,extraSubstTags)
+    def evalData(self,mode,data,extraSubstTags=None):
+        return self._a(mode).evalData(data,extraSubstTags)
     
     def getAlTags(self):
         _t = self.getTags("ptm")
@@ -127,6 +142,10 @@ class collectionalTagManager():
     def evalAl(self,string,extraSubstTags=None):
         string = self.eval("stm",string,extraSubstTags)
         return self.eval("ptm",string,extraSubstTags)
+
+    def evalDataAl(self,data,extraSubstTags=None):
+        data = self.evalData("stm",data,extraSubstTags)
+        return self.evalData("ptm",data,extraSubstTags)
 
 def removeAnsiSequences(inputString):
     '''CSlib.CGTS: Strips ansi sequences from a string.'''

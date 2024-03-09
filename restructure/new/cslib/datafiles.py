@@ -15,7 +15,7 @@ Depends on pyyaml
 
 '''
 
-def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,readerMode="Off",commentsToInclude=None,discardNewlines=False):
+def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=False,yaml_sort=False,readerMode="Off",commentsToInclude=None,discardNewlines=False,fileIsStream=False):
     """CSlib.datafiles: INTERNAL, abstraction layer for json/yaml files.
     
     readerMode: 'Off'/'Comments'/'Newline'
@@ -33,11 +33,17 @@ def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=Fals
         readerMode = True
         readerEx = extractComments_newlineSupport
         readerIn = injectComments_newlineSupport
-    if not os.path.exists(file):
-        file = normPathSepObj(file)
+    if fileIsStream != True:
+        if not os.path.exists(file):
+            file = normPathSepObj(file)
     if mode == "json":
         if operation == "get":
-            content = _stripJsonComments(open(file,'r',encoding=encoding).read())
+            if fileIsStream == True:
+                content = _stripJsonComments(file.read())
+                if content == "" or content == None:
+                    content = "{}"
+            else:
+                content = _stripJsonComments(open(file,'r',encoding=encoding).read())
             if readerMode != False:
                 if readerMode.lower() == "comments":
                     content,extractedComments = readerEx(content,discardNewlines)
@@ -57,10 +63,16 @@ def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=Fals
                     content_str = readerIn(content_str.split("\n"), commentsToInclude, discardNewlines)
                 else:
                     content_str = readerIn(content_str, commentsToInclude, discardNewlines)
-            open(file,'w',encoding=encoding).write(content_str)
+            if fileIsStream == True:
+                file.write(content_str)
+            else:
+                open(file,'w',encoding=encoding).write(content_str)
     elif mode == "yaml":
         if operation == "get":
-            content = open(file, "r",encoding=encoding).read()
+            if fileIsStream == True:
+                content = _stripJsonComments(file.read())
+            else:
+                content = _stripJsonComments(open(file,'r',encoding=encoding).read())
             if readerMode != False:
                 if readerMode.lower() == "comments":
                     content,extractedComments = readerEx(content,discardNewlines)
@@ -80,7 +92,10 @@ def _fileHandler(mode,operation,file,content=None,encoding="utf-8",safeSeps=Fals
                     content_str = readerIn(content_str.split("\n"), commentsToInclude, discardNewlines)
                 else:
                     content_str = readerIn(content_str, commentsToInclude, discardNewlines)
-            open(file,'w',encoding=encoding).write(content_str)
+            if fileIsStream == True:
+                file.write(content_str)
+            else:
+                open(file,'w',encoding=encoding).write(content_str)
 
 class jsonYamlProviderSimpleIO():
     '''

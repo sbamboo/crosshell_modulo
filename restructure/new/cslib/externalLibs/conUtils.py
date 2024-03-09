@@ -162,7 +162,7 @@ def IsOs(platformName=str) -> bool:
     elif platformName.lower() == "darwin":
         return IsMacOS()
     elif platformName.lower() == "macos":
-        return IsMacOS()
+        return IsMacOS()    
     elif platformName.lower() == "windows":
         return IsWindows()
     else:
@@ -172,7 +172,11 @@ def getConSize(cachePath=None,ask=True,defW=120,defH=30,_asker=input,_printer=pr
     "Gets consize and if unavaliable asks for config to cache."
     if cachePath == None:
         cachePath = os.getcwd()
-    cachePath = os.path.join(cachePath,"conUtils_conSize.cache")
+    cacheType = "path"
+    if type(cachePath) != str:
+        cacheType = "stream"
+    else:
+        cachePath = os.path.join(cachePath,"conUtils_conSize.cache")
     w = None,
     h = None,
     try:
@@ -182,9 +186,12 @@ def getConSize(cachePath=None,ask=True,defW=120,defH=30,_asker=input,_printer=pr
         try:
             _ask = ask
             s = None
-            if os.path.exists(cachePath):
-                try: s = open(cachePath,'r').read()
-                except: pass
+            if cacheType == "path":
+                if os.path.exists(cachePath):
+                    try: s = open(cachePath,'r').read()
+                    except: pass
+            else:
+                s = cachePath.read()
             if s != None and "," in s:
                 try:
                     w,h = s.strip().split(",")
@@ -205,7 +212,10 @@ def getConSize(cachePath=None,ask=True,defW=120,defH=30,_asker=input,_printer=pr
                         valid = True
                     except: pass
                 try:
-                    open(cachePath,'w').write(f"{w},{h}")
+                    if cacheType == "path":
+                        open(cachePath,'w').write(f"{w},{h}")
+                    else:
+                        cachePath.write(f"{w},{h}")
                 except Exception as e:
                     _printer(f"Error while writing cache: {e}")
             else:

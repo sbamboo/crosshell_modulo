@@ -1,14 +1,191 @@
 import pickle, sys, json, os, argparse, inspect, re
+from datetime import datetime, timezone
 
 from cslib.piptools import installPipDeps_fl
 from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
 from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem
 from cslib.externalLibs.filesys import filesys
+from cslib.externalLibs.conUtils import getConSize
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
 from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict
 from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
 from cslib.progressMsg import startupMessagingWProgress
 from cslib.exceptions import CrosshellDebErr
+
+class stateInstance():
+    """Supporting class for hosting data inplace of files."""
+    def __init__(self,mode="dict",dict_data={},stream_data=None,stream_appending=False,stream_asbytes=False,stream_filename="stateInstance.any",encoding="utf-8",parent=None,parentKeepList=None):
+        self.modes = ["dict","stream"]
+        if mode not in self.modes: raise Exception(f"Mode '{mode}' is not supported, use one of {self.modes}")
+        self.parent = parent
+        self.data = None
+        self.mode = mode
+        if self.mode == "dict":
+            self.data = dict_data
+        elif self.mode == "stream":
+            if stream_data != None:
+                self.data = stream_data
+            else:
+                self.data = b'' if stream_asbytes else ''
+        self.stream_appending = stream_appending
+        self.stream_asbytes = stream_asbytes
+        self.encoding = encoding
+        self.filename = stream_filename
+        if parentKeepList != None:
+            parentKeepList.append(self)
+    def _onNoneRaise(self):
+        if self.data == None:
+            raise Exception("Data is None, can't perform operation. (Probably inited with the wrong mode)")
+    def __repr__(self):
+        strBuild = f"<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))} of type {self.mode}"
+        if self.mode == "stream":
+            if self.stream_appending == True and self.stream_asbytes == True:
+                strBuild += ".appendingBytes"
+            elif self.stream_appending == True and self.stream_asbytes == False:
+                strBuild += ".appendingString"
+            elif self.stream_appending == False and self.stream_asbytes == True:
+                strBuild += ".bytes"
+            elif self.stream_appending == False and self.stream_asbytes == False:
+                strBuild += ".string"
+            if self.filename not in ["" , None, "stateInstance.any"]:
+                strBuild += f" for '{self.filename}'"
+        strBuild += ">"
+        return strBuild
+
+    def __setitem__(self, key, value):
+        self._onNoneRaise()
+        if self.mode == "dict":
+            self.data[key] = value
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'dict'!")
+    def __getitem__(self, key=None):
+        self._onNoneRaise()
+        if self.mode == "dict":
+            if key == None:
+                return self.data
+            else:
+                if key in self.data.keys():
+                    return self.data[key]
+                else:
+                    return None
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'dict'!")
+    def remove(self, key=None):
+        self._onNoneRaise()
+        if self.mode == "dict":
+            if key in self.data.keys():
+                del self.data[key]
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'dict'!")
+    def update(self,newDict):
+        self._onNoneRaise()
+        if self.mode == "dict":
+            self.data.update(newDict)
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'dict'!")
+
+    def write(self,binaryOrString):
+        self._onNoneRaise()
+        #stream
+        if self.mode == "stream":
+            #stream.appending
+            if self.stream_appending == True:
+                #stream.appening.bytes
+                if type(binaryOrString) == bytes:
+                    #stream.appending.bytes.asbinary
+                    if self.stream_asbytes == True:
+                        self.data += binaryOrString
+                    #stream.appending.bytes.asstring
+                    else:
+                        self.data += binaryOrString.decode(self.encoding)
+                #stream.appening.string
+                else:
+                    #stream.appending.string.asbinary
+                    if self.stream_asbytes == True:
+                        self.data += binaryOrString.encode(self.encoding)
+                    #stream.appending.string.asstring
+                    else:
+                        self.data += binaryOrString
+            #stream.overwrite
+            else:
+                #stream.overwrite.bytes
+                if type(binaryOrString) == bytes:
+                    #stream.overwrite.bytes.asbinary
+                    if self.stream_asbytes == True:
+                        self.data = binaryOrString
+                    #stream.overwrite.bytes.asstring
+                    else:
+                        self.data = binaryOrString.decode(self.encoding)
+                #stream.overwrite.string
+                else:
+                    #stream.overwrite.string.asbinary
+                    if self.stream_asbytes == True:
+                        self.data = binaryOrString.encode(self.encoding)
+                    #stream.overwrite.string.asstring
+                    else:
+                        self.data = binaryOrString
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'stream'!")
+    def read(self):
+        self._onNoneRaise()
+        if self.mode == "stream":
+            #binary
+            if type(self.data) == bytes:
+                #binary.asbinary
+                if self.stream_asbytes == True:
+                    return self.data
+                #binary.asstring
+                else:
+                    return self.data.decode(self.encoding)
+            #string
+            else:
+                #string.asbinary
+                if self.stream_asbytes == True:
+                    return self.data.encode(self.encoding)
+                #string.asstring
+                else:
+                    return self.data
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'stream'!")
+    def close(self):
+        self._onNoneRaise()
+        if self.mode == "stream":
+            pass
+        else:
+            raise Exception(f"Operation is not supported for mode '{self.mode}' only for 'stream'!")
+    
+    def get(self,key=None):
+        if key != None:
+            if self.mode == "dict":
+                return self.__getitem__(key)
+            else:
+                return self.data[key]
+        else:
+            return self.data
+    def getStr(self):
+        if self.mode == "dict":
+            return json.dumps(self.data)
+        else:
+            _toRet = self.read()
+            if type(_toRet) == bytes:
+                _toRet = _toRet.decode(self.encoding)
+            else:
+                _toRet = str(_toRet)
+            return _toRet
+    def getJson(self):
+        if self.mode == "dict":
+            return json.dumps(self.data)
+        else:
+            _str = self.getStr()
+            if _str.startswith("{") and _str.endswith("}"): pass
+            else:
+                _str = "{"+_str+"}"
+            return _str
+    def getForcedDict(self):
+        if self.mode == "dict":
+            return self.data
+        else:
+            return json.loads(self.getJson())
 
 class pathObject():
     def __init__(self,defaults=None):
@@ -28,15 +205,19 @@ class pathObject():
 
 class modularSettingsLinker():
     '''CSlib: Links to a settings file to provide a module system'''
-    def __init__(self,settingsFile,encoding="utf-8",ensure=False,readerMode="Comments",discardNewlines=False):
+    def __init__(self,settingsFile,encoding="utf-8",ensure=False,readerMode="Comments",discardNewlines=False,stm=None,fileIsStream=False,streamType="yaml"):
         self.file = settingsFile
         self.modules = []
         self.encoding = encoding
-        if ".yaml" in self.file:
-            self.filetype = "yaml"
-        elif ".json" in self.file or ".jsonc" in self.file or ".json5" in self.file:
-            self.filetype = "json"
-        if ensure == True:
+        self.fileIsStream = fileIsStream
+        if self.fileIsStream == True:
+            self.filetype = streamType
+        else:
+            if ".yaml" in self.file:
+                self.filetype = "yaml"
+            elif ".json" in self.file or ".jsonc" in self.file or ".json5" in self.file:
+                self.filetype = "json"
+        if self.fileIsStream == False and ensure == True:
             if os.path.exists(self.file) != True:
                 toc = ""
                 if self.filetype == "json":
@@ -45,24 +226,25 @@ class modularSettingsLinker():
         self.readerMode = readerMode
         self.discardNewlines = discardNewlines
         self.keptComments = None
-        if os.path.exists(self.file) == False: open(self.file,'x').write("")
+        self.tagMan = stm
+        if self.fileIsStream == False and os.path.exists(self.file) == False: open(self.file,'x').write("")
     def _getContent(self,_ovFile=None,_ovEnc=None) -> dict:
         toUse = _ovFile if _ovFile != None else self.file
         encoding = _ovEnc if _ovEnc != None else self.encoding
         data = {}
         if self.readerMode.lower() != "off":
-            data,self.keptComments = _fileHandler(self.filetype,"get",toUse,encoding=encoding,readerMode=self.readerMode,discardNewlines=self.discardNewlines)
+            data,self.keptComments = _fileHandler(self.filetype,"get",toUse,encoding=encoding,readerMode=self.readerMode,discardNewlines=self.discardNewlines,fileIsStream=self.fileIsStream)
         else:
-            data = _fileHandler(self.filetype,"get",toUse,encoding=encoding,readerMode=self.readerMode)
+            data = _fileHandler(self.filetype,"get",toUse,encoding=encoding,readerMode=self.readerMode,fileIsStream=self.fileIsStream)
         if data == None: data = {}
         return data
     def _setContent(self,content,_ovFile=None,_ovEnc=None) -> None:
         toUse = _ovFile if _ovFile != None else self.file
         encoding = _ovEnc if _ovEnc != None else self.encoding
         if self.readerMode.lower() != "off":
-            _fileHandler(self.filetype,"set",toUse,content,encoding=encoding,readerMode=self.readerMode,discardNewlines=self.discardNewlines,commentsToInclude=self.keptComments)
+            _fileHandler(self.filetype,"set",toUse,content,encoding=encoding,readerMode=self.readerMode,discardNewlines=self.discardNewlines,commentsToInclude=self.keptComments,fileIsStream=self.fileIsStream)
         else:
-            _fileHandler(self.filetype,"set",toUse,content,encoding=encoding,readerMode=self.readerMode)
+            _fileHandler(self.filetype,"set",toUse,content,encoding=encoding,readerMode=self.readerMode,fileIsStream=self.fileIsStream)
     def _appendFromFile(self,filepath,_ovEnc=None) -> None:
         """Obs! This function will overwrite any data with the new one, be carefull!"""
         encoding = _ovEnc if _ovEnc != None else self.encoding
@@ -76,19 +258,27 @@ class modularSettingsLinker():
             self._setContent(data)
     def _getModules(self) -> list:
         return list(self._getContent().items())
+    def _runThroughTagMan(self,data,extraTags=None):
+        if self.tagMan != None:
+            if self.tagMan.idef == "collection":
+                data = self.tagMan.evalDataAl(data,extraTags)
+            else:
+                data = self.tagMan.evalData(data,extraTags)
+        return data
     def createFile(self,overwrite=False):
-        self.keptComments = None
-        filesys.ensureDirPath(os.path.dirname(self.file))
-        if overwrite == True:
-            if filesys.doesExist(self.file): filesys.deleteFile(self.file)
-            filesys.createFile(self.file)
-        else:
-            if filesys.notExist(self.file):
+        if self.fileIsStream != True:
+            self.keptComments = None
+            filesys.ensureDirPath(os.path.dirname(self.file))
+            if overwrite == True:
+                if filesys.doesExist(self.file): filesys.deleteFile(self.file)
                 filesys.createFile(self.file)
-        if self.filetype == "json":
-            content = filesys.readFromFile(self.file)
-            if content == "" or content == None:
-                filesys.writeToFile("{}")
+            else:
+                if filesys.notExist(self.file):
+                    filesys.createFile(self.file)
+            if self.filetype == "json":
+                content = filesys.readFromFile(self.file)
+                if content == "" or content == None:
+                    filesys.writeToFile("{}")
     def removeFile(self):
         self.keptComments = None
         filesys.deleteFile(self.file)
@@ -101,9 +291,11 @@ class modularSettingsLinker():
             if data.get(module) == None:
                 data[module] = {}
         self._setContent(data)
-    def getModule(self,module) -> None:
+    def getModule(self,module,skipTagMan=False,extraTags=None) -> None:
         data = self._getContent()
-        return data[module]
+        toRet = data[module]
+        if skipTagMan == False: toRet = self._runThroughTagMan(toRet,extraTags=None)
+        return toRet
     def remModule(self,module) -> None:
         if module in self.modules:
             i = self.modules.index(module)
@@ -132,14 +324,18 @@ class modularSettingsLinker():
             data = self._getContent()
             data.pop(module)
             self._setContent(data)
-    def get(self,module,autocreate=False) -> dict:
+    def get(self,module,autocreate=False,skipTagMan=False,extraTags=None) -> dict:
         if module in self.modules:
             data = self._getContent()
-            return data[module]
+            toRet = data[module]
+            if skipTagMan == False: toRet = self._runThroughTagMan(toRet,extraTags=None)
+            return toRet
         elif autocreate == True:
             self.addModule(module)
             data = self._getContent()
-            return data[module]
+            toRet = data[module]
+            if skipTagMan == False: toRet = self._runThroughTagMan(toRet,extraTags=None)
+            return toRet
         else:
             return None
     def update(self,module,content,autocreate=False) -> None:
@@ -151,28 +347,30 @@ class modularSettingsLinker():
             self.addModule(module)
             self.set(module,content)
     def addProperty(self,module,keyPath,default,autocreate=False) -> None:
-        data = self.get(module,autocreate=autocreate)
+        data = self.get(module,autocreate=autocreate,skipTagMan=True)
         data = setKeyPath(data,keyPath,default)
         self.set(module,data,autocreate=autocreate)
-    def getProperty(self,module,keyPath,autocreate=False):
-        data = self.get(module,autocreate=autocreate)
-        return getKeyPath(data,keyPath)
+    def getProperty(self,module,keyPath,autocreate=False,skipTagMan=False,extraTags=None):
+        data = self.get(module,autocreate=autocreate,skipTagMan=True)
+        toRet = getKeyPath(data,keyPath)
+        if skipTagMan == False: toRet = self._runThroughTagMan(toRet,extraTags=None)
+        return toRet
     def chnProperty(self,module,keyPath,default,autocreate=False) -> None:
-        data = self.get(module,autocreate=autocreate)
+        data = self.get(module,autocreate=autocreate,skipTagMan=True)
         data = setKeyPath(data,keyPath,default,nonAppend=True)
         self.set(module,data,autocreate=autocreate)
     def uppProperty(self,module,keyPath,default,autocreate=False) -> None:
-        data = self.get(module,autocreate=autocreate)
+        data = self.get(module,autocreate=autocreate,skipTagMan=True)
         data = setKeyPath(data,keyPath,default,update=True)
         self.set(module,data,autocreate=autocreate)
     def remProperty(self,module,keyPath,autocreate=False) -> None:
-        data = self.get(module,autocreate=autocreate)
+        data = self.get(module,autocreate=autocreate,skipTagMan=True)
         data = remKeyPath(data,keyPath)
         self.set(module,data,autocreate=autocreate)
 
-def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False,encoding="utf-8"):
+def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False,encoding="utf-8",fileIsStream=False):
     '''CSlib: Function to populate a language list.'''
-    orgLangList = _fileHandler(listFormat,"get",languageListFile,encoding=encoding)
+    orgLangList = _fileHandler(listFormat,"get",languageListFile,encoding=encoding,fileIsStream=fileIsStream)
     LangList = orgLangList.copy()
     try:
         for path in langPath.get():
@@ -189,25 +387,26 @@ def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat=
                             LangList[name] = object.path
     except:
         LangList = orgLangList
-    _fileHandler(listFormat,"set",languageListFile,LangList,encoding=encoding)
+    _fileHandler(listFormat,"set",languageListFile,LangList,encoding=encoding,fileIsStream=fileIsStream)
 
-def recheckLanguageList(languageListFile,listFormat=None,returnDontRemove=False,encoding="utf-8"):
+def recheckLanguageList(languageListFile,listFormat=None,returnDontRemove=False,encoding="utf-8",fileIsStream=False):
     '''CSlib: Checks over a languagelist so al the entries exist, and removses those who don't'''
     if returnDontRemove == True:
         missing = []
     else:
-        languageList = _fileHandler(listFormat, "get", languageListFile,encoding=encoding)
+        languageList = _fileHandler(listFormat, "get", languageListFile,encoding=encoding,fileIsStream=fileIsStream)
         newLanguageList = languageList.copy()
     for entry,path in languageList.items():
-        if filesys.notExist(path):
-            if returnDontRemove == True:
-                missing.append({entry:path})
-            else:
-                newLanguageList.pop(entry)
+        if type(path) != dict:
+            if filesys.notExist(path):
+                if returnDontRemove == True:
+                    missing.append({entry:path})
+                else:
+                    newLanguageList.pop(entry)
     if returnDontRemove == True:
         return missing
     else:
-        _fileHandler(listFormat, "set", languageListFile, newLanguageList,encoding=encoding)
+        _fileHandler(listFormat, "set", languageListFile, newLanguageList,encoding=encoding,fileIsStream=fileIsStream)
 
 def _handleAnsi(text):
     '''CSlib: Smal function to handle the &<ansi>m format.'''
@@ -215,14 +414,16 @@ def _handleAnsi(text):
 
 class crosshellLanguageProvider():
     '''CSlib: Crosshell language system.'''
-    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False):
+    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False,fileIsStream=False):
         # Save
         self.languageListFile = languageListFile
-        if os.path.exists(self.languageListFile) == False:
-            if listFormat == "json":
-                open(self.languageListFile,'x').write("{}")
-            else:
-                open(self.languageListFile,'x').write("")
+        self.fileIsStream = fileIsStream
+        if self.fileIsStream != True:
+            if os.path.exists(self.languageListFile) == False:
+                if listFormat == "json":
+                    open(self.languageListFile,'x').write("{}")
+                else:
+                    open(self.languageListFile,'x').write("")
         self.defLanguage = self.parseSingleLanguage(defaultLanguage)
         self.listFormat = listFormat
         self.langFormat = langFormat
@@ -231,8 +432,8 @@ class crosshellLanguageProvider():
         self.encoding = encoding
         self.sameSuffixLoading = sameSuffixLoading
         # Retrive languageList after rechecking it
-        recheckLanguageList(self.languageListFile,self.listFormat,encoding=self.encoding)
-        self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding)
+        recheckLanguageList(self.languageListFile,self.listFormat,encoding=self.encoding,fileIsStream=self.fileIsStream)
+        self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding,fileIsStream=self.fileIsStream)
         # Set default language
         self.languagePrios = defaultLanguage
         self.language = self.defLanguage
@@ -279,24 +480,48 @@ class crosshellLanguageProvider():
         return mergedLanguage
     def populateList(self,keepExisting=False,reload=True):
         if self.langPath != None:
-            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding)
+            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding,fileIsStream=self.fileIsStream)
             if reload == True:
                 self.relist()
                 self.load()
     def relist(self):
         '''Reloads the languageList.'''
-        self.languageList = _fileHandler("json","get",self.languageListFile,encoding=self.encoding)
+        self.languageList = _fileHandler("json","get",self.languageListFile,encoding=self.encoding,fileIsStream=self.fileIsStream)
     def _ptmEval(self,instance,inp,extras=None):
-        if instance.idef == "collection":
-            return instance.evalAl(inp,extras)
+        if isinstance(inp,stateInstance):
+            _inp = inp.getStr()
         else:
-            return instance.eval(inp,extras)
+            if type(inp) == dict:
+                _inp = json.dumps(inp)
+            else:
+                _inp = inp
+        if instance.idef == "collection":
+            _inp = instance.evalAl(_inp,extras)
+        else:
+            _inp = instance.eval(_inp,extras)
+        if isinstance(inp,stateInstance):
+            inp.data = _inp
+            _inp = inp
+        else:
+            if type(inp) == dict:
+                _inp = json.loads(_inp)
+        return _inp
     def _load(self,languagelist,language,pathtagManInstance,langFormat):
         if languagelist.get(language) != None:
-            if pathtagManInstance == None:
-                languageData = _fileHandler(langFormat,"get",languagelist[language],encoding=self.encoding)
+            if isinstance(languagelist[language],stateInstance):
+                _isStream = True
             else:
-                languageData = _fileHandler(langFormat,"get",self._ptmEval(self.pathtagManInstance,languagelist[language]),encoding=self.encoding)
+                _isStream = False
+            if type(languagelist[language]) == dict:
+                if pathtagManInstance == None:
+                    languageData = languagelist[language]
+                else:
+                    languageData = self._ptmEval(pathtagManInstance,languagelist[language])
+            else:
+                if pathtagManInstance == None:
+                    languageData = _fileHandler(langFormat,"get",languagelist[language],encoding=self.encoding,fileIsStream=_isStream)
+                else:
+                    languageData = _fileHandler(langFormat,"get",self._ptmEval(self.pathtagManInstance,languagelist[language]),encoding=self.encoding,fileIsStream=_isStream)
         else:
             languageData = {}
         return languageData
@@ -306,10 +531,12 @@ class crosshellLanguageProvider():
     def setLang(self,language):
         '''Set the language.'''
         self.language = self.parseSingleLanguage(language)
+        self.languagePrios = self.language # fix?
         self.load()
     def resLang(self):
         '''Reset the language.'''
         self.language = self.defLanguage.copy()
+        self.languagePrios = self.language # fix?
         self.load()
     def _handleAnsi(self,text):
         return _handleAnsi(text)
@@ -372,6 +599,21 @@ class crosshellLanguageProvider():
         _ld["code"] = self.get("lang_code")
         _ld["format"] = self.get("lang_format")
         return _ld
+
+    def injectLanguage(self,name,languageData,useStateInstances=False):
+        if useStateInstances == True:
+            listContent = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding,fileIsStream=self.fileIsStream) # get list
+            _obj = stateInstance(mode="stream",stream_filename=name+"."+self.langFormat,parent=self,encoding=self.encoding)               # create obj
+            _fileHandler(self.langFormat,"set",_obj,languageData,encoding=self.encoding,fileIsStream=True)                                # write data to obj
+            listContent[name] = _obj.getForcedDict()                                                                                      # add obj to list
+            _fileHandler(self.listFormat,"set",self.languageListFile,listContent,encoding=self.encoding,fileIsStream=self.fileIsStream)   # save list
+        else:
+            listContent = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding,fileIsStream=self.fileIsStream) # get list
+            listContent[name] = languageData                                                                                              # add data to list
+            _fileHandler(self.listFormat,"set",self.languageListFile,listContent,encoding=self.encoding,fileIsStream=self.fileIsStream)   # save list
+        
+        self.relist()
+        self.populateChoices()
 
 def recursiveMultipleReplacementTagWrapper(obj,tags=dict):
     """CSlib: Evals an object in multiple replacementTagWrappers."""
@@ -625,12 +867,165 @@ class sessionFlags():
     def __call__(self):
         return self.flags
 
+class log2File():
+    def __init__(self,filepath,logType="text",encoding="utf-8",fileIsStream=False,timeForceUTC=False):
+        allowedLogTypes = ["text","json"]
+        self.logType = logType
+        if self.logType not in allowedLogTypes:
+            raise Exception(f"Log type '{logType}' is not allowed, use one of {allowedLogTypes}")
+        self.filepath = filepath
+        self.encoding = encoding
+        self.fileIsStream = fileIsStream
+        self.forceUTC = timeForceUTC
+        self._setMeta()
+    def _getTime(self):
+        if self.forceUTC == True:
+            return datetime.now(timezone.utc)
+        else:
+            return datetime.now(timezone.utc).replace(tzinfo=None)
+    def _getTimeStamp(self,format_="log"):
+        current_datetime = self._getTime()
+        if format_ == "meta":
+            return current_datetime.strftime('%d-%m-%Y %H:%M:%S') # 01-01-2021 00:00:00
+        elif format_ == "log":
+            return current_datetime.strftime('%d-%m-%Y_%H:%M:%S') # 01-01-2021_00:00:00
+        else:
+            return str(current_datetime)
+    def _hasMeta(self):
+        if self.logType == "json":
+            if filesys.doesExist(self.filepath): data = _fileHandler("json","get",self.filepath,encoding=self.encoding,fileIsStream=self.fileIsStream)
+            else: data = {}
+            if data.get("meta") != None:
+                return True
+            else:
+                return False
+        else:
+            if self.fileIsStream == True:
+                _tx = self.filepath.data
+            else:
+                if filesys.doesExist(self.filepath): _tx = filesys.readFromFile(self.filepath)
+                else: _tx = ""
+            fline = None
+            for line in _tx.split("\n"):
+                if line.strip().startswith("# log2File.LogFile, "):
+                    fline = line
+                    break
+            if fline != None:
+                return True
+            else:
+                return False
+    def _setMeta(self):
+        if self._hasMeta() == False:
+            if self.logType == "json":
+                meta = {
+                    "name": "log2File: Logfile",
+                    "format": 1,
+                    "knownAsStream": self.fileIsStream,
+                    "created": self._getTimeStamp("meta")
+                }
+                if filesys.doesExist(self.filepath): current = _fileHandler("json","get",self.filepath,encoding=self.encoding,fileIsStream=self.fileIsStream)
+                else: current = {}
+                new = dict()
+                new["meta"] = meta
+                new.update(current)
+                _fileHandler("json","set",self.filepath,new,encoding=self.encoding,fileIsStream=self.fileIsStream)
+            else:
+                meta = f"# log2File.LogFile, format:1, knownAsStream:{self.fileIsStream}, created:{self._getTimeStamp('meta')}"
+                if self.fileIsStream == True:
+                    current = self.filepath.data
+                    new = meta + "\n" + current
+                    self.filepath.data = new
+                else:
+                    if filesys.doesExist(self.filepath): current = filesys.readFromFile(self.filepath)
+                    else: current = ""
+                    new = meta + "\n" + current
+                    if filesys.notExist(self.filepath): filesys.createFile(self.filepath)
+                    filesys.writeToFile(new,self.filepath)
+    def _getObjAsDict(self,obj):
+        return obj.__dict__
+    def _getObjAsDictRecurs(self,obj):
+        new = obj.__dict__
+        for k,v in new.items():
+            if type(v) not in [str,int,float,bool]:
+                new[k] = self._getObjAsDictRecurs(v)
+        return new
+    def write(self,logData,prefix="%t"):
+        prefix = prefix.replace("%t",self._getTimeStamp('log'))
+        if self.logType == "text":
+            if type(logData) not in [str,int,float,bool,list,tuple,dict]:
+                logData = self._getObjAsDictRecurs(logData)
+            if type(logData) != str:
+                logData = json.dumps(logData)
+            if self.fileIsStream == True:
+                current = self.filepath.data
+                new = current + "\n" + f"[{prefix}] {logData}"
+                self.filepath.data = new
+            else:
+                if filesys.doesExist(self.filepath): current = filesys.readFromFile(self.filepath)
+                new = current + "\n" + f"[{prefix}] {logData}"
+                if filesys.notExist(self.filepath): filesys.createFile(self.filepath)
+                filesys.writeToFile(new,self.filepath)
+        else:
+            if type(logData) not in [str,int,float,bool,list,tuple,dict]:
+                logData = self._getObjAsDict(logData)
+            current = _fileHandler("json","get",self.filepath,encoding=self.encoding,fileIsStream=self.fileIsStream)
+            current[prefix] = logData
+            _fileHandler("json","set",self.filepath,current,encoding=self.encoding,fileIsStream=self.fileIsStream)
+    def read(self):
+        if self.logType == "text":
+            if self.fileIsStream == True:
+                _tx = self.filepath.data
+            else:
+                _tx = filesys.readFromFile(self.filepath)
+            nlines = []
+            for line in _tx.split("\n"):
+                if not line.strip().startswith("#"):
+                    nlines.append(line)
+            return "\n".join(nlines)
+        else:
+            _dict = _fileHandler("json","get",self.filepath,encoding=self.encoding,fileIsStream=self.fileIsStream)
+            if _dict.get("meta") != None:
+                _dict.pop("meta")
+            return _dict
+    def getMeta(self):
+        if self.logType == "text":
+            if self.fileIsStream == True:
+                _tx = self.filepath.data
+            else:
+                _tx = filesys.readFromFile(self.filepath)
+            fline = None
+            for line in _tx.split("\n"):
+                if line.strip().startswith("# log2File.LogFile, "):
+                    fline = line.replace("# log2File.LogFile, ","")
+                    break
+            if fline != None:
+                parts = fline.split(",")
+                meta = {}
+                for part in parts:
+                    part = part.strip()
+                    if ":" in part:
+                        key = part.split(":")[0]
+                        value = part.split(":")[1]
+                        meta[key] = value
+                return meta
+            else:
+                return fline
+        else:
+            _dict = _fileHandler("json","get",self.filepath,encoding=self.encoding,fileIsStream=self.fileIsStream)
+            return _dict.get("meta")
+                    
 class crosshellDebugger():
     '''CSlib: Crosshell debugger, this is a text-print based debugging system.'''
-    def __init__(self,defaultScope="msg",stripAnsi=False,formatterInstance=None,languageProvider=None):
+    def __init__(self,defaultScope="msg",stripAnsi=False,formatterInstance=None,languageProvider=None, logFile=None,logType="text",logEncoding="utf-8",logForceUTC=False,logIsStream=False,logFormatted=False):
         self.defScope = defaultScope
         self.scope = defaultScope
         self.stripAnsi = stripAnsi
+
+        if logFile != None:
+            self.logger = log2File(logFile,logType,logEncoding,logForceUTC,logIsStream)
+        else: self.logger = None
+        self.logFormatted = logFormatted
+
         # The scopes are are prio listed so if set to 'warn' info and msg will also be shown, to now show set !<mode>
         self.allowedScopes = ["msg","info","warn","exception","error","debug","off"]
         self.colors = {
@@ -719,10 +1114,63 @@ class crosshellDebugger():
                         text = text.replace("lng:","")
             else:
                 text = str(text)
+            orgText = text
             text = f"{color}{title}{reset}{text}{reset}"
             if self.formatterInstance != None:
                 text = self.formatterInstance.parse(text,_stripAnsi=self.stripAnsi,addCustomTags=ct)
+            if self.logger != None:
+                safeTitle = title.replace("[","")
+                safeTitle = safeTitle.replace("]: ","")
+                safeTitle = safeTitle.replace("]","")
+                if self.logFormatted == True:
+                    _textToLog = f"{orgText}{reset}"
+                    safeTitle = f"{color}{safeTitle}{reset}"
+                else:
+                    _textToLog = orgText
+                self.logger.write(_textToLog,prefix=f"%t {safeTitle}")
             return text
+        else:
+            reset = self.colors['reset']
+            color = self.colors[scope[0]]
+            if self.stripAnsi == True:
+                reset = ""
+                color = ""
+            title = ""
+            if noPrefix == False:
+                title = self.titles[scope[0]]
+            if type(text) == str:
+                text = text.replace(", txt:",",txt:")
+                if text.startswith("lng:"):
+                    text = text.replace("lng:","")
+                    if self.languageProvider != None:
+                        tosend = text.split(",txt:")[0]
+                        _text = self.languageProvider.get(tosend,lpReloadMode,ct)
+                        if _text != None:
+                            text = _text
+                        else:
+                            if ",txt:" in text:
+                                text = text.split(",txt:")[1]
+                else:
+                    if ",txt:" in text:
+                        text = text.split(",txt:")[1]
+                    else:
+                        text = text.replace("lng:","")
+            else:
+                text = str(text)
+            orgText = text
+            text = f"{color}{title}{reset}{text}{reset}"
+            if self.formatterInstance != None:
+                text = self.formatterInstance.parse(text,_stripAnsi=self.stripAnsi,addCustomTags=ct)
+            if self.logger != None:
+                safeTitle = title.replace("[","")
+                safeTitle = safeTitle.replace("]: ","")
+                safeTitle = safeTitle.replace("]","")
+                if self.logFormatted == True:
+                    _textToLog = f"{orgText}{reset}"
+                    safeTitle = f"{color}{safeTitle}{reset}"
+                else:
+                    _textToLog = orgText
+                self.logger.write(_textToLog,prefix=f"%t {safeTitle}")
     def print(self,text,onScope="msg",ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
         text = self.get(text,onScope,ct,lpReloadMode,noPrefix)
         if text != None:
@@ -744,6 +1192,10 @@ class crosshellDebugger():
         self.print(text,"debug",ct,lpReloadMode,raiseEx,noPrefix)
     def poff(self,text,ct=None,lpReloadMode=None,raiseEx=False,noPrefix=False):
         self.print(text,"off",ct,lpReloadMode,raiseEx,noPrefix)
+    def enableLogger(self,logFile,logType="text",logEncoding="utf-8",logForceUTC=False,logIsStream=False):
+        self.logger = log2File(logFile,logType,logEncoding,logForceUTC,logIsStream)
+    def disableLogger(self):
+        self.logger = None
 
 class crshSession():
     # The identification is used on import to ensure classes are compatible.
@@ -781,6 +1233,8 @@ class crshSession():
         self.deb = crosshellDebugger()
 
         self.initDefaults = {}
+
+        self.storage["stateInstances"] = []
 
         if initOnStart == True:
             self.init()
@@ -941,6 +1395,36 @@ class crshSession():
     def hasUnicodeAvaliable(self):
         return hasattr(sys.stdout, 'encoding') and sys.stdout.encoding.lower() in ['utf-8', 'utf_8', 'utf8']
 
+    def cu_getConSize(self):
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+        else:
+            if self.flags.has("--hasBeenInited") == True:
+                config = self.regionalGet.getProperty("conUtilsConfig")
+                ask = config["ask"]
+                defW = config["defW"]
+                defH = config["defH"]
+                asker = config["asker"]
+                printer = config["printer"]
+                state = config["state"]
+                return getConSize(
+                    cachePath = state,
+                    ask = ask,
+                    defW = defW,
+                    defH = defH,
+                    _asker = asker,
+                    _printer = printer
+                )
+            else:
+                return getConSize(
+                    cachePath = None,
+                    ask = True,
+                    defW = 120,
+                    defH = 30,
+                    _asker = input,
+                    _printer = print
+                )
+
     def populateDefaults(self):
         self.flags.enable("--populatedDefaults")
 
@@ -954,6 +1438,7 @@ class crshSession():
             "BaseDir": "{CSlibDir}/..",
             "CoreDir": "{BaseDir}/core",
             "AssetsDir": "{BaseDir}/assets",
+            "CacheDir": "{AssetsDir}/cache",
             "PackagesFolder": "{BaseDir}/packages",
             "mPackPath": "{PackagesFolder}",
             "lPackPath": "{PackagesFolder}/_legacyPackages",
@@ -993,11 +1478,17 @@ class crshSession():
 
             "LangpathObj": None,
 
-            "StartupWProgress_steps": 30,
-            "StartupWProgress_incr": 3,
+            "conUtilsConfig": {
+                "ask": True,
+                "defW": 120,
+                "defH": 30,
+                "asker": input,
+                "printer": print,
+                "state": "{CacheDir}"
+            },
 
             "__registerAsPaths": [ # __registerAsPaths is used to register the paths as pathTags, so any key in this list will be replaceable, for other keys.
-                "CSlibDir","BaseDir","CoreDir","AssetsDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder","AssetsLangPath","CoreLangPath"
+                "CSlibDir","BaseDir","CoreDir","AssetsDir","CacheDir","PackagesFolder","mPackPath","lPackPath","ReadersFolder","AssetsLangPath","CoreLangPath"
             ],
             "__registerAsTags": [ # __registerAsTags is used to register additional substituteTags, not usable when initiating regional-vars.
                 "DefaultEncoding", "VersionFile"
@@ -1063,6 +1554,22 @@ class crshSession():
                     "action": "store_true",
                     "help": "Suppresses startup-clear. (if such is enabled in settings)"
                 }
+            ],
+            [
+                ["--nomodstm"],
+                {
+                    "dest": "noModStm",
+                    "action": "store_true",
+                    "help": "Disables the modularSettings-interface using tagMan by default."
+                }
+            ],
+            [
+                ["--fileless"],
+                {
+                    "dest": "fileless",
+                    "action": "store_true",
+                    "help": "Makes crosshell attempt to not make files, data will not be static unless session is exported."
+                }
             ]
         ]
 
@@ -1098,7 +1605,11 @@ class crshSession():
                     "Language.LangFormat": "json",
                     "Language.LoadSameSuffixedLangs": True,
                     "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
-                    "CGTS.CustomMappings": {}
+                    "CGTS.CustomMappings": {},
+
+                    "conUtilsConfig.ask": True,
+                    "conUtilsConfig.defW": 120,
+                    "conUtilsConfig.defH": 30
                 },
                 "crsh_debugger": {
                     "Scope": "error"
@@ -1131,6 +1642,20 @@ class crshSession():
             "CS_DefaultEncoding": self.initDefaults["regionalVars"]["DefaultEncoding"],
             "CS_VersionFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["VersionFile"],self.storage.regionalPrefix)),
             "CS_LangListFile": normPathSep(prefixAnyTags(self.initDefaults["regionalVars"]["LangListFile"],self.storage.regionalPrefix))
+        }
+
+        self.initDefaults["startupMessagingConfig"] = {
+            "width": 30,
+            "incr": "auto",
+            "steps": 10,
+        }
+
+        self.initDefaults["DefaultVersionData"] = {
+            "name": "Crosshell_Modulo",
+            "vernr": "Unknown",
+            "tags": "Unknown_setByDefault",
+            "vid": "Unknown",
+            "channel": "Unknown",
         }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
@@ -1178,7 +1703,7 @@ class crshSession():
             raise Exception("This operation requires the session to have been inited. `init()`")
         self.regionalSet("VerboseStart",value)
 
-    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None, launchWith_stripAnsi=False, launchWith_noVerboseStart=False):
+    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None, launchWith_stripAnsi=False, launchWith_noVerboseStart=False, debug=False,debugFile=None,debugLogType="text",debugForceUTC=False,debugFormatLog=False):
         """Initiates the session."""
 
         if self.flags.has("--populatedDefaults") == False:
@@ -1379,17 +1904,25 @@ class crshSession():
 
         # Apply
         self.regionalUpdate(_regionalVars)
-
+        # Handle fileless
+        if self.regionalGet("Pargs").fileless == True:
+            self.flags.enable("--fileless")
+            _conUtilsConfig = self.regionalGet("conUtilsConfig")
+            _conUtilsConfig["state"] = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
+            self.regionalSet("conUtilsConfig",_conUtilsConfig)
         # Handle launchWith
         if launchWith_stripAnsi == True:
             self.regionalSet("StripAnsi", True)
             # Append to changedValues temp-list
-            self.tmpSet("changedValues",self.tmpGet("changedValues").append("StripAnsi"))
+            __tmp = self.tmpGet("changedValues")
+            if "StripAnsi" not in __tmp: __tmp.append("StripAnsi")
+            self.tmpSet("changedValues",__tmp)
         if launchWith_noVerboseStart == True:
             self.regionalSet("VerboseStart", False)
             # Append to changedValues temp-list
-            self.tmpSet("changedValues",self.tmpGet("changedValues").append("VerboseStart"))
-
+            __tmp = self.tmpGet("changedValues")
+            if "VerboseStart" not in __tmp: __tmp.append("VerboseStart")
+            self.tmpSet("changedValues",__tmp)
         # Register things
         self.register("base_ptm", pathTagManager(initSubstTags))
         self.getregister("base_ptm").ensureAl()
@@ -1403,10 +1936,21 @@ class crshSession():
         self.register("stm", collectionalTagManager(initSubstTags,_substTags))
         self.regionalSet("SubstTags", self.getregister("stm").getAlTags() )
 
-        self.register("set", modularSettingsLinker(self.regionalGet("SettingsFile"),encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
+        _setUseTagMan = self.getregister("stm")
+        if self.regionalGet("Pargs").noModStm == True: _setUseTagMan = None
+        if self.flags.has("--fileless"):
+            _isStream = True
+            _file = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
+        else:
+            _isStream = False
+            _file = self.regionalGet("SettingsFile")
+
+        self.register("set", modularSettingsLinker(_file,encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode"),stm=_setUseTagMan,fileIsStream=_isStream,streamType="yaml"))
         self.getregister("set").createFile()
         
-        self.register("per", modularSettingsLinker(self.regionalGet("PersistanceFile"),encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode")))
+        if self.flags.hasnt("--fileless"): _file = self.regionalGet("PersistanceFile")
+
+        self.register("per", modularSettingsLinker(_file,encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode"),stm=_setUseTagMan,fileIsStream=_isStream,streamType="yaml"))
         self.getregister("per").createFile()
 
         # Populate settings and persistance
@@ -1414,33 +1958,63 @@ class crshSession():
         self.flags.enable("--enableUnsafeOperations")
         ## Set
         self.ingestDefaults(defaults,_ingestDefaultTags)
-        self.regionalSet("DefaultEncoding",self.getregister("set").getProperty("crsh","Formats.DefaultEncoding"))
+        self.regionalSet("DefaultEncoding",self.getregister("set").getProperty("crsh","Formats.DefaultEncoding",skipTagMan=False))
         self.getregister("set").encoding = self.getEncoding()
         self.getregister("per").encoding = self.getEncoding()
         if "StripAnsi" not in self.tmpGet("changedValues"): # Read temp-list
-            self.regionalSet("StripAnsi", self.getregister("set").getProperty("crsh","Console.StripAnsi"))
+            self.regionalSet("StripAnsi", self.getregister("set").getProperty("crsh","Console.StripAnsi",skipTagMan=True))
         if "VerboseStart" not in self.tmpGet("changedValues"): # Read temp-list
-            self.regionalSet("VerboseStart", self.getregister("set").getProperty("crsh","Console.VerboseStart"))
+            self.regionalSet("VerboseStart", self.getregister("set").getProperty("crsh","Console.VerboseStart",skipTagMan=True))
         # remove temp-list
             self.tmpRemove("changedValues")
+        _conUtilsConfig = self.regionalGet("conUtilsConfig")
+        _conUtilsConfig["ask"] = self.getregister("set").getProperty("crsh","conUtilsConfig.ask")
+        _conUtilsConfig["defW"] = self.getregister("set").getProperty("crsh","conUtilsConfig.defW")
+        _conUtilsConfig["defH"] = self.getregister("set").getProperty("crsh","conUtilsConfig.defH")
+        self.regionalSet("conUtilsConfig",_conUtilsConfig)
+        # Make startupW
+        pgMax = self.initDefaults["startupMessagingConfig"]["width"]
+        if str(pgMax).lower() == "auto":
+            pgMax = getConSize()[0]
+        elif str(pgMax).lower().startswith("auto/"):
+            div = int(pgMax.split("auto/")[1])
+            pgMax = getConSize()[0] // div # roundDown
+        pgIncr = self.initDefaults["startupMessagingConfig"]["incr"]
+        if str(pgIncr).lower() == "auto":
+            steps = self.initDefaults["startupMessagingConfig"]["steps"]
+            pgIncr = pgMax // steps # roundDown
         st = self.createAndReturn_startupW(
-            pgMax = self.regionalGet("StartupWProgress_steps"),
-            pgIncr= self.regionalGet("StartupWProgress_incr"),
+            pgMax = pgMax,
+            pgIncr= pgIncr,
             unicodeSymbols = self.regionalGet("SupportsUnicode")()
         )
+        # Set scope on deb
         self.deb.setScope(
-            self.getregister("set").getProperty("crsh_debugger","Scope")
+            self.getregister("set").getProperty("crsh_debugger","Scope",skipTagMan=True)
         )
+        if debug == True:
+            if self.flags.has("--fileless"):
+                logFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
+                _isStream = True
+            else:
+                _isStream = False
+                if debugFile == None:
+                    logFile = os.path.join(self.regionalGet("BaseDir"),"debug.log")
+                else:
+                    logFile = debugFile
+            self.deb.enableLogger(logFile,logType=debugLogType,logEncoding=self.getEncoding(),logForceUTC=debugForceUTC,logIsStream=_isStream)
+            self.deb.logFormatted = debugFormatLog
         ## disable allow flag
         self.flags.disable("--enableUnsafeOperations")
 
         st.verb("Loading versiondata...") # VERBOSE START
 
         # Get versionData
-        _temp = self.getregister("set").getModule("crsh")
-        self.regionalSet(
-            "VersionData",
-            crosshellVersionManager_getData(
+        _temp = self.getregister("set").getModule("crsh",skipTagMan=True)
+        if self.flags.has("--fileless"):
+            _versionData = self.initDefaults["DefaultVersionData"]
+        else:
+            _versionData = crosshellVersionManager_getData(
                 versionFile = 
                     self.getregister("stm").eval(
                         mode = "ptm",
@@ -1449,11 +2023,11 @@ class crshSession():
                 formatVersion = getKeyPath(_temp, "Version.FileFormatVer"),
                 encoding = self.getEncoding()
             )
-        )
+        self.regionalSet("VersionData",_versionData)
 
         st.verb("Loading formatter...") # VERBOSE START
 
-        _temp = self.getregister("set").getModule("crsh")
+        _temp = self.getregister("set").getModule("crsh",skipTagMan=True)
         _textInst = crosshellGlobalTextSystem(
             pathtagInstance = self.getregister("stm"),
             palette = getKeyPath(_temp,"CGTS.ANSI_Hex_Palette"),
@@ -1476,15 +2050,22 @@ class crshSession():
             )
         )
 
+        if self.flags.has("--fileless"):
+            _file = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
+            _isStream = True
+        else:
+            _file = self.getregister("set").getProperty("crsh","Language.DefaultList",skipTagMan=False)
+            _isStream = False
         _cslp = crosshellLanguageProvider(
-            languageListFile = self.getregister("stm").eval("ptm",self.getregister("set").getProperty("crsh","Language.DefaultList")),
-            defaultLanguage = self.getregister("set").getProperty("crsh","Language.Loaded"),
-            listFormat = self.getregister("set").getProperty("crsh","Language.ListFormat"),
-            langFormat = self.getregister("set").getProperty("crsh","Language.LangFormat"),
+            languageListFile = _file,
+            defaultLanguage = self.getregister("set").getProperty("crsh","Language.Loaded",skipTagMan=False),
+            listFormat = self.getregister("set").getProperty("crsh","Language.ListFormat",skipTagMan=True),
+            langFormat = self.getregister("set").getProperty("crsh","Language.LangFormat",skipTagMan=True),
             pathtagManInstance = self.getregister("stm"),
             langPath = self.regionalGet("LangpathObj"),
             encoding = self.getEncoding(),
-            sameSuffixLoading = self.getregister("set").getProperty("crsh","Language.LoadSameSuffixedLangs")
+            sameSuffixLoading = self.getregister("set").getProperty("crsh","Language.LoadSameSuffixedLangs",skipTagMan=True),
+            fileIsStream = _isStream
         )
 
         self.deb.setLanguageProvider(_cslp)

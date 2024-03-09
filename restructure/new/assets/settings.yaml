@@ -1,14 +1,26 @@
 crsh:
   Console:
-    DefPrefix: '> '
-    DefTitle: Crosshell Modulo
     VerboseStart: true
     StripAnsi: false
+    DefPrefix: '> '
+    DefTitle: Crosshell Modulo
   Formats:
     DefaultEncoding: utf-8
   Version:
-    VerFile: '{CS_CoreDir}\version.yaml'
+    VerFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
     FileFormatVer: '1'
+  Parse:
+    Text:
+      Webcolors: true
+  Language:
+    Loaded:
+      '1': en-us
+    _choices:
+    - test
+    DefaultList: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
+    ListFormat: json
+    LangFormat: json
+    LoadSameSuffixedLangs: true
   CGTS:
     ANSI_Hex_Palette:
       '30': f#000000
@@ -44,16 +56,9 @@ crsh:
       '106': b#55FFFF
       '107': b#FFFFFF
     CustomMappings: {}
-  Parse:
-    Text:
-      Webcolors: true
-  Language:
-    Loaded:
-      '1': en-us
-    _choices: []
-    DefaultList: '{CS_AssetsDir}\langlist.json'
-    ListFormat: json
-    LangFormat: json
-    LoadSameSuffixedLangs: true
+  conUtilsConfig:
+    ask: true
+    defW: 120
+    defH: 30
 crsh_debugger:
   Scope: error

@@ -1,9 +1,3 @@
-- Make createAndReturn_startupW() use get max and incr values from some config, and clamp max if screen clamped, if so calc factor for confMax-clampedMax and divide incr with it
-
-- make modularSettingsClass have optional stm/ptm class and use on getKeyPath as arg, and then remove the current parse-passes
-
-- make "stateInstance" class to allow for file-less modes where the states are also exported on session-export. Implement this for example in the modularSettingsLinker.
-
 - Rewrite package loader with the steps:
     1. Path discovery
     2. Package discovery

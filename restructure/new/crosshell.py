@@ -2,4 +2,5 @@
 from cslib.main import *
 
 # [Create Session]
-csSession = crshSession(initOnStart=True).init(debug=True)
+csSession = crshSession()
+csSession.init()

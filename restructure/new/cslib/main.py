@@ -2011,9 +2011,7 @@ class crshSession():
 
         # Get versionData
         _temp = self.getregister("set").getModule("crsh",skipTagMan=True)
-        if self.flags.has("--fileless"):
-            _versionData = self.initDefaults["DefaultVersionData"]
-        else:
+        try:
             _versionData = crosshellVersionManager_getData(
                 versionFile = 
                     self.getregister("stm").eval(
@@ -2023,6 +2021,10 @@ class crshSession():
                 formatVersion = getKeyPath(_temp, "Version.FileFormatVer"),
                 encoding = self.getEncoding()
             )
+        except:
+            _versionData = self.initDefaults["DefaultVersionData"]
+        if _versionData == None or _versionData == {}:
+            _versionData = self.initDefaults["DefaultVersionData"]
         self.regionalSet("VersionData",_versionData)
 
         st.verb("Loading formatter...") # VERBOSE START

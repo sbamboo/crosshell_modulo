@@ -20,11 +20,11 @@ function RoundNumber {
 
 function RunTest {
     # Run crosshell to fix pip-deps
-    python3 .\testSuite_pre.py
+    python3 .\testSuite_pre.py --noverbstart
     # Run that inits and exports
-    $first_ms = Measure-Command {python3 .\testSuite_first.py}
+    $first_ms = Measure-Command {python3 .\testSuite_first.py --noverbstart}
     # Run that dosen't init and instead imports
-    $second_ms = Measure-Command {python3 .\testSuite_second.py}
+    $second_ms = Measure-Command {python3 .\testSuite_second.py --noverbstart}
 
     # Clean up
     $file = "test.session"

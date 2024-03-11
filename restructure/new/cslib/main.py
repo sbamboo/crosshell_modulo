@@ -470,9 +470,10 @@ class crosshellLanguageProvider():
                             heigestkey = int(key)
                     except: pass
                 self.languagePrios[str(heigestkey+1)] = name
+            del current
     def loadLanguagePriorityList(self):
         mergedLanguage = {}
-        languages = [value for key, value in sorted(self.languagePrios.items(), key=lambda x: int(x[0]))]
+        languages = [value for key, value in sorted(list(self.languagePrios.items()), key=lambda x: int(x[0]))]
         languages = languages[::-1] # Reverse
         for lang in languages:
             langData = self._load(self.languageList,lang,self.pathtagManInstance,self.langFormat)
@@ -1241,9 +1242,7 @@ class crshSession():
 
     def __repr__(self):
         if self.flags.has("--haveBeenInited"):
-            crshVer = self.regionalGet("VersionData")
-            crshVerId = f'{crshVer["name"]}:{crshVer["vernr"]}_{crshVer["channel"]}:{crshVer["vid"]}'
-            return f'<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))} with id {self.identification} for version {crshVerId}>'
+            return f'<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))} with id {self.identification} for version {self.regionalGet("VersionData")["versionid"]}>'
         else:
             return f'<{self.__class__.__module__}.{self.__class__.__name__} object at {hex(id(self))} with id {self.identification} for version UNSET>'
 
@@ -1380,12 +1379,15 @@ class crshSession():
     def getEncoding(self):
         return self.regionalGet("DefaultEncoding")
 
-    def fprint(self,text,file=None,flush=False,end=None,cusPrint=None):
+    def sformat(self,text) -> str:
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
         toformat, excludes = exclude_nonToFormat(text)
         formatted = self.getregister("txt").parse(toformat)
-        text = include_nonToFormat(formatted,excludes)
+        return include_nonToFormat(formatted,excludes)
+
+    def fprint(self,text,file=None,flush=False,end=None,cusPrint=None):
+        text = self.sformat(text)
         if cusPrint == None: cusPrint = print
         if end == None:
             cusPrint(text,file=file,flush=flush)
@@ -1474,6 +1476,7 @@ class crshSession():
 
             "GetEncoding": self.getEncoding,
             "*fprint": self.fprint,
+            "*sformat": self.sformat,
             "SupportsUnicode": self.hasUnicodeAvaliable,
 
             "LangpathObj": None,
@@ -1656,6 +1659,7 @@ class crshSession():
             "tags": "Unknown_setByDefault",
             "vid": "Unknown",
             "channel": "Unknown",
+            "versionid": 'Crosshell_Modulo:Unknown_Unknown:Unknown'
         }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
@@ -2021,6 +2025,7 @@ class crshSession():
                 formatVersion = getKeyPath(_temp, "Version.FileFormatVer"),
                 encoding = self.getEncoding()
             )
+            _versionData["versionid"] = f'{_versionData["name"]}:{_versionData["vernr"]}_{_versionData["channel"]}:{_versionData["vid"]}'
         except:
             _versionData = self.initDefaults["DefaultVersionData"]
         if _versionData == None or _versionData == {}:
@@ -2048,7 +2053,7 @@ class crshSession():
         self.regionalSet(
             "LangpathObj",
             pathObject(
-                self.regionalGet("LangPaths").values()
+                list(self.regionalGet("LangPaths").values())
             )
         )
 

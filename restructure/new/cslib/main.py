@@ -2347,6 +2347,17 @@ class crshSession():
         # use loadPackageConfig() to get the packageData and features
         # using the features load in the package featureData
 
+        # "<feature>": {
+        #   "config": {
+        #       "registeredBy": "builtin",
+        #       "type": "register_cmdlets",
+        #       "addr": "/cmdlets",
+        #       "legacy_addr": "/",
+        #       "recursive": true
+        #   },
+        #   "data": {}
+        # }
+
         # [Finish up]
         # Set flag
         self.flags.enable("--haveBeenInited")

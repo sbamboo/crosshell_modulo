@@ -799,7 +799,11 @@ class sessionStorage():
         self.storage = {
             "tempData": {},
             "userVars": {},
-            "regionalScope": {}
+            "regionalScope": {},
+            "pgkReg": {
+                "features": {},
+                "data": {}
+            }
         }
     # region: sessionStorage.mainmethods
     def reset(self, key=None):
@@ -807,7 +811,8 @@ class sessionStorage():
             self.storage = {
                 "tempData": {},
                 "userVars": {},
-                "regionalScope": {}
+                "regionalScope": {},
+                "pgkReg": {}
             }
         else:
             self.storage[key] = {}
@@ -902,6 +907,64 @@ class sessionStorage():
     def userVarReset(self):
         self.storage["userVars"] = {}
     # endregion
+
+    # region: sessionStorage.pkgRegmethods
+    def featureIsRegistered(self,name):
+        return self.storage["pgkReg"].get(name) != None
+    def regFeature(self,name,config={}):
+        if not featureIsRegistered(name):
+            self.storage["pgkReg"][name] = {}
+            self.storage["pgkReg"]["config"] = config
+            self.storage["pgkReg"]["data"] = {}
+        else:
+            raise Exception(f"Feature '{name}' is already registered, use uppFeature or unregFeature to manage it.")
+    def unregFeature(self,name):
+        if featureIsRegistered(name):
+            del self.storage["pgkReg"][name]
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def uppFeatureConfig(self,name,config=dict):
+        if featureIsRegistered(name):
+            del self.storage["pgkReg"][name]["config"] = config
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def uppFeatureData(self,name,data=dict):
+        if featureIsRegistered(name):
+            del self.storage["pgkReg"][name]["data"] = data
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def configFeature(self,key,value):
+        if featureIsRegistered(name):
+            del self.storage["pgkReg"][name]["config"][key] = value
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def getFeatureConfig(self,name) -> dict:
+        if featureIsRegistered(name):
+            return self.storage["pgkReg"][name]["config"]
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def getFeatureData(self,name) -> dict:
+        if featureIsRegistered(name):
+            return self.storage["pgkReg"][name]["data"]
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def getFeatureDataForPackage(self,pkgid) -> list:
+        if featureIsRegistered(name):
+            if self.storage["pgkReg"][name]["data"].get(pkgid) != None:
+                return self.storage["pgkReg"][name]["data"][pkgid]
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def getPackagesForFeature(self,name) -> list:
+        if featureIsRegistered(name):
+            return list(self.storage["pgkReg"][name]["data"].keys())
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def registerPackageForFeature(self,name,pkgid,data={}):
+        if featureIsRegistered(name):
+            self.storage["pgkReg"][name]["data"][pkgid] = data
+        else:
+            raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+
 
 class sessionFlags():
     def __init__(self):

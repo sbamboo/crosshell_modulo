@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from cslib.piptools import installPipDeps_fl
 from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
 from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem
-from cslib._crosshellMpackageSystem import discoverPackageFiles
+from cslib._crosshellMpackageSystem import discoverPackageFiles,installPackageFiles
 from cslib.externalLibs.filesys import filesys
 from cslib.externalLibs.conUtils import getConSize
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
@@ -264,10 +264,23 @@ class modularSettingsLinker():
         return list(self._getContent().items())
     def _runThroughTagMan(self,data,extraTags=None):
         if self.tagMan != None:
-            if self.tagMan.idef == "collection":
-                data = self.tagMan.evalDataAl(data,extraTags)
-            else:
-                data = self.tagMan.evalData(data,extraTags)
+            if type(data) == str:
+                if self.tagMan.idef == "collection":
+                    data = self.tagMan.evalDataAl(data,extraTags)
+                else:
+                    data = self.tagMan.evalData(data,extraTags)
+            elif type(data) in [tuple,list]:
+                for i in range(len(data)):
+                    if self.tagMan.idef == "collection":
+                        data[i] = self.tagMan.evalDataAl(data[i],extraTags)
+                    else:
+                        data[i] = self.tagMan.evalData(data[i],extraTags)
+            elif type(data) == dict:
+                for i in data.keys():
+                    if self.tagMan.idef == "collection":
+                        data[i] = self.tagMan.evalDataAl(data[i],extraTags)
+                    else:
+                        data[i] = self.tagMan.evalData(data[i],extraTags)
         return data
     def createFile(self,overwrite=False):
         if self.fileIsStream != True:
@@ -1530,7 +1543,7 @@ class crshSession():
                 "modulo": [],
                 "legacy": []
             },
-            "PacakageList": {
+            "PackageList": {
                 "modulo": [],
                 "legacy": []
             },
@@ -2206,12 +2219,16 @@ class crshSession():
         self.regionalSet("PkgFilePathObj",_tempPkgFilePath)
 
         # VERBOSE START #
-        st.verb("Loading packages...",l="cs.startup.loadpkgs")
+        st.verb("Discovering uninstalled packages...",l="cs.startup.discoverpkgs")
 
         # Retrive a list of packages in /packages
         _tempPkgFileList = self.regionalGet("PkgFileList")
+        _installedPackages = {
+            "modulo": [],
+            "legacy": []
+        }
         ## load moduloPackages
-        _tempPkgFileList["modulo"] = discoverPackageFiles(
+        _tempPkgFileList["modulo"],_installedPackages["modulo"] = discoverPackageFiles(
             type_ = "modulo",
             sourcePath = _tempPkgFilePath,
             installDest = self.regionalGet("mPackPath"),
@@ -2225,7 +2242,7 @@ class crshSession():
             moduloEncoding = self.getEncoding()
         )
         ## load legacyPackages
-        _tempPkgFileList["legacy"] = discoverPackageFiles(
+        _tempPkgFileList["legacy"],_installedPackages["legacy"] = discoverPackageFiles(
             type_ = "legacy",
             sourcePath = _tempPkgFilePath,
             installDest = self.regionalGet("lPackPath"),
@@ -2239,12 +2256,29 @@ class crshSession():
             legacyDiscoverTraverseDepth = int(self.getregister("set").getProperty("crsh","Packages.Discover.LegacyTraverseDepth")),
         )
         self.regionalSet("PkgFileList",_tempPkgFileList)
-        # clean up
-        del _tempPkgFileList
-        del _tempPkgFilePath
+
+        # VERBOSE START #
+        unilen = len([*_tempPkgFileList["legacy"],*_tempPkgFileList["modulo"]])
+        if unilen < 1:
+            st.verb("Found {amnt} packages, continuing...",l="cs.startup.installpkgs.zero",ct={"amnt":unilen})
+        else:
+            st.verb("Installing {amnt} uninstalled packages...",l="cs.startup.installpkgs",ct={"amnt":unilen})
 
         # Install any uninstalled package-files, then add to the packageList
-        print(self.regionalGet("PkgFileList"))
+        if unilen > 0:
+            _installedPackages = installPackageFiles(
+                nonInstalledPackages = _tempPkgFileList,
+                installedPackages = _installedPackages,
+                installDestModulo = self.regionalGet("mPackPath"),
+                installDestLegacy = self.regionalGet("lPackPath")
+            )
+            self.regionalSet("PackageList",_installedPackages)
+
+        # clean up
+        del unilen
+        del _installedPackages
+        del _tempPkgFileList
+        del _tempPkgFilePath
 
         # [Finish up]
         # Set flag

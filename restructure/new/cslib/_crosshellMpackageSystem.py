@@ -25,8 +25,8 @@ def listNonHiddenFolders(path, maxDepth=None, travelSymlink=False):
             continue
         for dirName in dirs:
             fullPath = os.path.join(root, dirName)
-            if not any(part.startswith('.') for part in fillPath.split(os.path.sep)):
-                nonHiddenFolders.append(fillPath)
+            if not any(part.startswith('.') for part in fullPath.split(os.path.sep)):
+                nonHiddenFolders.append(fullPath)
     return nonHiddenFolders
 
 def getFoldersInPath(path,handleSymlinks=False):
@@ -61,6 +61,10 @@ def _getNameOfModuloPackage(packageConfigFile=str,encoding="utf-8",fileIsStream=
     if dataRaw.get("package") != None:
         if dataRaw["package"].get("name") != None:
             name = dataRaw["package"]["name"]
+        if dataRaw["package"].get("author") != None:
+            name = dataRaw["package"]["author"].lower() + "." + name
+        if dataRaw["package"].get("version") != None:
+            name = name + "." + dataRaw["package"]["version"].lower()
     return name
 
 def _getInstalledModuloPackages(path=str, exclusionPathList=list, travelSymlink=False, encoding="utf-8"):
@@ -109,6 +113,27 @@ def _getInstalledModuloPackages(path=str, exclusionPathList=list, travelSymlink=
     # Return
     return installedPackages
 
+def discoverInstalledPackages(type_,exclusions=list,installDest=str,legacyTraverseDepth=1,travelSymlink=False,moduloEncoding="utf-8"):
+    installedPackages = {
+        "names": [],
+        "pnames": [],
+        "paths": []
+    }
+    if type_ == "legacy":
+        _paths = _getInstalledLegacyPackages(installDest,exclusions, traverseDepth=legacyTraverseDepth, travelSymlink=travelSymlink)
+        for _path in _paths:
+            installedPackages["paths"].append(_path)
+            installedPackages["names"].append(os.path.abspath(_path).split(os.sep)[-1])
+        del _paths
+    elif type_ == "modulo":
+        _datas = _getInstalledModuloPackages(installDest,exclusions, travelSymlink=travelSymlink, encoding=moduloEncoding)
+        for _data in _datas:
+            installedPackages["paths"].append(_data["path"])
+            installedPackages["pnames"].append(os.path.abspath(_data["path"]).split(os.sep)[-1])
+            installedPackages["names"].append(_data["name"])
+        del _datas
+    return installedPackages
+
 def discoverPackageFiles(type_=str, sourcePath=str|object, installDest=str, fileExtensions=list, excludedFolders=list, legacyDiscoverTraverseDepth=1, travelSymlink=False, moduloEncoding="utf-8"):
     """Discovers package files that aren't installed"""
     type_ = type_.lower()
@@ -125,26 +150,12 @@ def discoverPackageFiles(type_=str, sourcePath=str|object, installDest=str, file
             GetFilesByExt(path, fileExtensions)
         )
     # Get a list of installed packages to match with
-    installedPackages = {
-        "names": [],
-        "pnames": []
-    }
     _exclusions = [*sourcePaths,*excludedFolders]
-    if type_ == "legacy":
-        _paths = _getInstalledLegacyPackages(installDest,_exclusions, traverseDepth=legacyDiscoverTraverseDepth, travelSymlink=travelSymlink)
-        for _path in _paths:
-            installedPackages["names"].append(os.path.abspath(_path).split(os.sep)[-1])
-        del _paths
-    elif type_ == "modulo":
-        _datas = _getInstalledModuloPackages(installDest,_exclusions, travelSymlink=travelSymlink, encoding=moduloEncoding)
-        for _data in _datas:
-            installedPackages["pnames"].append(os.path.abspath(_data["path"]).split(os.sep)[-1])
-            installedPackages["names"].append(_data["name"])
-        del _datas
+    installedPackages = discoverInstalledPackages(type_,_exclusions,installDest,legacyDiscoverTraverseDepth,travelSymlink,moduloEncoding)
     # Check if a packages are installed and filter them out
     noninstalledPackageFiles = []
     for package in packageFiles:
-        filename = package.keys()[0]
+        filename = list(package.keys())[0]
         filepath = package[filename]
         # legacy
         if type_ == "legacy":
@@ -152,7 +163,42 @@ def discoverPackageFiles(type_=str, sourcePath=str|object, installDest=str, file
                 noninstalledPackageFiles.append(filepath)
         # modulo
         elif type_ == "modulo":
-            if filename not in installedPackages["names"] and filename not in installedPackages["panmes"]:
+            if filename not in installedPackages["names"] and filename not in installedPackages["pnames"]:
                 noninstalledPackageFiles.append(filepath)
     # return
-    return noninstalledPackageFiles
+    return noninstalledPackageFiles,installedPackages["paths"]
+
+def installPackageFiles(nonInstalledPackages=dict,installedPackages=dict,installDestModulo=str,installDestLegacy=str):
+    # install modulo
+    if nonInstalledPackages.get("modulo") != None:
+        for packageFile in nonInstalledPackages["modulo"]:
+            pathOnly = os.path.dirname(packageFile)
+            fileName = filesys.getFileName(packageFile)
+            newPath = os.path.join(pathOnly,f"{fileName}.zip")
+            filesys.renameFile(packageFile,newPath) # rename to zip
+            try:
+                destPath = os.path.join(installDestModulo,fileName)
+                filesys.ensureDirPath(destPath)
+                filesys.unArchive(newPath,destPath)
+                filesys.renameFile(newPath,packageFile) # rename to mpack again
+                installedPackages["modulo"].append(destPath)
+            except:
+                print(f"Failed to load modulo-package '{packageFile}', invalid archive!")
+                filesys.renameFile(newPath,packageFile) # rename to mpack again
+    # install legacy
+    if nonInstalledPackages.get("legacy") != None:
+        for packageFile in nonInstalledPackages["legacy"]:
+            pathOnly = os.path.dirname(packageFile)
+            fileName = filesys.getFileName(packageFile)
+            newPath = os.path.join(pathOnly,f"{fileName}.zip")
+            filesys.renameFile(packageFile,newPath) # rename to zip
+            try:
+                destPath = os.path.join(installDestLegacy,fileName)
+                filesys.ensureDirPath(destPath)
+                filesys.unArchive(newPath,destPath)
+                filesys.renameFile(newPath,packageFile) # rename to mpack again
+                installedPackages["legacy"].append(destPath)
+            except:
+                print(f"Failed to load legacy-package '{packageFile}', invalid archive!")
+                filesys.renameFile(newPath,packageFile) # rename to mpack again
+    return installedPackages

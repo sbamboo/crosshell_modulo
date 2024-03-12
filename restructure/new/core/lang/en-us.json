@@ -10,6 +10,9 @@
     "cs.startup.loadlngprov._nonadrss_": "Loading language provider...",
     "cs.startup.populanglist._nonadrss_": "Populating languageList... (len: {len})",
 
+    "cs.startup.discoverpkgs": "Discovering uninstalled packages...",
+    "cs.startup.installpkgs": "Installing {amnt} packages...",
+    "cs.startup.installpkgs.zero": "Found {amnt} uninstalled packages, continuing...",
     "cs.startup.loadpkgs": "Loading packages...",
     "cs.startup.populatesession": "Populating session...",
     "cs.startup.loadreaders": "Loading readers...",

@@ -2343,6 +2343,10 @@ class crshSession():
         del _tempPkgFileList
         del _tempPkgFilePath
 
+        # predefine features like cmdlets
+        # use loadPackageConfig() to get the packageData and features
+        # using the features load in the package featureData
+
         # [Finish up]
         # Set flag
         self.flags.enable("--haveBeenInited")

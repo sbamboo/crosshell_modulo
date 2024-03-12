@@ -169,6 +169,7 @@ def discoverPackageFiles(type_=str, sourcePath=str|object, installDest=str, file
     return noninstalledPackageFiles,installedPackages["paths"]
 
 def installPackageFiles(nonInstalledPackages=dict,installedPackages=dict,installDestModulo=str,installDestLegacy=str):
+    """Installs package files. (uncompresses them to right folder and adds them to "installed" list)"""
     # install modulo
     if nonInstalledPackages.get("modulo") != None:
         for packageFile in nonInstalledPackages["modulo"]:
@@ -202,3 +203,21 @@ def installPackageFiles(nonInstalledPackages=dict,installedPackages=dict,install
                 print(f"Failed to load legacy-package '{packageFile}', invalid archive!")
                 filesys.renameFile(newPath,packageFile) # rename to mpack again
     return installedPackages
+
+def loadPackageConfig(installedPackages,defaultFeatures=dict,encoding="utf-8"):
+    packageConfigs = {
+        "modulo": {},
+        "legacy": {}
+    }
+    foundFeatures = defaultFeatures
+    # modulo
+    for type_ in installedPackages.keys():
+        for packagePath in installedPackages[type_]:
+            possiblePackageConfig = os.path.join(packagePath, "package.json")
+            if os.path.exists(possiblePackageConfig):
+                packageName = _getNameOfModuloPackage(possiblePackageConfig,encoding=encoding)
+                packageData = _fileHandler("json","get",possiblePackageConfig,encoding=encoding)
+                packageConfigs[type_][packageName] = packageData
+                if packageData.get("features") != None:
+                    foundFeatures[packageName] = packageData["features"] 
+    return packageConfigs,foundFeatures

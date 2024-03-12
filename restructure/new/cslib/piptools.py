@@ -99,22 +99,34 @@ def fromPathAA(path):
     spec.loader.exec_module(module)
     return module.__dict__
 
-def installPipDeps(depsFile,encoding="utf-8",tagMapping=dict):
+def installPipDeps(depsFile,encoding="utf-8",tagMapping=dict,returnMods=False) -> list|None:
     '''Note! This takes a json file with a "deps" key, the fd function takes a deps list!'''
     deps = json.loads(open(depsFile,'r',encoding=encoding).read())["deps"]
+    toRet = []
     for dep in deps:
         for key,val in dep.items():
             for tag,tagVal in tagMapping.items():
                 dep[key] = val.replace("{"+tag+"}",tagVal)
-            _ = autopipImport(**dep)
+            if returnMods == True:
+                toRet.append( autopipImport(**dep) )
+            else:
+                _ = autopipImport(**dep)
+    if returnMods == True:
+        return toRet
     
-def installPipDeps_fl(deps=list,tagMapping=dict):
+def installPipDeps_fl(deps=list,tagMapping=dict,returnMods=False) -> list|None:
     '''Note! This takes a deps list, the file function takes a json with a "deps" key!'''
+    toRet = []
     for dep in deps:
         for key,val in dep.items():
             for tag,tagVal in tagMapping.items():
                 dep[key] = val.replace("{"+tag+"}",tagVal)
-            _ = autopipImport(**dep)
+            if returnMods == True:
+                toRet.append( autopipImport(**dep) )
+            else:
+                _ = autopipImport(**dep)
+    if returnMods == True:
+        return toRet
     
 def isPythonRuntime(filepath=str(),cusPip=None):
     exeFileEnds = [".exe"]

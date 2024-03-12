@@ -60,5 +60,19 @@ crsh:
     ask: true
     defW: 120
     defH: 30
+  Packages:
+    Discover:
+      TraverseSymLinks: false
+      LegacyTraverseDepth: 10
+    AllowedFileTypes:
+      Packages:
+        Modulo:
+        - mpackage
+        - mpack
+        - csmpack
+        Legacy:
+        - package
+        - pack
+        - cspack
 crsh_debugger:
   Scope: error

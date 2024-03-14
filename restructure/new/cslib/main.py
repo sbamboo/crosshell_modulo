@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from cslib.piptools import installPipDeps_fl
 from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
 from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem
-from cslib._crosshellMpackageSystem import discoverPackageFiles,installPackageFiles
+from cslib._crosshellMpackageSystem import discoverPackageFiles,installPackageFiles,loadPackageConfig,normFeatureDataAndReg
 from cslib.externalLibs.filesys import filesys
 from cslib.externalLibs.conUtils import getConSize
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
@@ -437,10 +437,9 @@ class crosshellLanguageProvider():
         self.fileIsStream = fileIsStream
         if self.fileIsStream != True:
             if os.path.exists(self.languageListFile) == False:
+                filesys.createFile(self.languageListFile)
                 if listFormat == "json":
-                    open(self.languageListFile,'x').write("{}")
-                else:
-                    open(self.languageListFile,'x').write("")
+                    open(self.languageListFile,'w').write("{}")
         self.defLanguage = self.parseSingleLanguage(defaultLanguage)
         self.listFormat = listFormat
         self.langFormat = langFormat
@@ -800,10 +799,7 @@ class sessionStorage():
             "tempData": {},
             "userVars": {},
             "regionalScope": {},
-            "pgkReg": {
-                "features": {},
-                "data": {}
-            }
+            "pkgReg": {}
         }
     # region: sessionStorage.mainmethods
     def reset(self, key=None):
@@ -812,7 +808,7 @@ class sessionStorage():
                 "tempData": {},
                 "userVars": {},
                 "regionalScope": {},
-                "pgkReg": {}
+                "pkgReg": {}
             }
         else:
             self.storage[key] = {}
@@ -910,61 +906,65 @@ class sessionStorage():
 
     # region: sessionStorage.pkgRegmethods
     def featureIsRegistered(self,name):
-        return self.storage["pgkReg"].get(name) != None
+        return self.storage["pkgReg"].get(name) != None
     def regFeature(self,name,config={}):
-        if not featureIsRegistered(name):
-            self.storage["pgkReg"][name] = {}
-            self.storage["pgkReg"]["config"] = config
-            self.storage["pgkReg"]["data"] = {}
+        if not self.featureIsRegistered(name):
+            self.storage["pkgReg"][name] = {}
+            self.storage["pkgReg"][name]["config"] = config
+            self.storage["pkgReg"][name]["data"] = {}
         else:
             raise Exception(f"Feature '{name}' is already registered, use uppFeature or unregFeature to manage it.")
     def unregFeature(self,name):
-        if featureIsRegistered(name):
-            del self.storage["pgkReg"][name]
+        if self.featureIsRegistered(name):
+            del self.storage["pkgReg"][name]
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
     def uppFeatureConfig(self,name,config=dict):
-        if featureIsRegistered(name):
-            del self.storage["pgkReg"][name]["config"] = config
+        if self.featureIsRegistered(name):
+            self.storage["pkgReg"][name]["config"] = config
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
     def uppFeatureData(self,name,data=dict):
-        if featureIsRegistered(name):
-            del self.storage["pgkReg"][name]["data"] = data
+        if self.featureIsRegistered(name):
+            self.storage["pkgReg"][name]["data"] = data
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
-    def configFeature(self,key,value):
-        if featureIsRegistered(name):
-            del self.storage["pgkReg"][name]["config"][key] = value
+    def configFeature(self,name,key,value):
+        if self.featureIsRegistered(name):
+            self.storage["pkgReg"][name]["config"][key] = value
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
+    def getFeatures(self) -> dict:
+        return self.storage["pkgReg"]
+    def uppFeatures(self,pkgReg=dict):
+        self.storage["pkgReg"].update(pkgReg)
     def getFeatureConfig(self,name) -> dict:
-        if featureIsRegistered(name):
-            return self.storage["pgkReg"][name]["config"]
+        if self.featureIsRegistered(name):
+            return self.storage["pkgReg"][name]["config"]
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
     def getFeatureData(self,name) -> dict:
-        if featureIsRegistered(name):
-            return self.storage["pgkReg"][name]["data"]
+        if self.featureIsRegistered(name):
+            return self.storage["pkgReg"][name]["data"]
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
-    def getFeatureDataForPackage(self,pkgid) -> list:
-        if featureIsRegistered(name):
-            if self.storage["pgkReg"][name]["data"].get(pkgid) != None:
-                return self.storage["pgkReg"][name]["data"][pkgid]
+    def getFeatureDataForPackage(self,name,pkgid) -> list:
+        if self.featureIsRegistered(name):
+            if self.storage["pkgReg"][name]["data"].get(pkgid) != None:
+                return self.storage["pkgReg"][name]["data"][pkgid]
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
     def getPackagesForFeature(self,name) -> list:
-        if featureIsRegistered(name):
-            return list(self.storage["pgkReg"][name]["data"].keys())
+        if self.featureIsRegistered(name):
+            return list(self.storage["pkgReg"][name]["data"].keys())
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
     def registerPackageForFeature(self,name,pkgid,data={}):
-        if featureIsRegistered(name):
-            self.storage["pgkReg"][name]["data"][pkgid] = data
+        if self.featureIsRegistered(name):
+            self.storage["pkgReg"][name]["data"][pkgid] = data
         else:
             raise Exception(f"Feature '{name}' isn't registered, use regFeature to register it.")
-
+    # endregion
 
 class sessionFlags():
     def __init__(self):
@@ -1801,6 +1801,21 @@ class crshSession():
             "versionid": 'Crosshell_Modulo:Unknown_Unknown:Unknown'
         }
 
+        self.initDefaults["builtInPkgFeatures"] = {
+            "cmdlets": {
+                "registeredBy": "builtin",
+                "type": "register_wdata",
+                "addr": "/cmdlets",
+                "legacy_addr": "/",
+                "recursive": True
+            }
+        }
+
+        self.initDefaults["allowedFeatureTypes"] = [
+            "mapping_1-1",
+            "register_wdata"
+        ]
+
     def ingestDefaults(self,defaults=None,ingestTags=None):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
@@ -2335,7 +2350,7 @@ class crshSession():
                 installDestModulo = self.regionalGet("mPackPath"),
                 installDestLegacy = self.regionalGet("lPackPath")
             )
-            self.regionalSet("PackageList",_installedPackages)
+        self.regionalSet("PackageList",_installedPackages)
 
         # clean up
         del unilen
@@ -2343,20 +2358,20 @@ class crshSession():
         del _tempPkgFileList
         del _tempPkgFilePath
 
-        # predefine features like cmdlets
-        # use loadPackageConfig() to get the packageData and features
-        # using the features load in the package featureData
+        # load predefined like cmdlets
+        self.storage.uppFeatures(self.initDefaults["builtInPkgFeatures"])
 
-        # "<feature>": {
-        #   "config": {
-        #       "registeredBy": "builtin",
-        #       "type": "register_cmdlets",
-        #       "addr": "/cmdlets",
-        #       "legacy_addr": "/",
-        #       "recursive": true
-        #   },
-        #   "data": {}
-        # }
+        # use loadPackageConfig() to get the packageData and features
+        packageConfigs,foundFeatures = loadPackageConfig(
+            installedPackages = self.regionalGet("PackageList"),
+            defaultFeatures = {},
+            encoding = self.getEncoding()
+        )
+
+        # using the features load in the package featureData
+        normFeatureDataAndReg(foundFeatures,self.storage.regFeature,self.initDefaults["allowedFeatureTypes"])
+
+        print(packageConfigs)
 
         # [Finish up]
         # Set flag

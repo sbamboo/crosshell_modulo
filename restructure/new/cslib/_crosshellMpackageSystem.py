@@ -57,7 +57,7 @@ def _getNameOfModuloPackage(packageConfigFile=str,encoding="utf-8",fileIsStream=
     else:
         configFilepath = packageConfigFile
     dataRaw = _fileHandler(filesys.getFileExtension(configFilepath),"get",packageConfigFile,encoding=encoding,fileIsStream=fileIsStream)
-    name = filesys.getFileName(configFilepath)
+    name = os.path.basename(os.path.dirname(configFilepath))
     if dataRaw.get("package") != None:
         if dataRaw["package"].get("name") != None:
             name = dataRaw["package"]["name"]
@@ -75,7 +75,7 @@ def _getInstalledModuloPackages(path=str, exclusionPathList=list, travelSymlink=
     installedPackages = []
     for topLevel in topLevelFolders:
         if topLevel not in exclusionPathList:
-        # setup possebilities
+            # setup possebilities
             possibleCollectionConfig = os.path.join(topLevel,"collection.json")
             possiblePackageConfig = os.path.join(topLevel, "package.json")
             # Collection
@@ -221,3 +221,31 @@ def loadPackageConfig(installedPackages,defaultFeatures=dict,encoding="utf-8"):
                 if packageData.get("features") != None:
                     foundFeatures[packageName] = packageData["features"] 
     return packageConfigs,foundFeatures
+
+def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
+    for package,featuresData in foundFeatures.items():
+        for featureName,featureData in featuresData.items():
+            if featureData.get("registeredBy") == None:
+                featureData["registeredBy"] = package
+            if featureData.get("legacy_addr") == None:
+                featureData["legacy_addr"] = None
+            if featureData.get("recursive") == None:
+                featureData["recursive"] = False
+            #addr
+            addr = featureData.get("addr")
+            if addr in [None,""]: addr = "/"
+            if addr.startswith("./"): addr = addr.replace("./","/",1)
+            addr = addr.replace("\\","/")
+            if not addr.startswith("/"): addr = "/" + addr
+            featureData["addr"] = addr
+            #laddr
+            laddr = featureData.get("legacy_addr")
+            if laddr != None:
+                if laddr == "": laddr = "/"
+                if laddr.startswith("./"): laddr = laddr.replace("./","/",1)
+                laddr = laddr.replace("\\","/")
+                if not laddr.startswith("/"): laddr = "/" + laddr
+                featureData["legacy_addr"] = laddr
+            # register
+            if featureData.get("type") in allowedFeatureTypes and featureData.get("addr") not in ["",None]:
+                registerMethod(featureName,featureData)

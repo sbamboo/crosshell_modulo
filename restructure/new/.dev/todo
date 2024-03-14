@@ -18,3 +18,5 @@
 
 - When finished remove unneccesairy deffinitions using `del`
 - When finished add comments and return types for al functions accessible through the session so it works better an an API/UsageLayers
+
+- Check so switching from fileless to filemode breaks settings/langlist

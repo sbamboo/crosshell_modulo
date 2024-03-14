@@ -1,0 +1,11 @@
+{
+    "package": {
+        "desc": "Testing"
+    },
+    "features": {
+        "test": {
+            "type": "mapping_1-1",
+            "addr": "/testing"
+        }
+    }
+}

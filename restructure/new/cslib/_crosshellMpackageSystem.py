@@ -218,8 +218,9 @@ def loadPackageConfig(installedPackages,defaultFeatures=dict,encoding="utf-8"):
                 packageName = _getNameOfModuloPackage(possiblePackageConfig,encoding=encoding)
                 packageData = _fileHandler("json","get",possiblePackageConfig,encoding=encoding)
                 packageConfigs[type_][packageName] = packageData
+                packageConfigs[type_][packageName]["path"] = packagePath
                 if packageData.get("features") != None:
-                    foundFeatures[packageName] = packageData["features"] 
+                    foundFeatures[packageName] = packageData["features"]
     return packageConfigs,foundFeatures
 
 def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
@@ -231,6 +232,10 @@ def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
                 featureData["legacy_addr"] = None
             if featureData.get("recursive") == None:
                 featureData["recursive"] = False
+            if featureData.get("inclDotted") == None:
+                featureData["inclDotted"] = False
+            if featureData.get("folderExclusions") == None:
+                featureData["folderExclusions"] = []
             #addr
             addr = featureData.get("addr")
             if addr in [None,""]: addr = "/"
@@ -249,3 +254,35 @@ def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
             # register
             if featureData.get("type") in allowedFeatureTypes and featureData.get("addr") not in ["",None]:
                 registerMethod(featureName,featureData)
+
+def loadPackageFeatures(loadedFeatures,packageConfigs):
+    for featureName, featureData in loadedFeatures.items():
+        # Get feature data
+        featureConfig = featureData["config"]
+        featureType = featureConfig["type"]
+        featureAddr = featureConfig["addr"]
+        featureLegacyAddr = featureConfig["legacy_addr"]
+        featureRecursive = featureConfig["recursive"]
+        featureIncludeDotted = featureConfig["inclDotted"]
+        featureExclusions = featureConfig["folderExclusions"]
+        # Iterate over packages and load into <feature>["data"]
+        # {
+        #   "<packageType>": {
+        #     "<packageName>": {
+        #       <featureData>
+        #     }
+        #   }
+        # }
+        for packageType, configs in packageConfigs.items():
+            for packageName,packageConfig in configs.items():
+                if loadedFeatures[featureName]["data"].get(packageType) == None: loadedFeatures[featureName]["data"][packageType] = {}
+                if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
+                if packageType == "legacy":
+                    adress = featureLegacyAddr
+                else:
+                    adress = featureAddr
+                dirs = []
+                if featureRecursive == False:
+                    pass
+    # return
+        return loadedFeatures

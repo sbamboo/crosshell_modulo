@@ -2334,7 +2334,6 @@ class crshSession():
             legacyDiscoverTraverseDepth = int(self.getregister("set").getProperty("crsh","Packages.Discover.LegacyTraverseDepth")),
         )
         self.regionalSet("PkgFileList",_tempPkgFileList)
-
         # VERBOSE START #
         unilen = len([*_tempPkgFileList["legacy"],*_tempPkgFileList["modulo"]])
         if unilen < 1:
@@ -2371,7 +2370,8 @@ class crshSession():
         # using the features load in the package featureData
         normFeatureDataAndReg(foundFeatures,self.storage.regFeature,self.initDefaults["allowedFeatureTypes"])
 
-        print(packageConfigs)
+        # using the loaded features and packageconfigs load package data for the features
+        
 
         # [Finish up]
         # Set flag

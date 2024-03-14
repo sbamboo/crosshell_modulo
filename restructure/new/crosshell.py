@@ -4,3 +4,5 @@ from cslib.main import *
 # [Create Session]
 csSession = crshSession()
 csSession.init()
+
+print(csSession.storage.getFeatures())

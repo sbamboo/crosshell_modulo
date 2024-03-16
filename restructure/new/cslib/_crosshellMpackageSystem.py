@@ -223,6 +223,13 @@ def loadPackageConfig(installedPackages,defaultFeatures=dict,encoding="utf-8"):
                     foundFeatures[packageName] = packageData["features"]
     return packageConfigs,foundFeatures
 
+def normPathsInFeatureData(path) -> str:
+    if path in [None,""]: path = "/"
+    path = path.replace("\\","/")
+    if path.startswith("./"): path = path.replace("./","/",1)
+    if not path.startswith("/"): path = "/" + path
+    return path
+
 def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
     for package,featuresData in foundFeatures.items():
         for featureName,featureData in featuresData.items():
@@ -237,20 +244,26 @@ def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
             if featureData.get("folderExclusions") == None:
                 featureData["folderExclusions"] = []
             #addr
-            addr = featureData.get("addr")
-            if addr in [None,""]: addr = "/"
-            if addr.startswith("./"): addr = addr.replace("./","/",1)
-            addr = addr.replace("\\","/")
-            if not addr.startswith("/"): addr = "/" + addr
-            featureData["addr"] = addr
+            #addr = featureData.get("addr")
+            #if addr in [None,""]: addr = "/"
+            #if addr.startswith("./"): addr = addr.replace("./","/",1)
+            #addr = addr.replace("\\","/")
+            #if not addr.startswith("/"): addr = "/" + addr
+            #featureData["addr"] = addr
+            featureData["addr"] = normPathsInFeatureData(featureData.get("addr"))
             #laddr
             laddr = featureData.get("legacy_addr")
             if laddr != None:
-                if laddr == "": laddr = "/"
-                if laddr.startswith("./"): laddr = laddr.replace("./","/",1)
-                laddr = laddr.replace("\\","/")
-                if not laddr.startswith("/"): laddr = "/" + laddr
+                #if laddr == "": laddr = "/"
+                #if laddr.startswith("./"): laddr = laddr.replace("./","/",1)
+                #laddr = laddr.replace("\\","/")
+                #if not laddr.startswith("/"): laddr = "/" + laddr
+                laddr = normPathsInFeatureData(laddr)
                 featureData["legacy_addr"] = laddr
+            # folderExclusions
+            if featureData.get("folderExclusions") != None:
+                for i,path in enumerate(featureData["folderExclusions"]):
+                    featureData["folderExclusions"][i] = normPathsInFeatureData(path)
             # register
             if featureData.get("type") in allowedFeatureTypes and featureData.get("addr") not in ["",None]:
                 registerMethod(featureName,featureData)

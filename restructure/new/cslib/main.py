@@ -1802,12 +1802,14 @@ class crshSession():
         }
 
         self.initDefaults["builtInPkgFeatures"] = {
-            "cmdlets": {
-                "registeredBy": "builtin",
-                "type": "register_wdata",
-                "addr": "/cmdlets",
-                "legacy_addr": "/",
-                "recursive": True
+            "builtin": {
+                "cmdlets": {
+                    "registeredBy": "builtin",
+                    "type": "register_wdata",
+                    "addr": "/cmdlets",
+                    "legacy_addr": "/",
+                    "recursive": True
+                }
             }
         }
 
@@ -2233,7 +2235,6 @@ class crshSession():
         # [Load formatter]
         st.verb("Loading formatter...") # VERBOSE START
         # Get the settings module and use it to get values for CSGT
-        _temp = self.getregister("set").getModule("crsh",skipTagMan=True)
         _textInst = crosshellGlobalTextSystem(
             pathtagInstance = self.getregister("stm"),
             palette = getKeyPath(_temp,"CGTS.ANSI_Hex_Palette"),
@@ -2357,9 +2358,6 @@ class crshSession():
         del _tempPkgFileList
         del _tempPkgFilePath
 
-        # load predefined like cmdlets
-        self.storage.uppFeatures(self.initDefaults["builtInPkgFeatures"])
-
         # use loadPackageConfig() to get the packageData and features
         packageConfigs,foundFeatures = loadPackageConfig(
             installedPackages = self.regionalGet("PackageList"),
@@ -2367,12 +2365,14 @@ class crshSession():
             encoding = self.getEncoding()
         )
 
+        # load predefined like cmdlets
+        foundFeatures.update(self.initDefaults["builtInPkgFeatures"])
+
         # using the features load in the package featureData
         normFeatureDataAndReg(foundFeatures,self.storage.regFeature,self.initDefaults["allowedFeatureTypes"])
 
         # using the loaded features and packageconfigs load package data for the features
         loadedFeatures = loadPackageFeatures(self.storage.getFeatures(),packageConfigs)
-        print(loadedFeatures)
 
         # [Finish up]
         # Set flag

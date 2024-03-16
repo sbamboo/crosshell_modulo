@@ -7,7 +7,7 @@ crsh:
   Formats:
     DefaultEncoding: utf-8
   Version:
-    VerFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
+    VerFile: '{CS_CoreDir}\version.yaml'
     FileFormatVer: '1'
   Parse:
     Text:
@@ -16,7 +16,7 @@ crsh:
     Loaded:
       '1': en-us
     _choices: []
-    DefaultList: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
+    DefaultList: '{CS_AssetsDir}\langlist.json'
     ListFormat: json
     LangFormat: json
     LoadSameSuffixedLangs: true

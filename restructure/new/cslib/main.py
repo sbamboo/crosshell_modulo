@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from cslib.piptools import installPipDeps_fl
 from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
 from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem
-from cslib._crosshellMpackageSystem import discoverPackageFiles,installPackageFiles,loadPackageConfig,normFeatureDataAndReg
+from cslib._crosshellMpackageSystem import discoverPackageFiles,installPackageFiles,loadPackageConfig,normFeatureDataAndReg,loadPackageFeatures
 from cslib.externalLibs.filesys import filesys
 from cslib.externalLibs.conUtils import getConSize
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
@@ -2371,7 +2371,8 @@ class crshSession():
         normFeatureDataAndReg(foundFeatures,self.storage.regFeature,self.initDefaults["allowedFeatureTypes"])
 
         # using the loaded features and packageconfigs load package data for the features
-        
+        loadedFeatures = loadPackageFeatures(self.storage.getFeatures(),packageConfigs)
+        print(loadedFeatures)
 
         # [Finish up]
         # Set flag

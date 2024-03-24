@@ -1,11 +1,14 @@
 {
     "package": {
-        "desc": "Testing"
+        "desc": "Main crosshell package"
     },
+
     "features": {
         "test": {
             "type": "mapping_1-1",
-            "addr": "/testing"
+            "addr": "/testing",
+            "mangler": "/Manglers/manglers.py@testingMangler",
+            "manglerKwargs": {}
         }
     }
 }

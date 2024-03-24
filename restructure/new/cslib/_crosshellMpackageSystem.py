@@ -3,8 +3,12 @@ CSlib: CrosshellMpackageSystem contains crosshells code to handle modules.
 '''
 
 import os
-from cslib.datafiles import _fileHandler
+from cslib.datafiles import _fileHandler,config_to_dict
 from cslib.externalLibs.filesys import filesys
+from cslib.pathtools import normPathSep
+from cslib.types import expectedList
+from cslib.piptools import fromPath
+from cslib.platformAndOS import handleOSinExtensionsList
 
 def GetFilesByExt(path=str,extensions=list):
     """Cslib.CMPS: Retrives a list of files in a folder if the extension match a given list."""
@@ -17,7 +21,7 @@ def GetFilesByExt(path=str,extensions=list):
             packageFiles.append({name:object.path})
     return packageFiles
 
-def listNonHiddenFolders(path, maxDepth=None, travelSymlink=False):
+def listNonHiddenFolders(path, maxDepth=None, travelSymlink=False) -> list:
     """Cslib: Os walks a path with a maxdepth and returns each path to a folder where no path-component starts with ."""
     nonHiddenFolders = []
     for root, dirs, _ in os.walk(path, followlinks=travelSymlink):
@@ -28,6 +32,17 @@ def listNonHiddenFolders(path, maxDepth=None, travelSymlink=False):
             if not any(part.startswith('.') for part in fullPath.split(os.path.sep)):
                 nonHiddenFolders.append(fullPath)
     return nonHiddenFolders
+
+def listFilesOfType(directory, fileTypes, givePaths=True):
+    filesOfType = []
+    for file in os.listdir(directory):
+        if os.path.isfile(os.path.join(directory, file)):
+            if any(file.endswith("." + fileType) for fileType in fileTypes):
+                if givePaths == True:
+                    filesOfType.append( os.path.join(directory,file) )
+                else:
+                    filesOfType.append(file)
+    return filesOfType
 
 def getFoldersInPath(path,handleSymlinks=False):
     """Cslib: Gets each folder in a path, also handles symlinks."""
@@ -220,7 +235,7 @@ def loadPackageConfig(installedPackages,defaultFeatures=dict,encoding="utf-8"):
                 packageConfigs[type_][packageName] = packageData
                 packageConfigs[type_][packageName]["path"] = packagePath
                 if packageData.get("features") != None:
-                    foundFeatures[packageName] = packageData["features"]
+                    foundFeatures[type_+"@"+packageName] = packageData["features"]
     return packageConfigs,foundFeatures
 
 def normPathsInFeatureData(path) -> str:
@@ -231,10 +246,18 @@ def normPathsInFeatureData(path) -> str:
     return path
 
 def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
-    for package,featuresData in foundFeatures.items():
+    for packageID,featuresData in foundFeatures.items():
+        if "@" in packageID:
+            package = packageID.split("@")[1]
+            packageType = packageID.split("@")[0]
+        else:
+            package = packageID
+            packageType = None
         for featureName,featureData in featuresData.items():
             if featureData.get("registeredBy") == None:
                 featureData["registeredBy"] = package
+            if featureData.get("registeredByType") == None:
+                featureData["registeredByType"] = packageType
             if featureData.get("legacy_addr") == None:
                 featureData["legacy_addr"] = None
             if featureData.get("recursive") == None:
@@ -243,6 +266,12 @@ def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
                 featureData["inclDotted"] = False
             if featureData.get("folderExclusions") == None:
                 featureData["folderExclusions"] = []
+            if featureData.get("mappingFileType") == None:
+                featureData["mappingFileType"] = "DEFAULT"
+            if featureData.get("mangler") == None:
+                featureData["mangler"] = None
+            if featureData.get("manglerKwargs") == None:
+                featureData["manglerKwargs"] = None
             #addr
             #addr = featureData.get("addr")
             #if addr in [None,""]: addr = "/"
@@ -265,37 +294,230 @@ def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
                 for i,path in enumerate(featureData["folderExclusions"]):
                     featureData["folderExclusions"][i] = normPathsInFeatureData(path)
             # register
-            if featureData.get("type") in allowedFeatureTypes and featureData.get("addr") not in ["",None]:
+            typeAllowed = False
+            typeToAllowCheck = featureData.get("type")
+            if ":" in typeToAllowCheck:
+                baseType = typeToAllowCheck.split(":")[0].rstrip(" ")
+                for type_ in allowedFeatureTypes:
+                    if ":" in type_ and baseType == type_.split(":")[0].rstrip(" "):
+                        typeAllowed = True
+            else:
+                if typeToAllowCheck in allowedFeatureTypes:
+                    typeAllowed = True
+            if typeAllowed == True and featureData.get("addr") not in ["",None]:
                 registerMethod(featureName,featureData)
 
-def loadPackageFeatures(loadedFeatures,packageConfigs):
+def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,travelSymlink=False,defaultFeatureConfigType="json",mappingFileEncoding="utf-8",preLoadedReaders={},preLoadedReadersType="modulo",preLoadedReadersFeature="readers",legacyPackagePath=str,moduloPackagePath=str):
+    if preLoadedReaders not in [None,{}]:
+        if loadedFeatures[preLoadedReadersFeature]["data"].get(preLoadedReadersType) == None: loadedFeatures[preLoadedReadersFeature]["data"][preLoadedReadersType] = {}
+        loadedFeatures[preLoadedReadersFeature]["data"][preLoadedReadersType]["builtins"] = preLoadedReaders
+    # Iterate over al features
     for featureName, featureData in loadedFeatures.items():
         # Get feature data
         featureConfig = featureData["config"]
-        featureType = featureConfig["type"]
+        featureType = featureConfig["type"].lower()
         featureAddr = featureConfig["addr"]
         featureLegacyAddr = featureConfig["legacy_addr"]
         featureRecursive = featureConfig["recursive"]
         featureIncludeDotted = featureConfig["inclDotted"]
         featureExclusions = featureConfig["folderExclusions"]
-        # Iterate over packages and load into <feature>["data"]
-        # {
-        #   "<packageType>": {
-        #     "<packageName>": {
-        #       <featureData>
-        #     }
-        #   }
-        # }
+        featureMappingFileType = featureConfig["mappingFileType"]
+        featureMangler = featureConfig["mangler"]
+        featureManglerKwargs = featureConfig["manglerKwargs"]
+        if featureMappingFileType == None or featureMappingFileType.lower() == "default":
+            featureMappingFileType = defaultFeatureConfigType
+        # Iterate over package types
         for packageType, configs in packageConfigs.items():
+            # Iterate over packages
             for packageName,packageConfig in configs.items():
                 if loadedFeatures[featureName]["data"].get(packageType) == None: loadedFeatures[featureName]["data"][packageType] = {}
-                if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
                 if packageType == "legacy":
-                    adress = featureLegacyAddr
+                    address = featureLegacyAddr
                 else:
-                    adress = featureAddr
-                dirs = []
-                if featureRecursive == False:
-                    pass
+                    address = featureAddr
+                # Legacy adresses might be None to disable legacy-support so in that case skip
+                if address != None:
+                    addressPath_partAddress = normPathSep(address)
+                    addressPath_partPkgPth = normPathSep(packageConfig["path"])
+                    # Ensure that the packagePath dosen't end with sep
+                    if addressPath_partPkgPth.endswith(os.sep):
+                        addressPath_partPkgPth = (addressPath_partPkgPth[::-1].replace(os.sep,"",1))[::-1]
+                    # If adress != sep apply it
+                    if addressPath_partAddress != os.sep:
+                        # Ensure that the adressPath 
+                        if not addressPath_partAddress.startswith(os.sep):
+                            addressPath_partAddress = os.sep + addressPath_partAddress
+                        # Join the two
+                        addressPath = addressPath_partPkgPth + addressPath_partAddress
+                    # If not just set it to the root
+                    else:
+                        addressPath = addressPath_partPkgPth
+                    # Discover search-directories 
+                    searchDirs = []
+                    if os.path.exists(addressPath) == True:
+                        searchDirs.append(addressPath)
+                        # Recursive
+                        if featureRecursive != False:
+                            searchDirs.extend(listNonHiddenFolders(addressPath,maxRecursiveDepth,travelSymlink))
+                    # Load data based on type
+                    ## Raw
+                    if featureType == "raw":
+                        dataFile = featureName+"."+featureMappingFileType
+                        mappingFtype = featureMappingFileType.lower()
+                        if (mappingFtype == "yml"): mappingFtype = "yaml"# Iterate over the search directories and look for mappings file
+                        for sdir in searchDirs:
+                            mappingFilePath = os.path.join(sdir,dataFile)
+                            if os.path.exists(mappingFilePath):
+                                mappingFileData = {}
+                                # If file was found load it and add the data based on the mapping_type
+                                if mappingFtype in ["cfg","config","property","properties"]:
+                                    mappingFileData = config_to_dict(
+                                        open(mappingFilePath,'r',encoding=encoding).read()
+                                    )
+                                elif mappingFtype in ["json","yaml"]:
+                                    mappingFileData = _fileHandler(mappingFtype,"get",mappingFilePath,encoding=mappingFileEncoding)
+                                if mappingFileData not in ["",None,{},[]]:
+                                    if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
+                                    loadedFeatures[featureName]["data"][packageType][packageName].update(mappingFileData)
+                    ## Mappings
+                    elif "mapping" in featureType:
+                        mappingFile = featureName+"."+featureMappingFileType
+                        mappingFtype = featureMappingFileType.lower()
+                        if (mappingFtype == "yml"): mappingFtype = "yaml"
+                        # Iterate over the search directories and look for mappings file
+                        for sdir in searchDirs:
+                            mappingFilePath = os.path.join(sdir,mappingFile)
+                            if os.path.exists(mappingFilePath):
+                                mappingFileData = {}
+                                # If file was found load it and add the data based on the mapping_type
+                                if mappingFtype in ["cfg","config","property","properties"]:
+                                    mappingFileData = config_to_dict(
+                                        open(mappingFilePath,'r',encoding=encoding).read()
+                                    )
+                                elif mappingFtype in ["json","yaml"]:
+                                    mappingFileData = _fileHandler(mappingFtype,"get",mappingFilePath,encoding=mappingFileEncoding)
+                                # Handle filen/filep mappings
+                                isRelPath = False
+                                if featureType == "mapping_filen-1":
+                                    isRelPath = True
+                                    featureType = "mapping_1-1"
+                                elif featureType == "mapping_filen-m":
+                                    isRelPath = True
+                                    featureType = "mapping_1-m"
+                                # Load data based on mapping_type
+                                if featureType == "mapping_1-1" or featureType == "mapping_filep-1":
+                                    if len(list(mappingFileData.keys())) > 0:
+                                        if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
+                                    for k,v in mappingFileData.items():
+                                        if isRelPath == True: k = os.path.join(sdir,normPathSep(k))
+                                        loadedFeatures[featureName]["data"][packageType][packageName][k] = v
+                                elif featureType == "mapping_1-m" or featureType == "mapping_filep-m":
+                                    if len(list(mappingFileData)) > 0:
+                                        if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
+                                    for item in mappingFileData:
+                                        if type(item) == str:
+                                            if "=>" in item:
+                                                _parts = item.split("=>")
+                                                key = _parts[1].rstrip(" ")
+                                                value = _parts[0].lstrip(" ")
+                                            else:
+                                                if "<=" in item: delim = "<="
+                                                elif ": " in item: delim = ": "
+                                                elif "=" in item: delim = "="
+                                                _parts = item.split(delim)
+                                                key = _parts[0].rstrip(" ")
+                                                value = _parts[1].lstrip(" ")
+                                        elif type(item) in [list,tuple]:
+                                            key = item[0]
+                                            value = item[1]
+                                        elif type(item) == dict:
+                                            key = item.keys()[0]
+                                            value = item.values()[0]
+                                        if loadedFeatures[featureName]["data"][packageType][packageName].get(k) == None:
+                                            loadedFeatures[featureName]["data"][packageType][packageName][k] = []
+                                        if isRelPath == True: k = os.path.join(sdir,normPathSep(k))
+                                        loadedFeatures[featureName]["data"][packageType][packageName][k].append(value)
+                    ## Registry
+                    elif "registry" in featureType:
+                        pre = featureType.split(":")[0]
+                        pst = featureType.split(":")[1]
+                        # For specific type
+                        if pre == "registry_fortype":
+                            if "," in pst:
+                                pst = pst.split(",")
+                            else:
+                                pst = [pst]
+                            for sdir in searchDirs:
+                                typeTypes = handleOSinExtensionsList(pst)
+                                filesOfTypes = listFilesOfType(sdir,pst,givePaths=False)
+                                if filesOfTypes not in [None,[]]:
+                                    if len(list(filesOfTypes)) > 0:
+                                        if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
+                                    for file in filesOfTypes:
+                                        ext = os.path.splitext(file)[1].lstrip(".")
+                                        if loadedFeatures[featureName]["data"][packageType][packageName].get(ext) == None:
+                                            loadedFeatures[featureName]["data"][packageType][packageName][ext] = []
+                                        loadedFeatures[featureName]["data"][packageType][packageName][ext].append(file)
+                        # For types given by another features data
+                        elif pre == "registry_forfeature":
+                            # Assemble complete-entries for feature
+                            assembledData = {}
+                            featureType_toread = loadedFeatures[pst]["config"]["type"].lower()
+                            # Load mappings of 1-1 where its <smth>:<type/types>
+                            if "mapping" in featureType_toread and featureType_toread.endswith("-1"):
+                                for pkgType_toread in loadedFeatures[pst]["data"].keys():
+                                    for readerEntry in loadedFeatures[pst]["data"][pkgType_toread].values():
+                                        assembledData.update(readerEntry)
+                            # Load mappings of 1-m where its <smth>:<type/types> (merges <smth> so multiple entries are ignored and latest is taken)
+                            elif "mapping" in featureType_toread and featureType_toread.endswith("-m"):
+                                for pkgType_toread in loadedFeatures[pst]["data"].keys():
+                                    for readerEntry in loadedFeatures[pst]["data"][pkgType_toread].values():
+                                        assembledData.update(readerEntry)
+                            # Load mappings of raw where its just data
+                            elif featureType_toread == "raw":
+                                assembledData.update(loadedFeatures[pst]["data"][pkgType_toread])
+                            # Find files of type per feature-entry
+                            for sdir in searchDirs:
+                                for parent,typeTypes in assembledData.items():
+                                    if type(typeTypes) == str: typeTypes = [typeTypes]
+                                    typeTypes = handleOSinExtensionsList(typeTypes)
+                                    # Get al files of types and link to their parent
+                                    filesOfTypes = listFilesOfType(sdir,typeTypes,givePaths=False)
+                                    if filesOfTypes not in [None,[]]:
+                                        if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
+                                        files_ = []
+                                        for file_ in filesOfTypes:
+                                            prefix = addressPath_partAddress.replace("\\","/")
+                                            if not prefix.endswith("/"): prefix += "/"
+                                            files_.append( prefix + file_ )
+                                        loadedFeatures[featureName]["data"][packageType][packageName][parent] = files_
+        # Apply mangling
+        if featureMangler != None:
+            featureMangler_toexec = None
+            if type(featureMangler) == str:
+                if "@" in featureMangler:
+                    manglerFile = featureMangler.split("@")[0]
+                    manglerFunc = featureMangler.split("@")[1]
+                    if featureConfig["registeredByType"] == "legacy":
+                        packagePath = os.path.join(legacyPackagePath,featureConfig["registeredBy"])
+                    else:
+                        packagePath = os.path.join(moduloPackagePath,featureConfig["registeredBy"])
+                    manglerFile = normPathSep(manglerFile)
+                    if manglerFile.startswith(os.sep):
+                        manglerFile = manglerFile.replace(os.sep,"",1)
+                    manglerFilePath = os.path.join(packagePath,manglerFile)
+                    if os.path.exists(manglerFilePath):
+                        try:
+                            manglerModule = fromPath(manglerFilePath)
+                            featureMangler_toexec = getattr(manglerModule, manglerFunc)
+                        except: pass
+            else:
+                featureMangler_toexec = featureMangler
+            if featureMangler_toexec != None:
+                if featureManglerKwargs == None: featureManglerKwargs = {}
+                mangledData = featureMangler_toexec(loadedFeatures[featureName]["data"],**featureManglerKwargs)
+                if type(mangledData) == dict:
+                    loadedFeatures[featureName]["data"] = mangledData
+
     # return
-        return loadedFeatures
+    return loadedFeatures

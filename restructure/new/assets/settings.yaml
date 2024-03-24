@@ -7,7 +7,7 @@ crsh:
   Formats:
     DefaultEncoding: utf-8
   Version:
-    VerFile: '{CS_CoreDir}\version.yaml'
+    VerFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
     FileFormatVer: '1'
   Parse:
     Text:
@@ -16,10 +16,46 @@ crsh:
     Loaded:
       '1': en-us
     _choices: []
-    DefaultList: '{CS_AssetsDir}\langlist.json'
+    DefaultList: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
     ListFormat: json
     LangFormat: json
     LoadSameSuffixedLangs: true
+  conUtilsConfig:
+    ask: true
+    defW: 120
+    defH: 30
+  Packages:
+    Discover:
+      TraverseSymLinks: false
+      LegacyTraverseDepth: 10
+    AllowedFileTypes:
+      Cmdlets:
+        INTERNAL_PYTHON:
+        - py
+        PLATFORM_EXECUTABLE:
+        - win@exe
+        - win@cmd
+        - win@bat
+        - lnx;mac@MIME_EXECUTABLE
+      Packages:
+        Modulo:
+        - mpackage
+        - mpack
+        - csmpack
+        Legacy:
+        - package
+        - pack
+        - cspack
+    Readers:
+      ReaderFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
+    Formatting:
+      Mappings:
+        Selected: null
+        _choices:
+        - crosshell.test.latest
+      Palettes:
+        Selected: null
+        _choices: []
   CGTS:
     ANSI_Hex_Palette:
       '30': f#000000
@@ -55,23 +91,5 @@ crsh:
       '106': b#55FFFF
       '107': b#FFFFFF
     CustomMappings: {}
-  conUtilsConfig:
-    ask: true
-    defW: 120
-    defH: 30
-  Packages:
-    Discover:
-      TraverseSymLinks: false
-      LegacyTraverseDepth: 10
-    AllowedFileTypes:
-      Packages:
-        Modulo:
-        - mpackage
-        - mpack
-        - csmpack
-        Legacy:
-        - package
-        - pack
-        - cspack
 crsh_debugger:
   Scope: error

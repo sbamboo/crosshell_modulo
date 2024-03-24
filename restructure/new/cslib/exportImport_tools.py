@@ -96,7 +96,6 @@ def initClassWithProps(class_,props,safe=False):
         props = nprops
     return class_(**props)
 
-
 def argParse_from_dict(import_,reparse=False,safeCreation=True):
     # create main
     #parser = import_["main"]["class"](**import_["main"]["props"])

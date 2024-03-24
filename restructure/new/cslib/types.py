@@ -1,3 +1,10 @@
+def expectedList(value) -> list:
+    '''CSlib: Smal function for ensuring lists.'''
+    if type(value) != list:
+        return [value]
+    else:
+        return value
+
 class exportableDict(dict):
     """Class for making dictionary .items()/.keys()/.items() exportable by casting their output to lists."""
     def __init__(self, *args, **kwargs):

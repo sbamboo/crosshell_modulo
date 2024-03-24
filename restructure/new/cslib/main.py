@@ -12,6 +12,9 @@ from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict
 from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
 from cslib.progressMsg import startupMessagingWProgress
 from cslib.exceptions import CrosshellDebErr
+from cslib.types import expectedList
+from cslib.customImplements import readerMangler,cmdletMangler,langpckMangler
+from cslib.platformAndOS import handleOSinExtensionsList
 
 class stateInstance():
     """Supporting class for hosting data inplace of files."""
@@ -791,6 +794,34 @@ def crosshellVersionManager_getData(versionFile,formatVersion="1",encoding="utf-
     if int(forData.get("format")) != int(formatVersion):
         raise Exception(f"Invalid format on versionfile, internal '{formatVersion}' whilst external is '{forData.get('format')}'")
     return verData
+
+def getReaderExecutable(name,readerFile,encoding="utf-8", isStream=False) -> str:
+    '''CSlib: Smal function to get the reader-executable from using its name'''
+    # ensuring valid data
+    if isStream == False:
+        if os.path.exists(readerFile) == False:
+            open(readerFile,'x').write("{}")
+    else:
+        if readerFile.read() in [None,""]: readerFile.write("{}")
+    # read
+    readers = _fileHandler("json", "get", readerFile, encoding=encoding, safeSeps=True, fileIsStream=isStream)
+    if readers.get(name) != None:
+        return readers.get(name)
+    else:
+        return None
+
+def toReaderFormat(dictFromSettings,readerFile,encoding="utf-8",isStream=False) -> list:
+    '''CSlib: Smal function for to convert the reader part of settings to the correct format.'''
+    readerData = []
+    for reader,extensions in dictFromSettings.items():
+        readerData.append( {"name":reader,"exec":getReaderExecutable(reader, readerFile, encoding, isStream),"extensions":expectedList(extensions)} )
+    return readerData
+
+def addReader(name,execPath,readerFile,encoding="utf-8",isStream=False):
+    '''CSlib: Smal function to add a reader to the readerFile'''
+    readers = _fileHandler("json", "get", readerFile, encoding=encoding, safeSeps=True, fileIsStream=isStream)
+    readers[name] = execPath
+    _fileHandler("json", "set", readerFile, readers, encoding=encoding, fileIsStream=isStream)
 
 class sessionStorage():
     def __init__(self,regionalPrefix=""):
@@ -1578,6 +1609,7 @@ class crshSession():
                 "CoreLangPath": "{CoreDir}/lang"
             },
             "LangListFile": "{AssetsDir}/langlist.json",
+            "ReaderListFile": "{AssetsDir}/readerlist.json",
 
             "Args": None,
             "Startfile": None,
@@ -1602,6 +1634,9 @@ class crshSession():
             "LangPathObj": None,
             "PkgFilePathObj": None,
 
+            "ReaderRegistry": None,
+            "LoadedPackageData": None,
+
             "PkgFileList": {
                 "modulo": [],
                 "legacy": []
@@ -1624,7 +1659,7 @@ class crshSession():
                 "CSlibDir","BaseDir","CoreDir","AssetsDir","CacheDir","PackagesFolder","PackageFilePath","mPackPath","lPackPath","ReadersFolder","AssetsLangPath","CoreLangPath"
             ],
             "__registerAsTags": [ # __registerAsTags is used to register additional substituteTags, not usable when initiating regional-vars.
-                "DefaultEncoding", "VersionFile"
+                "DefaultEncoding", "VersionFile","ReaderListFile"
             ]
         }
 
@@ -1741,8 +1776,6 @@ class crshSession():
                     "Language.ListFormat": "json",
                     "Language.LangFormat": "json",
                     "Language.LoadSameSuffixedLangs": True,
-                    "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
-                    "CGTS.CustomMappings": {},
 
                     "conUtilsConfig.ask": True,
                     "conUtilsConfig.defW": 120,
@@ -1750,8 +1783,16 @@ class crshSession():
 
                     "Packages.Discover.TraverseSymLinks": False,
                     "Packages.Discover.LegacyTraverseDepth": 10,
+                    "Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON": ["py"],
                     "Packages.AllowedFileTypes.Packages.Modulo": ["mpackage","mpack","csmpack"],
-                    "Packages.AllowedFileTypes.Packages.Legacy": ["package","pack","cspack"]
+                    "Packages.AllowedFileTypes.Packages.Legacy": ["package","pack","cspack"],
+                    "Packages.Readers.ReaderFile": "{CS_ReaderListFile}",
+                    "Packages.Formatting.Mappings.Selected": None,
+                    "Packages.Formatting.Mappings._choices": [],
+                    "Packages.Formatting.Palettes.Selected": None,
+                    "Packages.Formatting.Palettes._choices": [],
+                    "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
+                    "CGTS.CustomMappings": {},
                 },
                 "crsh_debugger": {
                     "Scope": "error"
@@ -1803,20 +1844,74 @@ class crshSession():
 
         self.initDefaults["builtInPkgFeatures"] = {
             "builtin": {
+                "readers": {
+                    "registeredBy": "builtin",
+                    "type": "mapping_1-1",
+                    "addr": "/Readers",
+                    "legacy_addr": None,
+                    "recursive": False,
+                    "mangler": readerMangler,
+                    "manglerKwargs": {
+                        "addMethod": addReader,
+                        "readerFile": None,
+                        "readerFileEncoding": None,
+                        "readerFileIsStream": None
+                    }
+                },
                 "cmdlets": {
                     "registeredBy": "builtin",
-                    "type": "register_wdata",
-                    "addr": "/cmdlets",
+                    "type": "registry_forfeature:readers",
+                    "addr": "/Cmdlets",
                     "legacy_addr": "/",
+                    "recursive": True,
+                    "mangler": cmdletMangler,
+                    "manglerKwargs": {}
+                },
+                "mappings": {
+                    "registeredBy": "builtin",
+                    "type": "raw",
+                    "addr": "/Formatting",
+                    "legacy_addr": None,
                     "recursive": True
+                },
+                "palette": {
+                    "registeredBy": "builtin",
+                    "type": "raw",
+                    "addr": "/Formatting",
+                    "legacy_addr": None,
+                    "recursive": True
+                },
+                "langpack": {
+                    "registeredBy": "builtin",
+                    "type": "registry_fortype:json",
+                    "addr": "/Langpck",
+                    "legacy_addr": None,
+                    "recursive": True,
+                    "mangler": langpckMangler,
+                    "manglerKwargs": {
+                        "languageProvider": None,
+                        "languagePath": None,
+                        "mPackPath": None
+                    }
                 }
             }
         }
 
         self.initDefaults["allowedFeatureTypes"] = [
             "mapping_1-1",
-            "register_wdata"
+            "mapping_1-m",
+            "mapping_filen-1",
+            "mapping_filen-m",
+            "mapping_filep-1",
+            "mapping_filep-m",
+            "registry_fortype:<type>",
+            "registry_forfeature:<feature>",
+            "raw"
         ]
+
+        self.initDefaults["defaultReaders"] = {
+            "INTERNAL_PYTHON": ["py"]
+        }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
@@ -2298,7 +2393,7 @@ class crshSession():
         self.regionalSet("PkgFilePathObj",_tempPkgFilePath)
 
         # VERBOSE START #
-        st.verb("Discovering uninstalled packages...",l="cs.startup.discoverpkgs")
+        st.verb("Discovering non-installed packages...",l="cs.startup.discoverpkgs")
 
         # Retrive a list of packages in /packages
         _tempPkgFileList = self.regionalGet("PkgFileList")
@@ -2338,9 +2433,9 @@ class crshSession():
         # VERBOSE START #
         unilen = len([*_tempPkgFileList["legacy"],*_tempPkgFileList["modulo"]])
         if unilen < 1:
-            st.verb("Found {amnt} packages, continuing...",l="cs.startup.installpkgs.zero",ct={"amnt":unilen})
+            st.verb("Installing {amnt} packages, continuing...",l="cs.startup.installpkgs.zero",ct={"amnt":unilen})
         else:
-            st.verb("Installing {amnt} uninstalled packages...",l="cs.startup.installpkgs",ct={"amnt":unilen})
+            st.verb("Found {amnt} non-installed packages...",l="cs.startup.installpkgs",ct={"amnt":unilen})
 
         # Install any uninstalled package-files, then add to the packageList
         if unilen > 0:
@@ -2351,6 +2446,8 @@ class crshSession():
                 installDestLegacy = self.regionalGet("lPackPath")
             )
         self.regionalSet("PackageList",_installedPackages)
+        
+        self.tmpSet("amntPkgsToLoad",len([*_installedPackages["legacy"],*_installedPackages["modulo"]]))
 
         # clean up
         del unilen
@@ -2358,21 +2455,160 @@ class crshSession():
         del _tempPkgFileList
         del _tempPkgFilePath
 
+        # VERBOSE START #
+        st.verb("Loading and registring features...",l="cs.startup.loadfeatures")
+
         # use loadPackageConfig() to get the packageData and features
         packageConfigs,foundFeatures = loadPackageConfig(
             installedPackages = self.regionalGet("PackageList"),
-            defaultFeatures = {},
+            defaultFeatures = self.initDefaults["builtInPkgFeatures"],
             encoding = self.getEncoding()
         )
-
-        # load predefined like cmdlets
-        foundFeatures.update(self.initDefaults["builtInPkgFeatures"])
 
         # using the features load in the package featureData
         normFeatureDataAndReg(foundFeatures,self.storage.regFeature,self.initDefaults["allowedFeatureTypes"])
 
+        tempList = []    
+        for i in [list(i.keys()) for i in list(foundFeatures.values())]: tempList.extend(i)
+        unilen2 = len(tempList)
+        del tempList
+
+        # VERBOSE START #
+        st.verb("Loading package data... (Pkgs: {amnt}, Features: {amnt2})",l="cs.startup.loadpkgdata",ct={"amnt":self.tmpGet("amntPkgsToLoad"),"amnt2":unilen2})
+
+        # Fill in readerMangler kwargs
+        if self.flags.has("--fileless"):
+            _readerManglerFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
+            _readerManglerFileIsStream = True
+        else:
+            _readerManglerFile = self.getregister("set").getProperty("crsh","Packages.Readers.ReaderFile",skipTagMan=False)
+            if os.path.exists(_readerManglerFile) == False:
+                if os.path.splitext(_readerManglerFile)[1] == ".json":
+                    open(_readerManglerFile,'w',encoding=self.getEncoding()).write("{}")
+                else:
+                    open(_readerManglerFile,'w',encoding=self.getEncoding()).write("")
+            _readerManglerFileIsStream = False
+        self.initDefaults["builtInPkgFeatures"]["builtin"]["readers"]["manglerKwargs"] = {
+            "addMethod": addReader,
+            "readerFile": _readerManglerFile,
+            "readerFileEncoding": self.getEncoding(),
+            "readerFileIsStream": _readerManglerFileIsStream
+        }
+        
+        # Fill in langpackMangler kwargs
+        self.initDefaults["builtInPkgFeatures"]["builtin"]["langpack"]["manglerKwargs"] = {
+            "languageProvider": self.getregister("lng"),
+            "languagePath": self.regionalGet("LangPathObj"),
+            "mPackPath": self.regionalGet("mPackPath")
+        }
+
         # using the loaded features and packageconfigs load package data for the features
-        loadedFeatures = loadPackageFeatures(self.storage.getFeatures(),packageConfigs)
+        loadedFeatures = loadPackageFeatures(
+            loadedFeatures = self.storage.getFeatures(),
+            packageConfigs = packageConfigs,
+            maxRecursiveDepth = None,
+            travelSymlink = False,
+            defaultFeatureConfigType = "json",
+            mappingFileEncoding = self.getEncoding(),
+            preLoadedReaders = self.initDefaults["defaultReaders"],
+            preLoadedReadersType = "modulo",
+            preLoadedReadersFeature = "readers",
+            moduloPackagePath = self.regionalGet("mPackPath"),
+            legacyPackagePath = self.regionalGet("lPackPath")
+        )
+
+        # Filter cmdlets based on reader-settings
+        if loadedFeatures.get("readers"):
+            mergedDeffintions = {}
+            ## Get a list of al registered filetypes for their reader
+            assembledReaderTypes = {}
+            for i in list(loadedFeatures["readers"]["data"].values()):
+                for i2 in list(i.values()):
+                    assembledReaderTypes.update(i2)
+            del i,i2
+            ## Filter the list based on what types are already in settings (independent of os-selector-prefix)
+            settingsDeffinitions = self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Cmdlets",skipTagMan=True)
+            if self.flags.has("--reBuildSettingReaderTypes") == True:
+                for reader,types in settingsDeffinitions.items():
+                    # Make a list of types without os-selector-prefix
+                    cleanTypes = []
+                    for type_ in types:
+                        if "@" in type_: type_ = type_.split("@")[1]
+                        cleanTypes.append(type_)
+                    # Add the list for the reader and add the types from settings
+                    mergedDeffintions[reader] = types
+                    # Add the new types that wheren't found in the clean list
+                    if assembledReaderTypes.get(reader):
+                        for type_2 in assembledReaderTypes[reader]:
+                            if type_2 not in cleanTypes and type_2 not in types:
+                                mergedDeffintions[reader].extend(types)
+            else:
+                for reader,types in assembledReaderTypes.items():
+                    readerName = os.path.basename(reader)
+                    if not readerName in settingsDeffinitions.keys():
+                        mergedDeffintions[readerName] = types
+                    else:
+                        mergedDeffintions[readerName] = settingsDeffinitions[readerName]
+            ## Update settings with the merged data
+            self.getregister("set").chnProperty("crsh","Packages.AllowedFileTypes.Cmdlets",mergedDeffintions)
+        else:
+            mergedDeffintions = self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Cmdlets",skipTagMan=True)
+
+        ## Add the ReaderRegistry with the data from the above
+        self.regionalSet("ReaderRegistry",
+            toReaderFormat(
+                dictFromSettings = mergedDeffintions,
+                readerFile = _readerManglerFile,
+                encoding = self.getEncoding(),
+                isStream = _readerManglerFileIsStream
+            )
+        )
+        del _readerManglerFile,_readerManglerFileIsStream
+
+        # Filter out cmdlets not type-selected
+        for packageType,data1 in loadedFeatures["cmdlets"]["data"].items():
+            for package,data2 in data1.items():
+                for reader,cmdlets in data2.items():
+                    validatedCmdlets = []
+                    for cmdlet in cmdlets:
+                        fileExt = os.path.splitext(cmdlet)[1].lstrip(".")
+                        if fileExt in handleOSinExtensionsList(mergedDeffintions[reader]):
+                            validatedCmdlets.append(cmdlet)
+                    loadedFeatures["cmdlets"]["data"][packageType][package][reader] = validatedCmdlets
+
+        self.regionalSet("LoadedPackageData",loadedFeatures)
+        del mergedDeffintions,packageType,data1,package,data2,reader,cmdlets,validatedCmdlets,loadedFeatures
+
+        # VERBOSE START #
+        st.verb(f"Preparing for console...",l="cs.startup.preparing-console")
+
+        # Update the palette/mapping choices in settings
+        mappingPackages = [i for i in [list(i.keys())[0] if len(i.keys()) > 0 else None for i in list(self.regionalGet("LoadedPackageData")["mappings"]["data"].values())] if i != None]
+        palettePackages = [i for i in [list(i.keys())[0] if len(i.keys()) > 0 else None for i in list(self.regionalGet("LoadedPackageData")["palette"]["data"].values())] if i != None]
+        self.getregister("set").chnProperty("crsh","Packages.Formatting.Mappings._choices",mappingPackages)
+        self.getregister("set").chnProperty("crsh","Packages.Formatting.Palettes._choices",palettePackages)
+        
+        # Get selected palette/mapping and apply
+        selectedMapping = self.getregister("set").getProperty("crsh","Packages.Formatting.Mappings.Selected")
+        selectedPalette = self.getregister("set").getProperty("crsh","Packages.Formatting.Palettes.Selected")
+        map_of_mappings, map_of_palette = {}, {}
+        for p in list(self.regionalGet("LoadedPackageData")["mappings"]["data"].values()): map_of_mappings.update(p)
+        for p in list(self.regionalGet("LoadedPackageData")["palette"]["data"].values()): map_of_palette.update(p)
+        selectedMappingData = map_of_mappings.get(selectedMapping)
+        selectedPaletteData = map_of_palette.get(selectedPalette)
+        
+        # Apply to text
+        if selectedMappingData != None:
+            self.getregister("txt").customTags.update(selectedMappingData)
+        if selectedPaletteData != None:
+            self.getregister("txt").palette.update(selectedPaletteData)
+
+        _tempLng = self.getregister("lng")
+        if self.getregister("set").getProperty("crsh","Language.LoadSameSuffixedLangs",skipTagMan=True) == True:
+            _tempLng.loadSameSuffixedLanguages()
+            _tempLng.load()
+            self.getregister("set").chnProperty("crsh","Language.Loaded", _tempLng.languagePrios)
+        del _tempLng
 
         # [Finish up]
         # Set flag

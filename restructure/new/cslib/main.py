@@ -2610,6 +2610,8 @@ class crshSession():
             self.getregister("set").chnProperty("crsh","Language.Loaded", _tempLng.languagePrios)
         del _tempLng
 
+        # [Add the default user-vars to storage using self.userVarUpdate()]
+
         # [Finish up]
         # Set flag
         self.flags.enable("--haveBeenInited")

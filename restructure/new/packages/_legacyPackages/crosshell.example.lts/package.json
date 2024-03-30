@@ -1,7 +1,7 @@
 {
     "package": {
         "name": "example",
-        "version": "latest",
+        "version": "lts",
         "author": "crosshell"
     },
 

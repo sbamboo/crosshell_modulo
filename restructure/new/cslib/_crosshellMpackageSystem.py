@@ -10,6 +10,109 @@ from cslib.types import expectedList
 from cslib.piptools import fromPath
 from cslib.platformAndOS import handleOSinExtensionsList
 
+def idToDict(idstr) -> dict:
+    """
+    Parses: <feature>@<prefix>:<pkgAuthor>.<pkgName>.<pkgVersion>/<relativePath>
+    """
+    # preset
+    data = {
+        "feature": None,
+        "package": {
+            "author": None,
+            "name": None,
+            "version": None,
+            "prefix": None,
+            "id": None
+        },
+        "path": None
+    }
+    # set
+    idstr = idstr.lstrip(" ")
+    ## relpath
+    if idstr.startswith("/"):
+        data["path"] = idstr.replace("/","",1)
+    else:  
+        ## dupeID
+        if idstr.startswith("#"):
+            idstr = idstr.replace("#","",1)
+        elif "#" in idstr:
+            if idstr.split("#")[-1].isdigit():
+                data["package"]["id"] = idstr.split("#")[-1]
+                idstr = '#'.join(idstr.split("#")[:-1])
+        ## path
+        if "/" in idstr:
+            parts = idstr.split("/")
+            idstr = parts[0]
+            data["path"] = '/'.join(parts[1:])
+            if not data["path"].startswith("/"): data["path"] = "/" + data["path"]
+        ## feature
+        if idstr.startswith("@"):
+            idstr = idstr.replace("@","",1)
+        elif "@" in idstr:
+            data["feature"] = idstr.split("@")[0]
+            idstr = '@'.join(idstr.split("@")[1:])
+        ## prefix
+        if idstr.startswith(":"):
+            idstr = idstr.replace(":","",1)
+        elif ":" in idstr:
+            data["package"]["prefix"] = idstr.split(":")[0]
+            idstr = ':'.join(idstr.split(":")[1:])
+        ## details
+        if idstr.count(".") > 1:
+            parts = idstr.split(".")
+            data["package"]["author"] = parts[0]
+            parts.pop(0)
+            data["package"]["name"] = '.'.join(parts[:-1])
+            data["package"]["version"] = parts[-1]
+        elif "." in idstr:
+            data["package"]["name"] = '.'.join(idstr.split(".")[:-1])
+            data["package"]["version"] = idstr.split(".")[-1]
+        else:
+            data["package"]["name"] = idstr
+    # return
+    return data
+
+def toLeastInfoStr(gid,mgids) -> str:
+    names = []
+    versions = []
+    authors = []
+    prefixs = []
+    ids = []
+    for gid2 in mgids:
+        if gid2 != gid:
+            _t = idToDict(gid2)
+            if _t["package"]["name"] != None: names.append(_t["package"]["name"])
+            if _t["package"]["version"] != None: versions.append(_t["package"]["version"])
+            if _t["package"]["author"] != None: authors.append(_t["package"]["author"])
+            if _t["package"]["prefix"] != None: prefixs.append(_t["package"]["prefix"])
+            if _t["package"]["id"] != None: ids.append(_t["package"]["id"])
+    gid = idToDict(gid)
+    name_ = gid["package"]["name"]
+    version_ = gid["package"]["version"]
+    author_ = gid["package"]["author"]
+    prefix_ = gid["package"]["prefix"]
+    id_ = gid["package"]["id"]
+    path_ = gid["path"]
+    # made
+    if name_ in names:
+        if version_ in versions:
+            if author_ in authors:
+                if feature_ in features:
+                    if prefix_ in prefixs:
+                        least = feature_+"@"+prefix_+":"+author_+"."+name_+"."+version_+"#"+id_
+                    else:
+                        least = feature_+"@"+prefix_+":"+author_+"."+name_+"."+version_    
+                else:
+                    least = feature_+"@"+author_+"."+name_+"."+version_    
+            else:
+                least = author_+"."+name_+"."+version_    
+        else:
+            least = name_+"."+version_
+    else:
+        least = name_
+    # return
+    return least+path_
+
 def GetFilesByExt(path=str,extensions=list):
     """Cslib.CMPS: Retrives a list of files in a folder if the extension match a given list."""
     packageFiles = []
@@ -73,13 +176,20 @@ def _getNameOfModuloPackage(packageConfigFile=str,encoding="utf-8",fileIsStream=
         configFilepath = packageConfigFile
     dataRaw = _fileHandler(filesys.getFileExtension(configFilepath),"get",packageConfigFile,encoding=encoding,fileIsStream=fileIsStream)
     name = os.path.basename(os.path.dirname(configFilepath))
+    gidd = idToDict(name)
     if dataRaw.get("package") != None:
         if dataRaw["package"].get("name") != None:
-            name = dataRaw["package"]["name"]
-        if dataRaw["package"].get("author") != None:
-            name = dataRaw["package"]["author"].lower() + "." + name
-        if dataRaw["package"].get("version") != None:
-            name = name + "." + dataRaw["package"]["version"].lower()
+            gidd["package"]["name"] = dataRaw["package"]["name"]
+        elif dataRaw["package"].get("author") != None:
+            gidd["package"]["author"] = dataRaw["package"]["author"].lower() + "." + name
+        elif dataRaw["package"].get("version") != None:
+            gidd["package"]["version"] = name + "." + dataRaw["package"]["version"].lower()
+    if gidd["package"]["name"] != None:
+        name = gidd["package"]["name"]
+    if gidd["package"]["author"] != None:
+        name = gidd["package"]["author"]+"."+name
+    if gidd["package"]["version"] != None:
+        name = name+"."+gidd["package"]["version"]
     return name
 
 def _getInstalledModuloPackages(path=str, exclusionPathList=list, travelSymlink=False, encoding="utf-8"):

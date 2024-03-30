@@ -1865,7 +1865,10 @@ class crshSession():
                     "legacy_addr": "/",
                     "recursive": True,
                     "mangler": cmdletMangler,
-                    "manglerKwargs": {}
+                    "manglerKwargs": {
+                        "lPackPath": None,
+                        "mPackPath": None
+                    }
                 },
                 "mappings": {
                     "registeredBy": "builtin",
@@ -1911,6 +1914,40 @@ class crshSession():
 
         self.initDefaults["defaultReaders"] = {
             "INTERNAL_PYTHON": ["py"]
+        }
+
+        self.initDefaults["cmdletDataSchema"] = {
+            "format": 1,
+            "type": "file",
+            "name": "CMDLET_NAME",
+            "data": {
+                "desc": {
+                    "type": "raw",
+                    "content": ""
+                },
+                "aliases": [],
+                "args": {},
+                "encoding": "CMDLET_ENCODING",
+                "options": {
+                    "blockCommonParams": False,
+                    "argparseHelp": False,
+                    "restrictionMode": "Normal",
+                    "readerReturnVars": False
+                },
+                "extras": {}
+            },
+            "fending": "CMDLET_FENDING",
+            "filename": "CMDLET_FILENAME",
+            "path": "CMDLET_PATH",
+            "parentPackage": {
+                "name": "CMDLET_PARENTPACKAGE_NAME",
+                "shortname": "CMDLET_PARENTPACKAGE_SHORTNAME",
+                "type": "CMDLET_PARENTPACKAGE_TYPE",
+                "rootPath": "CMDLET_PARENTPACKAGE_ROOTPATH"
+            },
+            "readAs": "unset",
+            "dupeID": -1,
+            "index": -1
         }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
@@ -2476,7 +2513,8 @@ class crshSession():
         # VERBOSE START #
         st.verb("Loading package data... (Pkgs: {amnt}, Features: {amnt2})",l="cs.startup.loadpkgdata",ct={"amnt":self.tmpGet("amntPkgsToLoad"),"amnt2":unilen2})
 
-        # Fill in readerMangler kwargs
+        # [Fill in mangler kwargs]
+        ## reader
         if self.flags.has("--fileless"):
             _readerManglerFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
             _readerManglerFileIsStream = True
@@ -2494,12 +2532,18 @@ class crshSession():
             "readerFileEncoding": self.getEncoding(),
             "readerFileIsStream": _readerManglerFileIsStream
         }
-        
-        # Fill in langpackMangler kwargs
+        ## langpack
         self.initDefaults["builtInPkgFeatures"]["builtin"]["langpack"]["manglerKwargs"] = {
             "languageProvider": self.getregister("lng"),
             "languagePath": self.regionalGet("LangPathObj"),
             "mPackPath": self.regionalGet("mPackPath")
+        }
+        ## cmdlets
+        self.initDefaults["builtInPkgFeatures"]["builtin"]["cmdlets"]["manglerKwargs"] = {
+            "mPackPath": self.regionalGet("mPackPath"),
+            "lPackPath": self.regionalGet("lPackPath"),
+            "cmdletStdEncoding": self.getEncoding(),
+            "cmdletSchema": self.initDefaults["cmdletDataSchema"]
         }
 
         # using the loaded features and packageconfigs load package data for the features

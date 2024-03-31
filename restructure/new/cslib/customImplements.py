@@ -38,7 +38,7 @@ def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=s
                 languageProvider.populateList()
     return {"langfiles":languageFiles}
 
-def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict) -> dict:
+def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"]) -> dict:
     rearrangedData = {}
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}
@@ -100,7 +100,6 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
     del knowBase_duplicateAmnt
     # Load cmdletdata from configs
     ## load from package.json
-    allowedPackageConfigTypes = ["json"]
     for gid,data1 in rearrangedData.items():
         # Find possible
         packageJsonFilePath = None
@@ -144,7 +143,11 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 rearrangedData[gid]["data"]["extras"].update(extras)
                 rearrangedData[gid]["readAs"] = mode
         ## load from <cmdlet_filename>.<allowedConfigFileType>, fix so extra tags that are under options in schema gets placed under options, also handle extra tags
-        print(os.path.dirname(rearrangedData[gid]["path"]))
+        basePathname = os.path.join(os.path.dirname(rearrangedData[gid]["path"]),os.path.splitext(rearrangedData[gid]["filename"])[0])
+        for type_ in allowedCmdletConfigTypes:
+            possibleCmdletConfigFilePath = basePathname + "." + type_
+            if os.path.exists(possibleCmdletConfigFilePath):
+                
         ## load from .<cmdlet_filename> (if "rudamentary-dotfiles" are enabled), fix so extra tags that are under options in schema gets placed under options, also handle extra tags
         # TODO:^
         ## Fix invalid strings, and replace paths with placeholders

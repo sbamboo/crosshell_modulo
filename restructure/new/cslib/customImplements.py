@@ -143,20 +143,20 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                     rearrangedData[gid]["data"] = merge_dicts(rearrangedData[gid]["data"],cmdlets[filename_d])
                 rearrangedData[gid]["data"]["extras"].update(extras)
                 rearrangedData[gid]["readAs"] = mode
-    ## load from <cmdlet_filename>.<allowedConfigFileType>, fix so extra tags that are under options in schema gets placed under options, also handle extra tags
-    # TODO:^
-    ## load from .<cmdlet_filename> (if "rudamentary-dotfiles" are enabled), fix so extra tags that are under options in schema gets placed under options, also handle extra tags
-    # TODO:^
-    ## fix invalid strings
-    if type(rearrangedData[gid]["data"]["desc"]) != dict:
-        rearrangedData[gid]["data"]["desc"] = {
-            "type": "raw",
-            "content": rearrangedData[gid]["data"]["desc"]
-        }
-    v = rearrangedData[gid]["data"]["args"]
-    if type(rearrangedData[gid]["data"]["args"]) != dict:
-        rearrangedData[gid]["data"]["args"] = {}
-        for arg in v.split(" "):
-            rearrangedData[gid]["data"]["args"][arg] = {}
+        ## load from <cmdlet_filename>.<allowedConfigFileType>, fix so extra tags that are under options in schema gets placed under options, also handle extra tags
+        print(os.path.dirname(rearrangedData[gid]["path"]))
+        ## load from .<cmdlet_filename> (if "rudamentary-dotfiles" are enabled), fix so extra tags that are under options in schema gets placed under options, also handle extra tags
+        # TODO:^
+        ## Fix invalid strings, and replace paths with placeholders
+        if type(rearrangedData[gid]["data"]["desc"]) != dict:
+            rearrangedData[gid]["data"]["desc"] = {
+                "type": "raw",
+                "content": rearrangedData[gid]["data"]["desc"]
+            }
+        v = rearrangedData[gid]["data"]["args"]
+        if type(rearrangedData[gid]["data"]["args"]) != dict:
+            rearrangedData[gid]["data"]["args"] = {}
+            for arg in v.split(" "):
+                rearrangedData[gid]["data"]["args"][arg] = {}
     ## return
     return data

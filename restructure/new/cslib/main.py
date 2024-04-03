@@ -2639,6 +2639,7 @@ class crshSession():
         del _tempLng
 
         # [Add the default user-vars to storage using self.userVarUpdate()]
+        #TODO:^
 
         # [Finish up]
         # Set flag

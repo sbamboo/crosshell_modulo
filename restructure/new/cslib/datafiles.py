@@ -2,6 +2,8 @@ import json, re, os
 from cslib.piptools import intpip
 from cslib.commentParsing import _stripJsonComments, extractComments_v2, injectComments_v2, extractComments_newlineSupport, injectComments_newlineSupport
 from cslib.pathtools import normPathSep,normPathSepObj
+from cslib.commentParsing import finBet,finBetWl
+import yaml
 
 try:
     import yaml
@@ -373,7 +375,59 @@ def dict_to_config(config_dict=dict) -> str:
         config_content += f"{key}={value}\n"
     return config_content
 
-def rudaDotfile_to_dict(content,commentChars="#",sectionChars="≈≈",headingChars="[]"):
+# DOTFILE
+def countIndent(s):
+    spaceCount = 0
+    for char in s:
+        if char == ' ':
+            spaceCount += 1
+        elif char == '\t':
+            # Assuming each tab is equivalent to four spaces
+            spaceCount += 4
+        else:
+            # If a non-space or non-tab character is encountered, stop counting
+            break
+    return spaceCount
+
+def revStackObj(obj,mlStrStackFormat="§STACK:MLSTR:%§",jsonStackFormat="§STACK:JSON:%§",mlStrStack=list,jsonStack=list,mlP='@"',mlS='"@',jsP=None,jsS=None):
+    if type(obj) == dict:
+        for k,v in obj.items():
+            obj[revStackObj(k,mlStrStackFormat,jsonStackFormat,mlStrStack,jsonStack,mlP,mlS,jsP,jsS)] = revStackObj(v,mlStrStackFormat,jsonStackFormat,mlStrStack,jsonStack,mlP,mlS,jsP,jsS)
+    elif type(obj) in [list,tuple]:
+        for i in range(len(obj)):
+            obj[i] = revStackObj(obj[i],mlStrStackFormat,jsonStackFormat,mlStrStack,jsonStack,mlP,mlS,jsP,jsS)
+    elif type(obj) == str:
+        if ':'.join(obj.strip().rstrip("§").split(":")[:-1]) == jsonStackFormat.split("%")[0].rstrip(":"):
+            i = int(obj.strip().rstrip("§").split(":")[-1])
+            obj = json.loads(jsonStack[i].replace("§nl§","\n"))
+        else:
+            for i in range(len(mlStrStack)):
+                nv = mlStrStack[i].replace("§nl§","\n")
+                if mlP != None: nv = nv.lstrip(mlP)
+                if mlS != None: nv = nv.rstrip(mlS)
+                obj = obj.replace( mlStrStackFormat.replace("%",str(i)), nv, 1 )
+            for i in range(len(jsonStack)):
+                nv = jsonStack[i].replace("§nl§","\n")
+                if jsP != None: nv = nv.lstrip(jsP)
+                if jsS != None: nv = nv.rstrip(jsS)
+                obj = obj.replace( jsonStackFormat.replace("%",str(i)), nv, 1 )
+    return obj
+
+def nameSpaceHandler(data=dict):
+    nameSpaceData = {
+        "Default": {}
+    }
+    for k,v in data.items():
+        if ":" in k:
+            nameSpace = k.split(":")[0]
+            k = ":".join(k.split(":")[1:])
+            if nameSpaceData.get(nameSpace) == None: nameSpaceData[nameSpace] = {}
+            nameSpaceData[nameSpace][k] = v
+        else:
+            nameSpaceData["Default"][k] = v
+    return nameSpaceData 
+
+def rudaDotfile_to_dict(content,commentChars="#",escapor="\\",sectionChars="≈≈",headingChars="[]"):
     """
     Converts rudamentary-dotfile formats to a dictionary handling comments, namespaces and headed-sections.
     Takes:
@@ -382,62 +436,86 @@ def rudaDotfile_to_dict(content,commentChars="#",sectionChars="≈≈",headingCh
       sectionChars: str, (1 or 2, first char is prefix, second is suffix)
       headingChars: str, (1 or 2, first char is prefix, second is suffix)
 
-    Format:
-    ```
-    # Comments prefixed like this
+    [Format]:
 
-    ≈≈≈≈≈≈≈≈[Section-Name]≈≈≈≈≈≈≈≈
+        # Comments prefixed like this
 
-    The amount of ≈ dosen't matter.
+        ≈≈≈≈≈≈≈≈[Section-Name]≈≈≈≈≈≈≈≈
 
-    <Key> = <Value>
-          /
-    <NameSpace>:<Key> = <Value>
+        The amount of ≈ dosen't matter.
 
-    <Key> = {<JSON_W_LINES>}
-          /
-    <NameSpace>:<Key> = {<JSON_W_LINES>}
+        <Key> = <Value>
+            /
+        <NameSpace>:<Key> = <Value>
+
+        <Key> = {<JSON_W_LINES>}
+            /
+        <NameSpace>:<Key> = {<JSON_W_LINES>}
+        
+        <Key> = [...]
+            /
+        <NameSpace>:<Key> = [...]
+
+        <Key> = @"<MultiLineString>"@
+
+        Indentation Is Ignored unless inside multilinestring.
+        
+
+    [Example]:
     
-    <Key> = [...]
-          /
-    <NameSpace>:<Key> = [...]
+        # This is an example
+        ≈[Conf.DotFile]≈ # Note the use of "Conf." this will change the syntax of bellow to be <key>:<value> instead of using =
+        Format: 1
+        Author: SimonKalmiClaesson
+        Description: # Note that the bellow code uses indents to determine "parent/key" this is only when section is prefixed with "Conf."
+        This file contains some example rudamentary-dotfile code.
+        Wabba dabba do!
+        
+        # Lets add a section with the name raw that sets the "raw" variable under the "autofill" namespace
+        ≈[Raw]≈
+        autofill:raw = {
+            "jsonKey": "jsonVal"
+        }
 
-    <Key> = @"<MultiLineString>"@
+        ≈[CustomSection]≈
+        CustomVar = CustomVal
+        CustomNameSpace:CustomVar = CustomVal
 
-    Indentation Is Ignored unless inside multilinestring.
-    ```
-    Example:
-    ```
-    # This is an example
-    ≈[Conf.DotFile]≈ # Note the use of "Conf." this will change the syntax of bellow to be <key>:<value> instead of using =
-    Format: 1
-    Author: SimonKalmiClaesson
-    Description: # Note that the bellow code uses indents to determine "parent/key" this is only when section is prefixed with "Conf."
-      This file contains some example rudamentary-dotfile code.
-      Wabba dabba do!
-    
-    # Lets add a section with the name raw that sets the "raw" variable under the "autofill" namespace
-    ≈[Raw]≈
-    autofill:raw = {
-        "jsonKey": "jsonVal"
-    }
 
-    ≈[CustomSection]≈
-    CustomVar = CustomVal
-    CustomNameSpace:CustomVar = CustomVal
+    [ReturnedAs]:
+        {
+          "<Section>": {
+            "<NameSpace>": {
+              "<VariableName>": "<VariableValue>"
+            }
+          }
+        }
 
-    ```
+        'Default' is a prefilled section and namespace.
     """
     # Strip comments
     commentStrippedLines = []
+    if len(commentChars[0]) > 1:
+        st = commentChars[0]
+        en = commentChars[1]
+    else:
+        st = commentChars[0] 
+        en = None
     for line in content.split("\n"):
-        if len(commentChars[0]) > 1:
-            st = commentChars[0]
-            en = commentChars[1]
+        line = line.replace(escapor+st,st+"STPL"+st)
+        if en != None: line = line.replace(escapor+en,en+"ENPL"+en)
+        if en != None:
             # parse
             if st in line and en in line:
-                line = line.split(commentChars[0])[0]
-            if not line.lstrip().startswith(commentChars[0]):
+                prem = finBet(line,st,en)
+                line = line.replace(prem,"")
+                if line.strip() != "":
+                    line = line.replace(st+"STPL"+st,escapor+st)
+                    line.replace(en+"ENPL"+en,escapor+en)
+                    commentStrippedLines.append(line)
+            else:
+                line = line.replace(st+"STPL"+st,escapor+st)
+                line.replace(en+"ENPL"+en,escapor+en)
                 commentStrippedLines.append(line)
         else:
             st = commentChars[0]
@@ -445,10 +523,100 @@ def rudaDotfile_to_dict(content,commentChars="#",sectionChars="≈≈",headingCh
             if st in line:
                 line = line.split(st)[0]
             if not line.lstrip().startswith(st):
+                line = line.replace(st+"STPL"+st,escapor+st)
                 commentStrippedLines.append(line)
     # Figure out sections
     sectionedLines = {
-        "Default": []
+        "Default": {
+            "isConf": False,
+            "lines": [],
+            "data": {}
+        }
     }
-    if line
-    print(sectionedLines)
+    if len(sectionChars) > 1:
+        st = sectionChars[0]
+        en = sectionChars[1]
+    else:
+        st = sectionChars[0]
+        en = None
+    if len(headingChars) > 1:
+        st2 = headingChars[0]
+        en2 = headingChars[1]
+    else:
+        st2 = headingChars[0]
+        en2 = None
+    inSection = "Default"
+    stack_mlstr = []
+    stack_json = []
+    commentStrippedLines_,stack_ = finBetWl('§nl§'.join(commentStrippedLines), '@"','"@', "§STACK:MLSTR:%§",0)
+    commentStrippedLines = commentStrippedLines_.split("§nl§")
+    stack_mlstr.extend(stack_)
+    commentStrippedLines_,stack_ = finBetWl('§nl§'.join(commentStrippedLines), '{','}', "§STACK:JSON:%§",0)
+    commentStrippedLines = commentStrippedLines_.split("§nl§")
+    stack_json.extend(stack_)
+    for line in commentStrippedLines:
+        sectionName = None
+        if en != None:
+            if line.lstrip().startswith(st) and line.rstrip().endswith(en):
+                if en2 != None:
+                    if st2 in line and en2 in line:
+                        sectionName = finBet(line,st2,en2).lstrip(st2).rstrip(en2)
+                else:
+                    if st2 in line:
+                        sectionName = en.join(st2.join(line.split(st2)[1:]).split(en)[:-1])
+                if sectionName != None:
+                    inSection = sectionName
+            else:
+                if inSection != None:
+                    if inSection.startswith("Conf."):
+                        isConf = True
+                        inSection = inSection.replace("Conf.","",1)
+                    elif inSection.startswith("conf."):
+                        isConf = True
+                        inSection = inSection.replace("conf.","",1)
+                    else: isConf = False
+                    if sectionedLines.get(inSection) == None: sectionedLines[inSection] = {
+                        "isConf": isConf,
+                        "lines": [],
+                        "data": {}
+                    }
+                    sectionedLines[inSection]["lines"].append(line)
+        else:
+            if line.lstrip().startswith(st):
+                if en2 != None:
+                    if st2 in line and en2 in line:
+                        sectionName = finBet(line,st2,en2).lstrip(st2).rstrip(en2)
+                else:
+                    if st2 in line:
+                        sectionName = st2.join(line.split(st2)[1:])
+            else:
+                if inSection != None:
+                    if inSection.startswith("Conf."):
+                        isConf = True
+                        inSection = inSection.replace("Conf.","",1)
+                    elif inSection.startswith("conf."):
+                        isConf = True
+                        inSection = inSection.replace("conf.","",1)
+                    else: isConf = False
+                    if sectionedLines.get(inSection) == None: sectionedLines[inSection] = {
+                        "isConf": isConf,
+                        "lines": [],
+                        "data": {}
+                    }
+                    sectionedLines[inSection].append(line)
+    # Parse the lines
+    for sName,section in sectionedLines.items():
+        lines = section["lines"]
+        ## isConf == True
+        if section["isConf"] == True:
+           sectionedLines[sName]["data"] = yaml.safe_load('\n'.join(lines))
+        ## isConf == False
+        if section["isConf"] == False:
+            sectionedLines[sName]["data"] = config_to_dict('\n'.join(lines))
+    # Re-replace Stack items
+    sectionedLines = revStackObj( sectionedLines, "§STACK:MLSTR:%§", "§STACK:JSON:%§", stack_mlstr, stack_json )
+    # Parse namespaces
+    parsedData = {}
+    for sName,section in sectionedLines.items():
+        parsedData[sName] = nameSpaceHandler(sectionedLines[sName]["data"])
+    return parsedData

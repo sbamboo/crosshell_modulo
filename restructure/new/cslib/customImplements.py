@@ -39,6 +39,7 @@ def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=s
     return {"langfiles":languageFiles}
 
 def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"],enableParsingOfRudamentaryDotFiles=False,dotFileEncoding="utf-8") -> dict:
+    #TODO: Make it so you can disable/enable both config files and dotfiles in package.json as a performace saver
     rearrangedData = {}
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}
@@ -183,7 +184,53 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
             basePathname = os.path.dirname(rearrangedData[gid]["path"])
             possibleCmdletDotfileFilePath = os.path.join(basePathname,"."+os.path.splitext(rearrangedData[gid]["filename"])[0])
             if os.path.exists(possibleCmdletDotfileFilePath):
-                rudaDotfile_to_dict(open(possibleCmdletDotfileFilePath,'r',encoding=dotFileEncoding).read())
+                rudaData = rudaDotfile_to_dict(open(possibleCmdletDotfileFilePath,'r',encoding=dotFileEncoding).read())
+                selSection = "Default"
+                if rudaData.get("Cmdlet") != None: selSection = "Cmdlet"
+                # set
+                newData = rudaData.get(selSection)
+                del rudaData[selSection]
+                # Mapping
+                if newData.get("Overide") != None:
+                    # Override:path
+                    if newData["Override"].get("path") != None:
+                        if mode == "modulo.old":
+                            newData["pathoverwrite"] = newData["Override"]["path"]
+                        else:
+                            newData["override_path"] = newData["Override"]["path"]
+                    # Override:name
+                    if newData["Override"].get("name") != None:
+                        if mode == "modulo.old":
+                            newData["nameoverwrite"] = newData["Override"]["name"]
+                        else:
+                            newData["override_name"] = newData["Override"]["name"]
+                    # Override:id
+                    if newData["Override"].get("id") != None:
+                        if mode == "modulo.old":
+                            newData["idoverwrite"] = newData["Override"]["id"]
+                        else:
+                            newData["override_id"] = newData["Override"]["id"]
+                extras = {}
+                newData2 = {}
+                currentKeys = list(newData.keys())
+                for k in currentKeys:
+                    v = newData[k]
+                    allowed_keys = list(rearrangedData[gid]["data"].keys())
+                    allowed_keys.extend(sumAllowedKeys)
+                    allowed_keys.extend(sumAllowedKeys2)
+                    if k == "blockCommonparams":
+                        if type(newData2.get("options")) != dict: newData2["Options"] = {}
+                        newData2["Options"]["blockCommonParams"] = v
+                        del newData[k]
+                    elif k not in allowed_keys:
+                        extras[k] = v
+                        del newData[k]
+                    else:
+                        newData2[k] = v
+                newData2["extras"] = extras
+                newData2["extras"]["dotfileRaw"] = rudaData
+                rearrangedData[gid]["data"].update(newData2)
+                del newData,extras,currentKeys,newData2
         ## Fix invalid strings, and replace paths with placeholders
         if type(rearrangedData[gid]["data"]["desc"]) != dict:
             rearrangedData[gid]["data"]["desc"] = {

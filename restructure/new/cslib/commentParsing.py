@@ -507,3 +507,21 @@ def injectComments_v2(lines,extractedLines, attemptFuzzy=False, samelineSpacer="
             else:
                 lines = injectStringAtIndex_list(lines,lineIndex,comment)
     return '\n'.join(lines).replace("§newline§\n","\n").replace("\u00a7newline\u00a7\n","\n")
+
+def finBet(c, sd, ed):
+    pattern = re.compile(re.escape(sd) + r'((?:[^' + re.escape(sd+ed) + r']*' + re.escape(sd) + r'[^' + re.escape(sd+ed) + r']*' + re.escape(ed) + r')*[^' + re.escape(sd+ed) + r']*?)' + re.escape(ed))
+    match = pattern.search(c)
+    if match:
+        return match.group(0)
+    else:
+        return None
+
+def finBetWl(c, sd, ed, stackPlaceholder="§STACK:%§",startOnIndex=0):
+    matches = []
+    def replace(match):
+        nonlocal matches, stackPlaceholder, startOnIndex
+        matches.append(match.group(0))
+        return stackPlaceholder.replace("%",str(len(matches)-1+startOnIndex))
+    pattern = re.compile(re.escape(sd) + r'((?:[^' + re.escape(sd+ed) + r']*' + re.escape(sd) + r'[^' + re.escape(sd+ed) + r']*' + re.escape(ed) + r')*[^' + re.escape(sd+ed) + r']*?)' + re.escape(ed))
+    modified_text = pattern.sub(replace, c)
+    return modified_text, matches

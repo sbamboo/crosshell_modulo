@@ -7,19 +7,11 @@ crsh:
   Formats:
     DefaultEncoding: utf-8
   Version:
-    VerFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
     FileFormatVer: '1'
+    VerFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
   Parse:
     Text:
       Webcolors: true
-  Language:
-    Loaded:
-      '1': en-us
-    _choices: []
-    DefaultList: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
-    ListFormat: json
-    LangFormat: json
-    LoadSameSuffixedLangs: true
   conUtilsConfig:
     ask: true
     defW: 120
@@ -52,8 +44,6 @@ crsh:
         Config:
         - cfg
         - config
-    Readers:
-      ReaderFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
     Formatting:
       Mappings:
         Selected: null
@@ -63,7 +53,9 @@ crsh:
         Selected: null
         _choices: []
     RudamentaryDotFiles:
-      Enable: true
+      Enable: false
+    Readers:
+      ReaderFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
   CGTS:
     ANSI_Hex_Palette:
       '30': f#000000
@@ -99,5 +91,13 @@ crsh:
       '106': b#55FFFF
       '107': b#FFFFFF
     CustomMappings: {}
+  Language:
+    Loaded:
+      '1': en-us
+    _choices: []
+    DefaultList: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
+    ListFormat: json
+    LangFormat: json
+    LoadSameSuffixedLangs: true
 crsh_debugger:
   Scope: error

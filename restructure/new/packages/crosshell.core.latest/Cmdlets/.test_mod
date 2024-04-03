@@ -1,8 +1,8 @@
 # This is an example
-≈[Conf.DotFile]≈ # Note the use of "Conf." this will change the syntax of bellow to be <key>:<value> instead of using =
+≈[Conf.DotFile]≈
 Format: 1
 Author: SimonKalmiClaesson
-Description: # Note that the bellow code uses indents to determine "parent/key" this is only when section is prefixed with "Conf."
+Description:
   This file contains some example rudamentary-dotfile code.
   Wabba dabba do!
 

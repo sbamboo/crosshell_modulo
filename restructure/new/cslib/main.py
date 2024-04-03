@@ -668,11 +668,13 @@ def ingestDefaults(defaultsFile,encoding="utf-8",instanceMapping=dict):
                                 settV2 = getKeyPath(_temp,settK2)
                                 settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
                                 #instanceMapping[file]["instance"].addProperty(module,settK,settV2)
-                                _temp = setKeyPath(_temp, settK, settV2)
+                                if getKeyPath(_temp, settK) == None:
+                                    _temp = setKeyPath(_temp, settK, settV2)
                     else:
                         settV = recursiveMultipleReplacementTagWrapper(settV,instanceMapping[file]["tags"])
                         #instanceMapping[file]["instance"].addProperty(module,settK,settV)
-                        _temp = setKeyPath(_temp, settK, settV)
+                        if getKeyPath(_temp, settK) == None:
+                            _temp = setKeyPath(_temp, settK, settV)
                 instanceMapping[file]["instance"].set(module,_temp)
 def ingestDefaults_fd(defaults=dict,instanceMapping=dict):
     for file in defaults.keys():
@@ -691,11 +693,15 @@ def ingestDefaults_fd(defaults=dict,instanceMapping=dict):
                                 settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
                                 settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
                                 #instanceMapping[file]["instance"].addProperty(module,settK,settV2)
-                                _temp = setKeyPath(_temp, settK, settV2)
+                                _current = getKeyPath(_temp, settK)
+                                if _current == None:
+                                    _temp = setKeyPath(_temp, settK, settV2)
                     else:
                         settV = recursiveMultipleReplacementTagWrapper(settV,instanceMapping[file]["tags"])
                         #instanceMapping[file]["instance"].addProperty(module,settK,settV)
-                        _temp = setKeyPath(_temp, settK, settV)
+                        _current = getKeyPath(_temp, settK)
+                        if _current == None:
+                            _temp = setKeyPath(_temp, settK, settV)
                 instanceMapping[file]["instance"].set(module,_temp)
 
 def prefixAnyTags(string_with_tags,prefix):
@@ -1750,6 +1756,9 @@ class crshSession():
                     "Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON": ["py"],
                     "Packages.AllowedFileTypes.Packages.Modulo": ["mpackage","mpack","csmpack"],
                     "Packages.AllowedFileTypes.Packages.Legacy": ["package","pack","cspack"],
+                    "Packages.AllowedFileTypes.Config.Package": ["json"],
+                    "Packages.AllowedFileTypes.Config.Config": ["cfg","config"],
+                    "Packages.RudamentaryDotFiles.Enable": False,
                     "Packages.Readers.ReaderFile": "{CS_ReaderListFile}",
                     "Packages.Formatting.Mappings.Selected": None,
                     "Packages.Formatting.Mappings._choices": [],
@@ -1831,7 +1840,13 @@ class crshSession():
                     "mangler": cmdletMangler,
                     "manglerKwargs": {
                         "lPackPath": None,
-                        "mPackPath": None
+                        "mPackPath": None,
+                        "cmdletStdEncoding": None,
+                        "cmdletSchema": None,
+                        "allowedPackageConfigTypes": None,
+                        "allowedCmdletConfigTypes": None,
+                        "enableParsingOfRudamentaryDotFiles": None,
+                        "dotFileEncoding": None
                     }
                 },
                 "mappings": {
@@ -2508,7 +2523,11 @@ class crshSession():
             "mPackPath": self.regionalGet("mPackPath"),
             "lPackPath": self.regionalGet("lPackPath"),
             "cmdletStdEncoding": self.getEncoding(),
-            "cmdletSchema": self.initDefaults["cmdletDataSchema"]
+            "cmdletSchema": self.initDefaults["cmdletDataSchema"],
+            "allowedPackageConfigTypes": self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Config.Package"),
+            "allowedCmdletConfigTypes": self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Config.Config"),
+            "enableParsingOfRudamentaryDotFiles": self.getregister("set").getProperty("crsh","Packages.RudamentaryDotFiles.Enable"),
+            "dotFileEncoding": self.getEncoding()
         }
 
         # using the loaded features and packageconfigs load package data for the features

@@ -383,7 +383,72 @@ def rudaDotfile_to_dict(content,commentChars="#",sectionChars="≈≈",headingCh
       headingChars: str, (1 or 2, first char is prefix, second is suffix)
 
     Format:
+    ```
     # Comments prefixed like this
-    # 
+
+    ≈≈≈≈≈≈≈≈[Section-Name]≈≈≈≈≈≈≈≈
+
+    The amount of ≈ dosen't matter.
+
+    <Key> = <Value>
+          /
+    <NameSpace>:<Key> = <Value>
+
+    <Key> = {<JSON_W_LINES>}
+          /
+    <NameSpace>:<Key> = {<JSON_W_LINES>}
+    
+    <Key> = [...]
+          /
+    <NameSpace>:<Key> = [...]
+
+    <Key> = @"<MultiLineString>"@
+
+    Indentation Is Ignored unless inside multilinestring.
+    ```
+    Example:
+    ```
+    # This is an example
+    ≈[Conf.DotFile]≈ # Note the use of "Conf." this will change the syntax of bellow to be <key>:<value> instead of using =
+    Format: 1
+    Author: SimonKalmiClaesson
+    Description: # Note that the bellow code uses indents to determine "parent/key" this is only when section is prefixed with "Conf."
+      This file contains some example rudamentary-dotfile code.
+      Wabba dabba do!
+    
+    # Lets add a section with the name raw that sets the "raw" variable under the "autofill" namespace
+    ≈[Raw]≈
+    autofill:raw = {
+        "jsonKey": "jsonVal"
+    }
+
+    ≈[CustomSection]≈
+    CustomVar = CustomVal
+    CustomNameSpace:CustomVar = CustomVal
+
+    ```
     """
-    pass
+    # Strip comments
+    commentStrippedLines = []
+    for line in content.split("\n"):
+        if len(commentChars[0]) > 1:
+            st = commentChars[0]
+            en = commentChars[1]
+            # parse
+            if st in line and en in line:
+                line = line.split(commentChars[0])[0]
+            if not line.lstrip().startswith(commentChars[0]):
+                commentStrippedLines.append(line)
+        else:
+            st = commentChars[0]
+            # parse
+            if st in line:
+                line = line.split(st)[0]
+            if not line.lstrip().startswith(st):
+                commentStrippedLines.append(line)
+    # Figure out sections
+    sectionedLines = {
+        "Default": []
+    }
+    if line
+    print(sectionedLines)

@@ -81,6 +81,8 @@ class tagSubstitionManager():
             for i,v in enumerate(data):
                 data[i] = self.evalData(v,extraSubstTags)
             return data
+        else:
+            return data
 
 class pathTagManager(tagSubstitionManager):
     def __init__(self,defaultSubsttags=dict):

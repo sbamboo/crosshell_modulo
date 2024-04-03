@@ -46,6 +46,12 @@ crsh:
         - package
         - pack
         - cspack
+      Config:
+        Package:
+        - json
+        Config:
+        - cfg
+        - config
     Readers:
       ReaderFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
     Formatting:
@@ -56,6 +62,8 @@ crsh:
       Palettes:
         Selected: null
         _choices: []
+    RudamentaryDotFiles:
+      Enable: true
   CGTS:
     ANSI_Hex_Palette:
       '30': f#000000

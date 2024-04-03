@@ -1,8 +1,8 @@
 import os
 from cslib.pathtools import normPathSep
 from cslib.types import picklePrioCopy, merge_dicts
-from cslib.datafiles import _fileHandler,config_to_dict
-from cslib._crosshellMpackageSystem import idToDict, toLeastInfoStr
+from cslib.datafiles import _fileHandler,config_to_dict,rudaDotfile_to_dict
+from cslib._crosshellMpackageSystem import toLeastInfoStr
 
 # FeatureManglers
 def readerMangler(data=dict,addMethod=None,readerFile=None,readerFileEncoding="utf-8",readerFileIsStream=False) -> dict:
@@ -38,7 +38,7 @@ def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=s
                 languageProvider.populateList()
     return {"langfiles":languageFiles}
 
-def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"]) -> dict:
+def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"],enableParsingOfRudamentaryDotFiles=False,dotFileEncoding="utf-8") -> dict:
     rearrangedData = {}
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}
@@ -179,7 +179,11 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                     newData["args"] = conf_data["paramhelp"]
                 rearrangedData[gid]["data"].update(newData)
         ## load from .<cmdlet_filename> (if "rudamentary-dotfiles" are enabled), fix so extra tags that are under options in schema gets placed under options, also handle extra tags
-        # TODO:^
+        if enableParsingOfRudamentaryDotFiles == True:
+            basePathname = os.path.dirname(rearrangedData[gid]["path"])
+            possibleCmdletDotfileFilePath = os.path.join(basePathname,"."+os.path.splitext(rearrangedData[gid]["filename"])[0])
+            if os.path.exists(possibleCmdletDotfileFilePath):
+                rudaDotfile_to_dict(open(possibleCmdletDotfileFilePath,'r',encoding=dotFileEncoding).read())
         ## Fix invalid strings, and replace paths with placeholders
         if type(rearrangedData[gid]["data"]["desc"]) != dict:
             rearrangedData[gid]["data"]["desc"] = {

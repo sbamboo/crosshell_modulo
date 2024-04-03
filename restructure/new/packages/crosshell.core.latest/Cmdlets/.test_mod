@@ -1,0 +1,17 @@
+# This is an example
+≈[Conf.DotFile]≈ # Note the use of "Conf." this will change the syntax of bellow to be <key>:<value> instead of using =
+Format: 1
+Author: SimonKalmiClaesson
+Description: # Note that the bellow code uses indents to determine "parent/key" this is only when section is prefixed with "Conf."
+  This file contains some example rudamentary-dotfile code.
+  Wabba dabba do!
+
+# Lets add a section with the name raw that sets the "raw" variable under the "autofill" namespace
+≈[Raw]≈
+autofill:raw = {
+    "jsonKey": "jsonVal"
+}
+
+≈[CustomSection]≈
+CustomVar = CustomVal
+CustomNameSpace:CustomVar = CustomVal

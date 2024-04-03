@@ -1,7 +1,7 @@
 import os
 from cslib.pathtools import normPathSep
 from cslib.types import picklePrioCopy, merge_dicts
-from cslib.datafiles import _fileHandler
+from cslib.datafiles import _fileHandler,config_to_dict
 from cslib._crosshellMpackageSystem import idToDict, toLeastInfoStr
 
 # FeatureManglers
@@ -43,6 +43,8 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}
     index = 0
+    sumAllowedKeys = ["pathoverwrite","nameoverwrite","idoverwrite","override_path","override_name","override_id"]
+    sumAllowedKeys2 = ["description","aliases","paramhelp"]
     for pkgType,x in data.items():
         for pkg,y in x.items():
             # Get pkgpath
@@ -109,11 +111,11 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
             if os.path.exists(possiblePackageJsonFilePath):
                 packageJsonFilePath = possiblePackageJsonFilePath
                 packageJsonFileType = type_
+        mode = "modulo.new"
         # If found load it under the cmdlets key
         if packageJsonFilePath != None and packageJsonFileType != None:
             raw = _fileHandler(packageJsonFileType,"get",packageJsonFilePath)
             compatability = raw.get("compat")
-            mode = "modulo.new"
             if compatability != None:
                 if compatability.get("cmdlets:use_old_modulo_schema") == True:
                     mode = "modulo.old"
@@ -124,8 +126,10 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
             if cmdlets != None and cmdlets.get(filename_d) != None:
                 # Prep extras
                 extras = {}
+                allowed_keys = list(rearrangedData[gid]["data"].keys())
+                allowed_keys.extend(sumAllowedKeys)
                 for k,v in cmdlets[filename_d].items():
-                    if k not in rearrangedData[gid]["data"].keys():
+                    if k not in allowed_keys:
                         extras[k] = v
                         del cmdlets[filename_d][k]
                 # Mode: Raw
@@ -135,8 +139,8 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 elif mode == "modulo.old":
                     rearrangedData[gid]["data"] = merge_dicts(rearrangedData[gid]["data"],cmdlets[filename_d])
                     # fix
-                    rearrangedData[gid]["data"]["Options"]["blockCommonParams"] = rearrangedData[gid]["data"]["blockCommonParams"]
-                    del rearrangedData[gid]["data"]["blockCommonParams"]
+                    rearrangedData[gid]["data"]["Options"]["blockCommonParams"] = rearrangedData[gid]["data"]["blockCommonparams"]
+                    del rearrangedData[gid]["data"]["blockCommonparams"]
                 # Mode: modulo.new
                 else:
                     rearrangedData[gid]["data"] = merge_dicts(rearrangedData[gid]["data"],cmdlets[filename_d])
@@ -147,7 +151,33 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
         for type_ in allowedCmdletConfigTypes:
             possibleCmdletConfigFilePath = basePathname + "." + type_
             if os.path.exists(possibleCmdletConfigFilePath):
-                
+                conf_data = config_to_dict(open(possibleCmdletConfigFilePath,'r').read())
+                extras = {}
+                newData = {}
+                currentKeys = list(conf_data.keys())
+                for k in currentKeys:
+                    v = conf_data[k]
+                    allowed_keys = list(rearrangedData[gid]["data"].keys())
+                    allowed_keys.extend(sumAllowedKeys)
+                    allowed_keys.extend(sumAllowedKeys2)
+                    if k == "blockCommonparams":
+                        if type(newData.get("options")) != dict: newData["Options"] = {}
+                        newData["Options"]["blockCommonParams"] = v
+                        del conf_data[k]
+                    elif k not in allowed_keys:
+                        extras[k] = v
+                        del conf_data[k]
+                    else:
+                        newData[k] = v
+                newData["extras"] = extras
+                # Map
+                if conf_data.get("description") != None:
+                    newData["desc"] = conf_data["description"]
+                if conf_data.get("aliases") != None:
+                    newData["aliases"] = conf_data["aliases"]
+                if conf_data.get("paramhelp") != None:
+                    newData["args"] = conf_data["paramhelp"]
+                rearrangedData[gid]["data"].update(newData)
         ## load from .<cmdlet_filename> (if "rudamentary-dotfiles" are enabled), fix so extra tags that are under options in schema gets placed under options, also handle extra tags
         # TODO:^
         ## Fix invalid strings, and replace paths with placeholders
@@ -160,6 +190,49 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
         if type(rearrangedData[gid]["data"]["args"]) != dict:
             rearrangedData[gid]["data"]["args"] = {}
             for arg in v.split(" "):
-                rearrangedData[gid]["data"]["args"][arg] = {}
+                rearrangedData[gid]["data"]["args"][arg] = {
+                    "type": "raw",
+                    "content": ""
+                }
+        else:
+            for k,v in rearrangedData[gid]["data"]["args"].items():
+                if type(v) != dict:
+                    rearrangedData[gid]["data"]["args"][k] = {
+                        "type": "raw",
+                        "content": v
+                    }
+        # Fix path/name/id placeholders
+        if mode == "modulo.old":
+            v = rearrangedData[gid]["data"].get("pathoverwrite")
+            if v != None and v != "" and type(v) == str:
+                rearrangedData[gid]["path"] = rearrangedData[gid]["data"]["pathoverwrite"]
+                rearrangedData[gid]["data"]["hasOverriddenWith"]["path"] = rearrangedData[gid]["data"]["pathoverwrite"]
+                del rearrangedData[gid]["data"]["pathoverwrite"]
+            v = rearrangedData[gid]["data"].get("nameoverwrite")
+            if v != None and v != "" and type(v) == str:
+                rearrangedData[gid]["name"] = rearrangedData[gid]["data"]["nameoverwrite"]
+                rearrangedData[gid]["data"]["hasOverriddenWith"]["name"] = rearrangedData[gid]["data"]["nameoverwrite"]
+                del rearrangedData[gid]["data"]["nameoverwrite"]
+            v = rearrangedData[gid]["data"].get("idoverwrite")
+            if v != None and v != "" and type(v) == str:
+                rearrangedData[gid] = rearrangedData[rearrangedData[gid]["data"]["idoverwrite"]]
+                rearrangedData[gid]["data"]["hasOverriddenWith"]["id"] = rearrangedData[gid]["data"]["idoverwrite"]
+                del rearrangedData[gid]["data"]["idoverwrite"]
+        else:
+            v = rearrangedData[gid]["data"].get("override_path")
+            if v != None and v != "" and type(v) == str:
+                rearrangedData[gid]["path"] = rearrangedData[gid]["data"]["override_path"]
+                rearrangedData[gid]["data"]["hasOverriddenWith"]["path"] = rearrangedData[gid]["data"]["override_path"]
+                del rearrangedData[gid]["data"]["override_path"]
+            v = rearrangedData[gid]["data"].get("override_name")
+            if v != None and v != "" and type(v) == str:
+                rearrangedData[gid]["name"] = rearrangedData[gid]["data"]["override_name"]
+                rearrangedData[gid]["data"]["hasOverriddenWith"]["name"] = rearrangedData[gid]["data"]["override_name"]
+                del rearrangedData[gid]["data"]["override_name"]
+            v = rearrangedData[gid]["data"].get("override_id")
+            if v != None and v != "" and type(v) == str:
+                rearrangedData[gid] = rearrangedData[rearrangedData[gid]["data"]["override_id"]]
+                rearrangedData[gid]["data"]["hasOverriddenWith"]["id"] = rearrangedData[gid]["data"]["override_id"]
+                del rearrangedData[gid]["data"]["override_id"]
     ## return
-    return data
+    return rearrangedData

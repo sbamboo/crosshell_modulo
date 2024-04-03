@@ -745,42 +745,6 @@ def listItemInList(sublist,toplist):
             break
     return found
 
-def handleOSinExtensionsList(extensions=list) -> list:
-    """CSlib: Smal function for checking os-specific extensions.
-    Handling extension prefixes like 'win@' and if os dosen't match will exlcude it."""
-    newList = []
-    for extension in extensions:
-        # multi
-        if "win;mac@" in extension:
-            if IsWindows() == True or IsMacOS() == True:
-                newList.append( extension.replace("win;mac@","") )
-        elif "win;lnx@" in extension:
-            if IsWindows() == True or IsLinux() == True:
-                newList.append( extension.replace("win;lnx@","") )
-        elif "mac;lnx@" in extension:
-            if IsMacOS() == True or IsLinux() == True:
-                newList.append( extension.replace("mac;lnx@","") )
-        elif "lnx;mac@" in extension:
-            if IsMacOS() == True or IsLinux() == True:
-                newList.append( extension.replace("lnx;mac@","") )
-        # single
-        elif "win@" in extension:
-            if IsWindows() == True:
-                newList.append( extension.replace("win@","") )
-        elif "mac@" in extension:
-            if IsMacOS() == True:
-                newList.append( extension.replace("mac@","") )
-        elif "lnx@" in extension:
-            if IsLinux() == True:
-                newList.append( extension.replace("lnx@","") )
-        # all
-        elif "all@" in extension:
-            newList.append( extension.replace("all@","") )
-        # fallback
-        else:
-            newList.append(extension)
-    return newList
-
 def crosshellVersionManager_getData(versionFile,formatVersion="1",encoding="utf-8"):
     '''CSlib: gets the versionData from a compatible version file.'''
     data = {}
@@ -1934,7 +1898,8 @@ class crshSession():
                     "restrictionMode": "Normal",
                     "readerReturnVars": False
                 },
-                "extras": {}
+                "extras": {},
+                "hasOverriddenWith": {}
             },
             "fending": "CMDLET_FENDING",
             "filename": "CMDLET_FILENAME",
@@ -2610,18 +2575,18 @@ class crshSession():
         del _readerManglerFile,_readerManglerFileIsStream
 
         # Filter out cmdlets not type-selected
-        for packageType,data1 in loadedFeatures["cmdlets"]["data"].items():
-            for package,data2 in data1.items():
-                for reader,cmdlets in data2.items():
-                    validatedCmdlets = []
-                    for cmdlet in cmdlets:
-                        fileExt = os.path.splitext(cmdlet)[1].lstrip(".")
-                        if fileExt in handleOSinExtensionsList(mergedDeffintions[reader]):
-                            validatedCmdlets.append(cmdlet)
-                    loadedFeatures["cmdlets"]["data"][packageType][package][reader] = validatedCmdlets
+        for gid,cmdlet in loadedFeatures["cmdlets"]["data"].items():
+            found = False
+            for reader in self.regionalGet("ReaderRegistry"):
+                if reader.get("extensions") != None and cmdlet.get("fending"):
+                    extensions = handleOSinExtensionsList(reader["extensions"])
+                    if cmdlet["fending"] in extensions:
+                        found = True
+            if found == False:
+                del loadedFeatures["cmdlets"]["data"][gid]
 
         self.regionalSet("LoadedPackageData",loadedFeatures)
-        del mergedDeffintions,packageType,data1,package,data2,reader,cmdlets,validatedCmdlets,loadedFeatures
+        del mergedDeffintions,loadedFeatures,gid,cmdlet,found,reader,extensions
 
         # VERBOSE START #
         st.verb(f"Preparing for console...",l="cs.startup.preparing-console")

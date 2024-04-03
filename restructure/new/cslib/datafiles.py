@@ -372,3 +372,18 @@ def dict_to_config(config_dict=dict) -> str:
     for key, value in config_dict.items():
         config_content += f"{key}={value}\n"
     return config_content
+
+def rudaDotfile_to_dict(content,commentChars="#",sectionChars="≈≈",headingChars="[]"):
+    """
+    Converts rudamentary-dotfile formats to a dictionary handling comments, namespaces and headed-sections.
+    Takes:
+      content: str,
+      commentChars: str, (1 or 2, first char is prefix, second is suffix)
+      sectionChars: str, (1 or 2, first char is prefix, second is suffix)
+      headingChars: str, (1 or 2, first char is prefix, second is suffix)
+
+    Format:
+    # Comments prefixed like this
+    # 
+    """
+    pass

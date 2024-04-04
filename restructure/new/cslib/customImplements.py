@@ -39,7 +39,6 @@ def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=s
     return {"langfiles":languageFiles}
 
 def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"],enableParsingOfRudamentaryDotFiles=False,dotFileEncoding="utf-8") -> dict:
-    #TODO: Make it so you can disable/enable both config files and dotfiles in package.json as a performace saver
     rearrangedData = {}
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}

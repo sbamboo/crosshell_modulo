@@ -433,6 +433,7 @@ def rudaDotfile_to_dict(content,commentChars="#",escapor="\\",sectionChars="â‰ˆâ
     Takes:
       content: str,
       commentChars: str, (1 or 2, first char is prefix, second is suffix)
+      escapor: str, (1 len)
       sectionChars: str, (1 or 2, first char is prefix, second is suffix)
       headingChars: str, (1 or 2, first char is prefix, second is suffix)
 

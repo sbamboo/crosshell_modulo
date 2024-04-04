@@ -8,7 +8,7 @@ crsh:
     DefaultEncoding: utf-8
   Version:
     FileFormatVer: '1'
-    VerFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
+    VerFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
   Parse:
     Text:
       Webcolors: true
@@ -53,9 +53,9 @@ crsh:
         Selected: null
         _choices: []
     RudamentaryDotFiles:
-      Enable: false
+      Enable: true
     Readers:
-      ReaderFile: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
+      ReaderFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
   CGTS:
     ANSI_Hex_Palette:
       '30': f#000000
@@ -95,7 +95,7 @@ crsh:
     Loaded:
       '1': en-us
     _choices: []
-    DefaultList: c:\Users\simonkalmi.claesson\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
+    DefaultList: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
     ListFormat: json
     LangFormat: json
     LoadSameSuffixedLangs: true

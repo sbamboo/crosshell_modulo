@@ -1,5 +1,10 @@
 {
     "package": {
         "desc": "Main crosshell package"
+    },
+
+    "loaderOptions": {
+        "cmdlets:disableConfigFileLoad": false,
+        "cmdlets:disableDotFileLoad": false
     }
 }

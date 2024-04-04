@@ -816,7 +816,7 @@ class sessionStorage():
     def __setitem__(self, key, value):
         self.storage[key] = value
     def __getitem__(self, key):
-        return self.storage[key]
+        return self.storage.get(key)
     def remove(self, key):
         del self.storage[key]
     def update(self, newDict):
@@ -839,9 +839,9 @@ class sessionStorage():
             if key not in self.storage["regionalScope"].keys():
                 key = key.replace("*","",1)
             try:
-                _v = self.storage["regionalScope"][key]
+                _v = self.storage["regionalScope"].get(key)
             except KeyError:
-                _v = self.storage["regionalScope"]["*"+key]
+                _v = self.storage["regionalScope"].get("*"+key)
             return _v
     def regionalRemove(self, key):
         del self.storage["regionalScope"][key]
@@ -878,7 +878,7 @@ class sessionStorage():
         if key == None:
             return self.storage["tempData"]
         else:
-            return self.storage["tempData"][key]
+            return self.storage["tempData"].get(key)
     def tempRemove(self, key):
         del self.storage["tempData"][key]
     def tempUpdate(self, newDict):
@@ -895,7 +895,7 @@ class sessionStorage():
         if key == None:
             return self.storage["userVars"]
         else:
-            return self.storage["userVars"][key]
+            return self.storage["userVars"].get(key)
     def userVarRemove(self, key):
         del self.storage["userVars"][key]
     def userVarUpdate(self, newDict):
@@ -1914,7 +1914,8 @@ class crshSession():
                     "readerReturnVars": False
                 },
                 "extras": {},
-                "hasOverriddenWith": {}
+                "hasOverriddenWith": {},
+                "dotFileRaw": {}
             },
             "fending": "CMDLET_FENDING",
             "filename": "CMDLET_FILENAME",
@@ -1928,6 +1929,13 @@ class crshSession():
             "readAs": "unset",
             "dupeID": -1,
             "index": -1
+        }
+
+        self.initDefaults["default_userVars"] = {
+            "True": True,
+            "False": False,
+            "BaseDir": "@regionalVars:BaseDir",
+            "CoreDir": "@regionalVars:CoreDir"
         }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
@@ -2639,7 +2647,15 @@ class crshSession():
         del _tempLng
 
         # [Add the default user-vars to storage using self.userVarUpdate()]
-        #TODO:^
+        ## Update the keys from regionalVars
+        for k,v in self.initDefaults["default_userVars"].items():
+            if type(v) == str and v.startswith("@regionalVars:"):
+                k2 = v.replace("@regionalVars:","",1)
+                v2 = self.regionalGet(k2)
+                if v2 != None:
+                    self.initDefaults["default_userVars"][k] = v2
+        ## Update the uservars
+        self.userVarUpdate(self.initDefaults["default_userVars"])
 
         # [Finish up]
         # Set flag

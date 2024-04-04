@@ -44,8 +44,16 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}
     index = 0
+    # Allowed keys (keys that won't map into extras)
     sumAllowedKeys = ["pathoverwrite","nameoverwrite","idoverwrite","override_path","override_name","override_id"]
+    # More keys that won't mapp but theese only apply to dotfile or configfile
     sumAllowedKeys2 = ["description","aliases","paramhelp"]
+    # Keys that don't mapp to extras but will be mapped (adding a key here will remove any None valued)
+    tidyThis_None = []
+    tidyThis_None.extend(sumAllowedKeys)
+    # Same as above but removed no-matter None or not
+    tidyThis_Alw = ["paramhelp","description"]
+    # Get data:
     for pkgType,x in data.items():
         for pkg,y in x.items():
             # Get pkgpath
@@ -113,15 +121,29 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 packageJsonFilePath = possiblePackageJsonFilePath
                 packageJsonFileType = type_
         mode = "modulo.new"
+        switch_loadConfigs = True
+        switch_loadDotFiles = enableParsingOfRudamentaryDotFiles
         # If found load it under the cmdlets key
         if packageJsonFilePath != None and packageJsonFileType != None:
+            # Get
             raw = _fileHandler(packageJsonFileType,"get",packageJsonFilePath)
+            # Compat
             compatability = raw.get("compat")
             if compatability != None:
                 if compatability.get("cmdlets:use_old_modulo_schema") == True:
                     mode = "modulo.old"
                 elif compatability.get("cmdlets:use_raw_loading") == True:
                     mode = "raw"
+            # Switches
+            switching = raw.get("loaderOptions")
+            if switching != None:
+                dis_cfg = switching.get("cmdlets:disableConfigFileLoad")
+                dis_dot = switching.get("cmdlets:disableDotFileLoad")
+                if type(dis_cfg) == bool:
+                    switch_loadConfigs = not dis_cfg
+                if type(dis_dot) == bool:
+                    switch_loadDotFiles = not dis_dot
+            # Cmdlets
             cmdlets = raw.get("cmdlets")
             filename_d = os.path.splitext(data1["filename"])[0]
             if cmdlets != None and cmdlets.get(filename_d) != None:
@@ -149,38 +171,39 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 rearrangedData[gid]["readAs"] = mode
         ## load from <cmdlet_filename>.<allowedConfigFileType>, fix so extra tags that are under options in schema gets placed under options, also handle extra tags
         basePathname = os.path.join(os.path.dirname(rearrangedData[gid]["path"]),os.path.splitext(rearrangedData[gid]["filename"])[0])
-        for type_ in allowedCmdletConfigTypes:
-            possibleCmdletConfigFilePath = basePathname + "." + type_
-            if os.path.exists(possibleCmdletConfigFilePath):
-                conf_data = config_to_dict(open(possibleCmdletConfigFilePath,'r').read())
-                extras = {}
-                newData = {}
-                currentKeys = list(conf_data.keys())
-                for k in currentKeys:
-                    v = conf_data[k]
-                    allowed_keys = list(rearrangedData[gid]["data"].keys())
-                    allowed_keys.extend(sumAllowedKeys)
-                    allowed_keys.extend(sumAllowedKeys2)
-                    if k == "blockCommonparams":
-                        if type(newData.get("options")) != dict: newData["Options"] = {}
-                        newData["Options"]["blockCommonParams"] = v
-                        del conf_data[k]
-                    elif k not in allowed_keys:
-                        extras[k] = v
-                        del conf_data[k]
-                    else:
-                        newData[k] = v
-                newData["extras"] = extras
-                # Map
-                if conf_data.get("description") != None:
-                    newData["desc"] = conf_data["description"]
-                if conf_data.get("aliases") != None:
-                    newData["aliases"] = conf_data["aliases"]
-                if conf_data.get("paramhelp") != None:
-                    newData["args"] = conf_data["paramhelp"]
-                rearrangedData[gid]["data"].update(newData)
+        if switch_loadConfigs == True:
+            for type_ in allowedCmdletConfigTypes:
+                possibleCmdletConfigFilePath = basePathname + "." + type_
+                if os.path.exists(possibleCmdletConfigFilePath):
+                    conf_data = config_to_dict(open(possibleCmdletConfigFilePath,'r').read())
+                    extras = {}
+                    newData = {}
+                    currentKeys = list(conf_data.keys())
+                    for k in currentKeys:
+                        v = conf_data[k]
+                        allowed_keys = list(rearrangedData[gid]["data"].keys())
+                        allowed_keys.extend(sumAllowedKeys)
+                        allowed_keys.extend(sumAllowedKeys2)
+                        if k == "blockCommonparams":
+                            if type(newData.get("options")) != dict: newData["Options"] = {}
+                            newData["Options"]["blockCommonParams"] = v
+                            del conf_data[k]
+                        elif k not in allowed_keys:
+                            extras[k] = v
+                            del conf_data[k]
+                        else:
+                            newData[k] = v
+                    newData["extras"] = extras
+                    # Map
+                    if conf_data.get("description") != None:
+                        newData["desc"] = conf_data["description"]
+                    if conf_data.get("aliases") != None:
+                        newData["aliases"] = conf_data["aliases"]
+                    if conf_data.get("paramhelp") != None:
+                        newData["args"] = conf_data["paramhelp"]
+                    rearrangedData[gid]["data"].update(newData)
         ## load from .<cmdlet_filename> (if "rudamentary-dotfiles" are enabled), fix so extra tags that are under options in schema gets placed under options, also handle extra tags
-        if enableParsingOfRudamentaryDotFiles == True:
+        if enableParsingOfRudamentaryDotFiles == True and switch_loadDotFiles == True:
             basePathname = os.path.dirname(rearrangedData[gid]["path"])
             possibleCmdletDotfileFilePath = os.path.join(basePathname,"."+os.path.splitext(rearrangedData[gid]["filename"])[0])
             if os.path.exists(possibleCmdletDotfileFilePath):
@@ -191,25 +214,36 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 newData = rudaData.get(selSection)
                 del rudaData[selSection]
                 # Mapping
-                if newData.get("Overide") != None:
+                if newData.get("Override") != None:
                     # Override:path
                     if newData["Override"].get("path") != None:
                         if mode == "modulo.old":
                             newData["pathoverwrite"] = newData["Override"]["path"]
                         else:
                             newData["override_path"] = newData["Override"]["path"]
+                        del newData["Override"]["path"]
                     # Override:name
                     if newData["Override"].get("name") != None:
                         if mode == "modulo.old":
                             newData["nameoverwrite"] = newData["Override"]["name"]
                         else:
                             newData["override_name"] = newData["Override"]["name"]
+                        del newData["Override"]["name"]
                     # Override:id
                     if newData["Override"].get("id") != None:
                         if mode == "modulo.old":
                             newData["idoverwrite"] = newData["Override"]["id"]
                         else:
                             newData["override_id"] = newData["Override"]["id"]
+                        del newData["Override"]["id"]
+                newData_ = {}
+                for nsp,nspd in newData.items():
+                    if nspd != {}:
+                        newData_[nsp] = nspd
+                newData = newData_
+                if newData.get("Default") != None:
+                    newData.update(newData["Default"])
+                    del newData["Default"]
                 extras = {}
                 newData2 = {}
                 currentKeys = list(newData.keys())
@@ -228,7 +262,7 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                     else:
                         newData2[k] = v
                 newData2["extras"] = extras
-                newData2["extras"]["dotfileRaw"] = rudaData
+                newData2["dotFileRaw"] = rudaData
                 rearrangedData[gid]["data"].update(newData2)
                 del newData,extras,currentKeys,newData2
         ## Fix invalid strings, and replace paths with placeholders
@@ -285,5 +319,12 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 rearrangedData[gid] = rearrangedData[rearrangedData[gid]["data"]["override_id"]]
                 rearrangedData[gid]["data"]["hasOverriddenWith"]["id"] = rearrangedData[gid]["data"]["override_id"]
                 del rearrangedData[gid]["data"]["override_id"]
+        # Tidy
+        for key in tidyThis_None:
+            if key in rearrangedData[gid]["data"] and rearrangedData[gid]["data"][key] == None:
+                del rearrangedData[gid]["data"][key]
+        for key in tidyThis_Alw:
+            if key in rearrangedData[gid]["data"]:
+                del rearrangedData[gid]["data"][key]
     ## return
     return rearrangedData

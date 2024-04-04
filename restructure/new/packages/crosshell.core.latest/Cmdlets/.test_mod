@@ -1,4 +1,7 @@
 # This is an example
+description = "hello"
+Override:name = YOINK2
+NameSpace:var = value
 ≈[Conf.DotFile]≈
 Format: 1
 Author: SimonKalmiClaesson

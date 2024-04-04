@@ -224,7 +224,7 @@ class filesys():
             try:
                 f = open(filepath, "w", encoding=encoding)
                 f.close()
-            except Exception as e: print("\033[31mAn error occurred calling creatFile!\033[0m",e)
+            except Exception as e: print("\033[31mAn error occurred calling createFile!\033[0m",e)
     
     # Function to create directory
     def createDir(folderpath=str()):

@@ -34,7 +34,8 @@ def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=s
     if languageProvider != None and languagePath != None:
         for file in languageFiles:
             if os.path.exists(file):
-                languagePath.append(os.path.dirname(file))
+                fpath = os.path.dirname(file)
+                languagePath.append(fpath)
                 languageProvider.populateList()
     return {"langfiles":languageFiles}
 

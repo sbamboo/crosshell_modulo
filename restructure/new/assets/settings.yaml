@@ -7,11 +7,19 @@ crsh:
   Formats:
     DefaultEncoding: utf-8
   Version:
+    VerFile: '{CS_CoreDir}/version.yaml'
     FileFormatVer: '1'
-    VerFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\core\version.yaml
   Parse:
     Text:
       Webcolors: true
+  Language:
+    Loaded:
+      '1': en-us
+    _choices: []
+    DefaultList: '{CS_AssetsDir}/langlist.json'
+    ListFormat: json
+    LangFormat: json
+    LoadSameSuffixedLangs: true
   conUtilsConfig:
     ask: true
     defW: 120
@@ -44,6 +52,10 @@ crsh:
         Config:
         - cfg
         - config
+    RudamentaryDotFiles:
+      Enable: false
+    Readers:
+      ReaderFile: '{CS_ReaderListFile}'
     Formatting:
       Mappings:
         Selected: null
@@ -52,10 +64,6 @@ crsh:
       Palettes:
         Selected: null
         _choices: []
-    RudamentaryDotFiles:
-      Enable: true
-    Readers:
-      ReaderFile: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\readerlist.json
   CGTS:
     ANSI_Hex_Palette:
       '30': f#000000
@@ -91,13 +99,5 @@ crsh:
       '106': b#55FFFF
       '107': b#FFFFFF
     CustomMappings: {}
-  Language:
-    Loaded:
-      '1': en-us
-    _choices: []
-    DefaultList: c:\Users\simon\Documents\GitHub\crosshell_modulo\restructure\new\assets\langlist.json
-    ListFormat: json
-    LangFormat: json
-    LoadSameSuffixedLangs: true
 crsh_debugger:
   Scope: error

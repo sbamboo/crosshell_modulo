@@ -388,7 +388,7 @@ class modularSettingsLinker():
         data = remKeyPath(data,keyPath)
         self.set(module,data,autocreate=autocreate)
 
-def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False,encoding="utf-8",fileIsStream=False):
+def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat="json",keepExisting=False,encoding="utf-8",fileIsStream=False,substTagsToApplyToPath={}):
     '''CSlib: Function to populate a language list.'''
     orgLangList = _fileHandler(listFormat,"get",languageListFile,encoding=encoding,fileIsStream=fileIsStream)
     LangList = orgLangList.copy()
@@ -402,9 +402,15 @@ def populateLanguageList(languageListFile,langPath,listFormat="json",langFormat=
                     if fending == langFormat:
                         if keepExisting == True:
                             if LangList.get(name) == None:
-                                LangList[name] = object.path
+                                fpath = object.path
+                                for k,v in substTagsToApplyToPath.items():
+                                    fpath = fpath.replace(v,"{"+str(k)+"}")
+                                LangList[name] = fpath
                         else:
-                            LangList[name] = object.path
+                            fpath = object.path
+                            for k,v in substTagsToApplyToPath.items():
+                                fpath = fpath.replace(v,"{"+str(k)+"}")
+                            LangList[name] = fpath
     except:
         LangList = orgLangList
     _fileHandler(listFormat,"set",languageListFile,LangList,encoding=encoding,fileIsStream=fileIsStream)
@@ -434,7 +440,7 @@ def _handleAnsi(text):
 
 class crosshellLanguageProvider():
     '''CSlib: Crosshell language system.'''
-    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False,fileIsStream=False):
+    def __init__(self,languageListFile,defaultLanguage="en-us",listFormat="json",langFormat="json",pathtagManInstance=None,langPath=None,encoding="utf-8",sameSuffixLoading=False,fileIsStream=False,langListApplicapleSubstTags={}):
         # Save
         self.languageListFile = languageListFile
         self.fileIsStream = fileIsStream
@@ -450,6 +456,7 @@ class crosshellLanguageProvider():
         self.langPath = langPath
         self.encoding = encoding
         self.sameSuffixLoading = sameSuffixLoading
+        self.langListApplicapleSubstTags = langListApplicapleSubstTags
         # Retrive languageList after rechecking it
         recheckLanguageList(self.languageListFile,self.listFormat,encoding=self.encoding,fileIsStream=self.fileIsStream)
         self.languageList = _fileHandler(self.listFormat,"get",self.languageListFile,encoding=self.encoding,fileIsStream=self.fileIsStream)
@@ -500,7 +507,7 @@ class crosshellLanguageProvider():
         return mergedLanguage
     def populateList(self,keepExisting=False,reload=True):
         if self.langPath != None:
-            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding,fileIsStream=self.fileIsStream)
+            populateLanguageList(self.languageListFile,self.langPath,self.listFormat,self.langFormat,keepExisting=keepExisting,encoding=self.encoding,fileIsStream=self.fileIsStream,substTagsToApplyToPath=self.langListApplicapleSubstTags)
             if reload == True:
                 self.relist()
                 self.load()
@@ -655,7 +662,7 @@ def ingestDefaults(defaultsFile,encoding="utf-8",instanceMapping=dict):
         if instanceMapping.get(file) != None:
             for module, settings in defaults[file].items():
                 instanceMapping[file]["instance"].addModule(module)
-                _temp = instanceMapping[file]["instance"].getModule(module)
+                _temp = instanceMapping[file]["instance"].getModule(module,skipTagMan=True)
                 for settK,settV in settings.items():
                     if type(settV) == str and settV.startswith("@") and settV.count(":") == 2:
                         split = settV.replace("@","",1).split(":")
@@ -676,12 +683,12 @@ def ingestDefaults(defaultsFile,encoding="utf-8",instanceMapping=dict):
                         if getKeyPath(_temp, settK) == None:
                             _temp = setKeyPath(_temp, settK, settV)
                 instanceMapping[file]["instance"].set(module,_temp)
-def ingestDefaults_fd(defaults=dict,instanceMapping=dict):
+def ingestDefaults_fd(defaults=dict,instanceMapping=dict,applyTagManToFromFileMappings=False):
     for file in defaults.keys():
         if instanceMapping.get(file) != None:
             for module, settings in defaults[file].items():
                 instanceMapping[file]["instance"].addModule(module)
-                _temp = instanceMapping[file]["instance"].getModule(module)
+                _temp = instanceMapping[file]["instance"].getModule(module,skipTagMan=True)
                 for settK,settV in settings.items():
                     if type(settV) == str and settV.startswith("@") and settV.count(":") == 2:
                         split = settV.replace("@","",1).split(":")
@@ -690,7 +697,11 @@ def ingestDefaults_fd(defaults=dict,instanceMapping=dict):
                         settK2 = split[2]
                         if instanceMapping.get(file2) != None:
                             if instanceMapping[file2]["instance"].get(module2) != None:
-                                settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2)
+                                if applyTagManToFromFileMappings == True:
+                                    skipTagMan = False
+                                else:
+                                    skipTagMan = True
+                                settV2 = instanceMapping[file2]["instance"].getProperty(module2,settK2,skipTagMan=skipTagMan)
                                 settV2 = recursiveMultipleReplacementTagWrapper(settV2,instanceMapping[file]["tags"])
                                 #instanceMapping[file]["instance"].addProperty(module,settK,settV2)
                                 _current = getKeyPath(_temp, settK)
@@ -864,7 +875,7 @@ class sessionStorage():
             return toExprt
         else:
             return {
-                self.addPrefToKey(key): self.storage["regionalScope"]
+                self.addPrefToKey(key): self.storage["regionalScope"][key]
             }
     def regionalGetP(self, key=None):
         if key.startswith(self.regionalPrefix):
@@ -1873,7 +1884,8 @@ class crshSession():
                     "manglerKwargs": {
                         "languageProvider": None,
                         "languagePath": None,
-                        "mPackPath": None
+                        "mPackPath": None,
+                        "rootSubstTags": None
                     }
                 }
             }
@@ -1937,6 +1949,10 @@ class crshSession():
             "BaseDir": "@regionalVars:BaseDir",
             "CoreDir": "@regionalVars:CoreDir"
         }
+
+        self.initDefaults["languageListApplicableSubstTags"] = [
+            "AssetsDir", "CoreDir", "BaseDir"
+        ]
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
@@ -2267,7 +2283,9 @@ class crshSession():
         ## enable allow flag
         self.flags.enable("--enableUnsafeOperations")
         ## Ingest the defaults and the tags that will be allowed for it
+        print(defaults,"\n\n",_ingestDefaultTags,"\n\n")
         self.ingestDefaults(defaults,_ingestDefaultTags)
+        exit() #DEBUG
         # Get encoding and also set it for both settings/persistance
         self.regionalSet("DefaultEncoding",self.getregister("set").getProperty("crsh","Formats.DefaultEncoding",skipTagMan=False)) # Last time to not use self.getEncoding()
         self.getregister("set").encoding = self.getEncoding()
@@ -2386,8 +2404,14 @@ class crshSession():
             _isStream = True
         else:
             _file = self.getregister("set").getProperty("crsh","Language.DefaultList",skipTagMan=False)
+            _file = normPathSep(_file)
             _isStream = False
         # Init class
+        langListApplicapleSubstTags = self.initDefaults["languageListApplicableSubstTags"]
+        langListApplicapleSubstTags_ = {}
+        for x in langListApplicapleSubstTags:
+            if self.regionalGet(x) != None:
+                langListApplicapleSubstTags_.update(self.regionalExport(x))
         _cslp = crosshellLanguageProvider(
             languageListFile = _file,
             defaultLanguage = self.getregister("set").getProperty("crsh","Language.Loaded",skipTagMan=False),
@@ -2397,8 +2421,10 @@ class crshSession():
             langPath = self.regionalGet("LangPathObj"),
             encoding = self.getEncoding(),
             sameSuffixLoading = self.getregister("set").getProperty("crsh","Language.LoadSameSuffixedLangs",skipTagMan=True),
-            fileIsStream = _isStream
+            fileIsStream = _isStream,
+            langListApplicapleSubstTags = langListApplicapleSubstTags_
         )
+        del langListApplicapleSubstTags,langListApplicapleSubstTags_
         # Register and add to debugger
         self.deb.setLanguageProvider(_cslp)
         self.register("lng",_cslp)
@@ -2508,6 +2534,7 @@ class crshSession():
             _readerManglerFileIsStream = True
         else:
             _readerManglerFile = self.getregister("set").getProperty("crsh","Packages.Readers.ReaderFile",skipTagMan=False)
+            _readerManglerFile = normPathSep(_readerManglerFile)
             if os.path.exists(_readerManglerFile) == False:
                 if os.path.splitext(_readerManglerFile)[1] == ".json":
                     open(_readerManglerFile,'w',encoding=self.getEncoding()).write("{}")

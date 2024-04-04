@@ -2283,9 +2283,7 @@ class crshSession():
         ## enable allow flag
         self.flags.enable("--enableUnsafeOperations")
         ## Ingest the defaults and the tags that will be allowed for it
-        print(defaults,"\n\n",_ingestDefaultTags,"\n\n")
         self.ingestDefaults(defaults,_ingestDefaultTags)
-        exit() #DEBUG
         # Get encoding and also set it for both settings/persistance
         self.regionalSet("DefaultEncoding",self.getregister("set").getProperty("crsh","Formats.DefaultEncoding",skipTagMan=False)) # Last time to not use self.getEncoding()
         self.getregister("set").encoding = self.getEncoding()

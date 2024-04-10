@@ -4,7 +4,7 @@ from cslib.types import picklePrioCopy, merge_dicts
 from cslib.datafiles import _fileHandler,config_to_dict,rudaDotfile_to_dict
 from cslib._crosshellMpackageSystem import toLeastInfoStr
 
-# FeatureManglers
+# region: [FeatureManglers]
 def readerMangler(data=dict,addMethod=None,readerFile=None,readerFileEncoding="utf-8",readerFileIsStream=False) -> dict:
     # Add the readers to the readerFile
     readers = {}
@@ -91,9 +91,11 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                     # Set Data
                     rearrangedData[generatedID_final] = picklePrioCopy(cmdletSchema)
                     rearrangedData[generatedID_final].update({
+                        "type": "file",
                         "name": cmdletName,
                         "fending": os.path.splitext(cmdletPath)[1].replace(".","",1),
                         "filename": os.path.basename(cmdlet),
+                        "method": None,
                         "path": cmdletPath,
                         "parentPackage": {
                             "name": pkg,
@@ -328,3 +330,9 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 del rearrangedData[gid]["data"][key]
     ## return
     return rearrangedData
+# endregion
+
+# region: [Cmdlets]
+def methodCmdet_exit(globalData):
+    pass
+# endregion

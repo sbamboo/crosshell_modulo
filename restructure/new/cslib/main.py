@@ -13,7 +13,7 @@ from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
 from cslib.progressMsg import startupMessagingWProgress
 from cslib.exceptions import CrosshellDebErr
 from cslib.types import expectedList
-from cslib.customImplements import readerMangler,cmdletMangler,langpckMangler
+from cslib.customImplements import readerMangler,cmdletMangler,langpckMangler, methodCmdet_exit
 from cslib.platformAndOS import handleOSinExtensionsList
 
 class stateInstance():
@@ -1909,7 +1909,7 @@ class crshSession():
 
         self.initDefaults["cmdletDataSchema"] = {
             "format": 1,
-            "type": "file",
+            "type": "CMDLET_TYPE",
             "name": "CMDLET_NAME",
             "data": {
                 "desc": {
@@ -1932,6 +1932,7 @@ class crshSession():
             "fending": "CMDLET_FENDING",
             "filename": "CMDLET_FILENAME",
             "path": "CMDLET_PATH",
+            "method": "CMDLET_METHOD",
             "parentPackage": {
                 "name": "CMDLET_PARENTPACKAGE_NAME",
                 "shortname": "CMDLET_PARENTPACKAGE_SHORTNAME",
@@ -1953,6 +1954,27 @@ class crshSession():
         self.initDefaults["languageListApplicableSubstTags"] = [
             "AssetsDir", "CoreDir", "BaseDir"
         ]
+
+        self.initDefaults["defaultCmdlet_mergeSchema"] = {
+            "type": "method",
+            "fending": None,
+            "filename": None,
+            "path": None,
+            "method": None,
+            "parentPackage": {
+                "name": "builtin",
+                "shortname": "builtin",
+                "type": "modulo",
+                "rootPath": "."
+            }
+        }
+
+        self.initDefaults["defaultCmdlet_data"] = {
+            "modulo:builtins/exit#1": self.initDefaults["cmdletDataSchema"] | self.initDefaults["defaultCmdlet_mergeSchema"] | {
+                "name": "exit",
+                "method": methodCmdet_exit
+            }
+        }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
@@ -2637,6 +2659,12 @@ class crshSession():
             if found == False:
                 del loadedFeatures["cmdlets"]["data"][gid]
 
+        # Append builtin cmdlet-data
+        for k,v in self.initDefaults["defaultCmdlet_data"].items():
+            v["index"] = len(loadedFeatures["cmdlets"]["data"])
+            v["data"]["encoding"] = self.getEncoding()
+            loadedFeatures["cmdlets"]["data"][k] = v
+
         self.regionalSet("LoadedPackageData",loadedFeatures)
         del mergedDeffintions,loadedFeatures,gid,cmdlet,found,reader,extensions
 
@@ -2679,7 +2707,7 @@ class crshSession():
                 v2 = self.regionalGet(k2)
                 if v2 != None:
                     self.initDefaults["default_userVars"][k] = v2
-        ## Update the uservars
+        ## Update the userVars
         self.userVarUpdate(self.initDefaults["default_userVars"])
 
         # [Finish up]

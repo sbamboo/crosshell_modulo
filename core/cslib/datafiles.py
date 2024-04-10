@@ -1,6 +1,5 @@
 import json,re,os
 from .cslib import normalizePathSepMT,intpip
-from ._crosshellParsingEngine import placeholdAnyQoutedX
 
 try:
     import yaml

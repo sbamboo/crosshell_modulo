@@ -1401,6 +1401,8 @@ class crshSession():
 
     def exprt(self,filename,_mode="dill"):
         """Exports the current session to a file."""
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
         _mode = "pickle"
         if _mode.lower() == "dill":
             try:
@@ -1617,6 +1619,11 @@ class crshSession():
 
             "ReaderRegistry": None,
             "LoadedPackageData": None,
+
+            "RegisteredArgs": None,
+            "RegisteredCmdArgPlaceHolders": None,
+            "LaunchedWithNoVerbStart": None,
+            "LauncherWithStripAnsi": None,
 
             "PkgFileList": {
                 "modulo": [],
@@ -2021,45 +2028,52 @@ class crshSession():
             raise Exception("This operation requires the session to have been inited. `init()`")
         self.regionalSet("VerboseStart",value)
 
-    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None, launchWith_stripAnsi=False, launchWith_noVerboseStart=False, debug=False,debugFile=None,debugLogType="text",debugForceUTC=False,debugFormatLog=False):
-        """Initiates the session."""
 
+    def reparseArgs(self,cliArgs=None):
+        """Reparses cli-arguments, usefull after import."""
+        if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
+            raise Exception("This operation requires the session to have been inited. `init()`")
+
+        _regionalVars = self.regionalGet()
+
+        _argparser = _regionalVars["Argparser"]
+
+        cliArgs,_startfile,_efile = self.init_handleStartFileEfileParams(cliArgs)
+
+        _Pargs = _argparser.parse_args(cliArgs)
+
+        _Pargs,regionalVars = self.init_handlePlaceholdersInArgs(
+            _Pargs,
+            cliArgs,
+            _regionalVars["RegisteredArgs"],
+            self.initDefaults["cmdIdentifier"],
+            self.initDefaults["aliasIdentifiers"],
+            _regionalVars,
+            _regionalVars["RegisteredCmdArgPlaceHolders"]
+        )
+
+        self.init_handleAdvArgs(_regionalVars.get("LauncherWithStripAnsi"),_regionalVars.get("LaunchedWithNoVerbStart"))
+
+        self.regionalUpdate(_regionalVars)
+
+        self.regionalSet("Startfile",_startfile)
+        self.regionalSet("Efile",_efile)
+        self.regionalSet("Args",cliArgs)
+        self.regionalSet("Pargs",_Pargs)
+        del _argparser,_startfile,_efile,_Pargs,_regionalVars
+        
+    # region: Init-SubMethods
+    def init_setupStep(self):
+        # Populate default values
         if self.flags.has("--populatedDefaults") == False:
             self.populateDefaults()
 
         # Enable ansi on windows
         os.system("")
 
-        # [Prepare by getting values]
-        # Define standard 
-        _regionalVars = self.initDefaults["regionalVars"]
-
-        # Define Arguments
-        _arguments = self.initDefaults["arguments"]
-        # Define argument placeholders
-        _cmdArgPlaceholders = self.initDefaults["cmdArgPlaceholders"]
-        # Define pathtagBlackList
-        _pathTagBlacklistKeys = self.initDefaults["pathTagBlacklistKeys"]
-        # Get peristance/settings defaults
-        defaults = self.initDefaults["defaults"]
-        # Get pip-dependencies
-        pipDeps = self.initDefaults["pipDeps"]
-        # Load tags that should be loaded when loading settings/persistance defaults
-        _ingestDefaultTags = self.initDefaults["ingestDefaultTags"]
-        # Set values based on the method call functions
-        if argumentDeffinionOvw != None: _arguments = argumentDeffinionOvw
-        if cmdArgPlaceholders != None: _cmdArgPlaceholders.update(cmdArgPlaceholders)
-        if pathTagBlacklistKeys != None:
-            _pathTagBlacklistKeys.extend(pathTagBlacklistKeys)
-        if additionalSettings != None:
-            defaults = deep_merge_dict_only(defaults,additionalSettings)
-        if additionalPipDeps != None:
-            pipDeps.extend(additionalPipDeps)
-        if additionalIngestDefaultTags != None:
-            _ingestDefaultTags.update(additionalIngestDefaultTags)
-        # Get cliargs
+    def init_handleStartFileEfileParams(self,cliArgs=None) -> (list,str,str):
+        # [Get cliargs]
         _cliArgs = cliArgs if cliArgs != None else sys.argv
-        _regionalVars["Args"] = _cliArgs
 
         # [Handle startfile/efile parameters]
         # startfile
@@ -2077,83 +2091,89 @@ class crshSession():
             _efile = _cliArgs[0]
         else:
             _efile = "Unknown"
-        # Add them to the temporary regionalVars
-        _regionalVars["Startfile"] = _startfile
-        _regionalVars["Efile"] = _efile
-
+        
+        return _cliArgs,_startfile,_efile
+    
+    def init_getCslibDir(self,rootPathRetrivalMode=str,arguments=list) -> str:
         # [Get working directories based on the assumption of root/cslib/main.py]
         # Get CSlibDir
         _cslibdir = None
-        if _regionalVars["RootPathRetrivalMode"] == "inspect":
+        if rootPathRetrivalMode == "inspect":
             if os.path.exists( os.path.abspath(inspect.getfile(inspect.currentframe())) ):
                 _cslibdir = os.path.dirname( os.path.abspath(inspect.getfile(inspect.currentframe())) )
             else:
                 if os.path.dirname(__file__) == False:
                     _cslibdir = os.path.abspath( os.path.dirname(__file__) )
                 else:
-                    if os.path.exists(_regionalVars["Args"][0]):
-                        _cslibdir = _regionalVars["Args"][0]
+                    if os.path.exists(arguments[0]):
+                        _cslibdir = arguments[0]
         else:
             if os.path.dirname(__file__) == False:
                 _cslibdir = os.path.abspath( os.path.dirname(__file__) )
             else:
-                if os.path.exists(_regionalVars["Args"][0]):
-                    _cslibdir = _regionalVars["Args"][0]
-        # Add to regionalvars
-        _regionalVars["CSlibDir"] = _cslibdir
+                if os.path.exists(arguments[0]):
+                    _cslibdir = arguments[0]
+        
+        return _cslibdir
 
-        # [Evaluate the pathtags in regionalvars for the variables defined in __registerAsPaths]
-        tempSubstTagMan = tagSubstitionManager() #init temp-subs-man
-        hasPaths = _regionalVars["__registerAsPaths"]
-        def _hasTags(obj):
-            hasTags = False
-            if type(obj) == dict:
-                for key,value in obj.items():
-                    if _hasTags(value) == True:
-                        hasTags = True
-                        break
-            elif type(obj) == list or type(obj) == "tuple":
-                for i,value in enumerate(obj):
-                    if _hasTags(value) == True:
-                        hasTags = True
-                        break
-            elif type(obj) == str:
-                if "{" in obj and "}" in obj:
-                    hasTags = True
-            return hasTags
-        def _applySubstTags(instance,obj,keyn="base",blacklistKeys=[]):
-            if keyn not in blacklistKeys:
+    def init_evalPathTagsInData(self,data=dict,pathTagBlackListKeys=list) -> (dict,dict):
+        """
+        Evaluates pathTags in keys set under the '__registerAsPaths key'
+        Places the tags it has evaluated under the 'base_PathTags' key.
+        """
+        if data.get("__registerAsPaths") != None:
+            tempSubstTagMan = tagSubstitionManager() #init temp-subs-man
+            hasPaths = data["__registerAsPaths"]
+            def _hasTags(obj):
+                hasTags = False
                 if type(obj) == dict:
                     for key,value in obj.items():
-                        obj[key] = _applySubstTags(instance,value,key,blacklistKeys)
+                        if _hasTags(value) == True:
+                            hasTags = True
+                            break
                 elif type(obj) == list or type(obj) == "tuple":
                     for i,value in enumerate(obj):
-                        obj[i] = _applySubstTags(instance,value,keyn,blacklistKeys)
+                        if _hasTags(value) == True:
+                            hasTags = True
+                            break
                 elif type(obj) == str:
-                    if _hasTags(obj) == True:
-                        value = absPathSepObj(tempSubstTagMan.eval(obj))
-                    else:
-                        value = tempSubstTagMan.eval(obj)
-                    value = normPathSep(value)
-                    if keyn in hasPaths:
-                        tempSubstTagMan.addTag(keyn,value)
-                    obj = value
-            return obj
-        # Apply to regionalVars applying blacklist as an exclusionlist
-        _regionalVars = _applySubstTags(tempSubstTagMan,_regionalVars,blacklistKeys=_pathTagBlacklistKeys)
-        # Add the tags to a dictionary and add that to regionaVars as the baseTags
-        initSubstTags = {}
-        for key,value in tempSubstTagMan.substTags.items():
-            initSubstTags[self.storage.addPrefToKey(key)] = value
-        _regionalVars["base_PathTags"] = initSubstTags
-        # Clean up
-        del tempSubstTagMan
+                    if "{" in obj and "}" in obj:
+                        hasTags = True
+                return hasTags
+            def _applySubstTags(instance,obj,keyn="base",blacklistKeys=[]):
+                if keyn not in blacklistKeys:
+                    if type(obj) == dict:
+                        for key,value in obj.items():
+                            obj[key] = _applySubstTags(instance,value,key,blacklistKeys)
+                    elif type(obj) == list or type(obj) == "tuple":
+                        for i,value in enumerate(obj):
+                            obj[i] = _applySubstTags(instance,value,keyn,blacklistKeys)
+                    elif type(obj) == str:
+                        if _hasTags(obj) == True:
+                            value = absPathSepObj(tempSubstTagMan.eval(obj))
+                        else:
+                            value = tempSubstTagMan.eval(obj)
+                        value = normPathSep(value)
+                        if keyn in hasPaths:
+                            tempSubstTagMan.addTag(keyn,value)
+                        obj = value
+                return obj
+            # Apply to regionalVars applying blacklist as an exclusionlist
+            data = _applySubstTags(tempSubstTagMan,data,blacklistKeys=pathTagBlackListKeys)
+            # Add the tags to a dictionary and add that to regionaVars as the baseTags
+            _initSubstTags = {}
+            for key,value in tempSubstTagMan.substTags.items():
+                _initSubstTags[self.storage.addPrefToKey(key)] = value
+            data["base_PathTags"] = _initSubstTags
+            # Clean up
+            del tempSubstTagMan,hasPaths,_initSubstTags
+        # Return
+        return data
 
-        # [Handle pip dependencies by running them through piptools]
+    def init_handlePipDeps(self,pipDeps,customPythonForPip=None,defaultPythonBin=sys.executable,pipDepsTags=None,):
         # handle cuspip
-        _pipDepsCusPip = pipDepsCusPip if pipDepsCusPip != None else sys.executable
         _tagMapping = {
-            "CusPip": _pipDepsCusPip
+            "CusPip": customPythonForPip if customPythonForPip != None else defaultPythonBin
         }
         # Additional pip deps?
         if pipDepsTags != None: _tagMapping.update(pipDepsTags)
@@ -2161,73 +2181,57 @@ class crshSession():
         resolves = installPipDeps_fl(
             deps = pipDeps,
             tagMapping = _tagMapping,
-            returnMods = _regionalVars["AddPipResolvesToList"]
+            returnMods = True
         )
-        # if enabled in regionalVars also add to regionalVars
-        if _regionalVars["AddPipResolvesToList"] == True:
-            _regionalVars["AddedPipResolved"] = resolves
+
         # cleanup
-        del resolves
+        del pipDeps,_tagMapping
 
-        # [Handle arguments]
-        # Define argparser 
-        _argparser = argparse.ArgumentParser(
-            **self.initDefaults["argParser_creationKwargs"]
-        )
-        # Add instance to regionalVars
-        _regionalVars["Argparser"] = _argparser
-        # Add arguments
-        for arg in _arguments:
-            _argparser.add_argument(*arg[0], **arg[1])
-        # Add argument for additionalInput
-        _argparser.add_argument('additional', nargs='*', **self.initDefaults["restArgumentOpts"])
+        # return
+        return resolves
 
-        # Parse args
-        _regionalVars["Pargs"] = _argparser.parse_args(_cliArgs)
-
+    def init_handlePlaceholdersInArgs(self,pargs=list,argumentsToParse=list,argumentsToRegister=list,cmdIdentifier=str,aliasIdentifiers=dict,regionalVars=dict,cmdArgPlaceHolders=dict):
         # Handle placeholders in command and add stripansi
-        cmdIndentifier = self.initDefaults["cmdIdentifier"]
-        aliasIndentifiers = self.initDefaults["aliasIdentifiers"]
         seenCmd = False
         seenAliases = []
         self.tmpSet("changedValues",[]) # init temporary list of changed values
         # Iterate over the arguments and replace placeholders for selected values
-        for vl in _arguments:
-            if vl[1]["dest"] == cmdIndentifier and seenCmd == False:
-                for pl,val in _cmdArgPlaceholders.items():
-                    attr = getattr(_regionalVars["Pargs"], cmdIndentifier)
+        for vl in argumentsToRegister:
+            if vl[1]["dest"] == cmdIdentifier and seenCmd == False:
+                for pl,val in cmdArgPlaceHolders.items():
+                    attr = getattr(pargs, cmdIdentifier)
                     if attr != None:
-                        setattr(_regionalVars["Pargs"], cmdIndentifier, attr.replace(pl,val) )
-                for i,arg in enumerate(_regionalVars["Args"]):
+                        setattr(pargs, cmdIdentifier, attr.replace(pl,val) )
+                for i,arg in enumerate(argumentsToParse):
                     if arg in vl[0]:
-                        if i+1 > len(_regionalVars["Args"])-1: pass
+                        if i+1 > len(argumentsToParse)-1: pass
                         else:
-                            for pl,val in _cmdArgPlaceholders.items():
-                                _regionalVars["Args"][i+1] = _regionalVars["Args"][i+1].replace(val,pl)
+                            for pl,val in cmdArgPlaceHolders.items():
+                                argumentsToParse[i+1] = argumentsToParse[i+1].replace(val,pl)
                 seenCmd = True
                 break
         # Iterate over the arguments and handle aliases for selected keys
-        for vl in _arguments:
+        for vl in argumentsToRegister:
             dest = vl[1]["dest"]
-            if dest in list(aliasIndentifiers.keys()) and dest not in seenAliases:
-                key = aliasIndentifiers[dest]
+            if dest in list(aliasIdentifiers.keys()) and dest not in seenAliases:
+                key = aliasIdentifiers[dest]
                 invertBool = False
                 if key.startswith("!"):
                     invertBool = True
                     key = key.replace("!", "", 1)
                 if invertBool == True:
-                    _v = getattr(_regionalVars["Pargs"], dest)
+                    _v = getattr(pargs, dest)
                     if type(_v) == bool:
-                        _regionalVars[key] = not _v
+                        regionalVars[key] = not _v
                     else:
-                        _regionalVars[key] = _v
+                        regionalVars[key] = _v
                     # add value to temp-list
                     self.tmpSet(
                         "changedValues",
                         [key,*self.tmpGet("changedValues")]
                     )
                 else:
-                    _regionalVars[key] = getattr(_regionalVars["Pargs"], dest)
+                    regionalVars[key] = getattr(pargs, dest)
                     # add value to temp-list
                     self.tmpSet(
                         "changedValues",
@@ -2235,14 +2239,38 @@ class crshSession():
                     )
                 seenAliases.append(dest)
 
-        # [Add the regionalVars to the session]
-        # Append possible custom
-        if regionalVars != None: _regionalVars.update(regionalVars)
-        # Normalize al paths in values
-        _regionalVars = normPathSepObj(_regionalVars)
-        # Apply
-        self.regionalUpdate(_regionalVars)
+        del cmdIdentifier,aliasIdentifiers,seenCmd,seenAliases
 
+        return pargs,regionalVars
+
+    def init_handleArgswithArgParse(self,argumentsToParse=list,argumentsToRegister=list,argparserCreationKwargs=dict,restArgumentOptions=dict,cmdIdentifier=str,aliasIdentifiers=dict,cmdArgPlaceHolders=dict,regionalVars=dict) -> (object,list,list):
+        # Define argparser 
+        _argparser = argparse.ArgumentParser(
+            **argparserCreationKwargs
+        )
+        # Add arguments
+        for arg in argumentsToRegister:
+            _argparser.add_argument(*arg[0], **arg[1])
+        # Add argument for additionalInput
+        _argparser.add_argument('additional', nargs='*', **restArgumentOptions)
+
+        # Parse args
+        _Pargs = _argparser.parse_args(argumentsToParse)
+
+        # Handle placeholders in command and add stripansi
+        pargs,regionalVars = self.init_handlePlaceholdersInArgs(
+            _Pargs,
+            argumentsToParse,
+            argumentsToRegister,
+            cmdIdentifier,
+            aliasIdentifiers,
+            regionalVars,
+            cmdArgPlaceHolders
+        )
+
+        return _argparser,argumentsToParse,_Pargs,regionalVars
+
+    def init_handleAdvArgs(self,launchWith_stripAnsi=bool,launchWith_noVerboseStart=bool):
         # [Handle Fileless]
         if self.regionalGet("Pargs").fileless == True:
             self.flags.enable("--fileless")
@@ -2266,21 +2294,103 @@ class crshSession():
             if "VerboseStart" not in __tmp: __tmp.append("VerboseStart")
             self.tmpSet("changedValues",__tmp)
 
-        # [Register ptm and stm (bases and final collection)]
+    def init_populateBaseRegionalVars(self,cliArgs=None,regionalVars=None,argumentDeffinionOvw=None,cmdArgPlaceholders=None,pathTagBlacklistKeys=None,additionalSettings=None,additionalPipDeps=None,additionalIngestDefaultTags=None,pipDepsCusPip=None,pipDepsTags=None,launchWith_stripAnsi=False,launchWith_noVerboseStart=False):
+        # [Prepare by getting values]
+        # Define standard 
+        _regionalVars = self.initDefaults["regionalVars"]
+        # Define Arguments
+        _arguments = self.initDefaults["arguments"]
+        # Define argument placeholders
+        _cmdArgPlaceholders = self.initDefaults["cmdArgPlaceholders"]
+        # Define pathtagBlackList
+        _pathTagBlacklistKeys = self.initDefaults["pathTagBlacklistKeys"]
+        # Get peristance/settings defaults
+        _defaults = self.initDefaults["defaults"]
+        # Get pip-dependencies
+        pipDeps = self.initDefaults["pipDeps"]
+        # Load tags that should be loaded when loading settings/persistance defaults
+        _ingestDefaultTags = self.initDefaults["ingestDefaultTags"]
+        # Set values based on the method call functions
+        if argumentDeffinionOvw != None: _arguments = argumentDeffinionOvw
+        if cmdArgPlaceholders != None:
+            _cmdArgPlaceholders.update(cmdArgPlaceholders)
+        if pathTagBlacklistKeys != None:
+            _pathTagBlacklistKeys.extend(pathTagBlacklistKeys)
+        if additionalSettings != None:
+            _defaults = deep_merge_dict_only(defaults,additionalSettings)
+        if additionalPipDeps != None:
+            pipDeps.extend(additionalPipDeps)
+        if additionalIngestDefaultTags != None:
+            _ingestDefaultTags.update(additionalIngestDefaultTags)
+        # Clean up
+        self.tmpSet("defaults",_defaults)
+        self.tmpSet("ingestDefaultTags",_ingestDefaultTags)
+        del _defaults,_ingestDefaultTags
+
+        # [Handle args]
+        _regionalVars["Args"],_regionalVars["Startfile"],_regionalVars["Efile"] = self.init_handleStartFileEfileParams(cliArgs)
+
+        # [Get CslibDir]
+        _regionalVars["CSlibDir"] = self.init_getCslibDir(_regionalVars["RootPathRetrivalMode"],_regionalVars["Args"])
+
+        # [Evaluate the pathtags in regionalvars for the variables defined in __registerAsPaths]
+        _regionalVars = self.init_evalPathTagsInData(_regionalVars,_pathTagBlacklistKeys)
+        del _pathTagBlacklistKeys
+
+        # [Handle pip dependencies by running them through piptools]
+        resolves = self.init_handlePipDeps(
+            pipDeps = pipDeps,
+            customPythonForPip = pipDepsCusPip,
+            defaultPythonBin = sys.executable,
+            pipDepsTags = pipDepsTags)
+
+        # if enabled in regionalVars also add to regionalVars
+        if _regionalVars["AddPipResolvesToList"] == True:
+            _regionalVars["AddedPipResolved"] = resolves
+        del resolves
+
+        # [Handle arguments]
+        _regionalVars["Argparser"],_regionalVars["Args"],_regionalVars["Pargs"],_regionalVars = self.init_handleArgswithArgParse(
+            _regionalVars["Args"],
+            _arguments,
+            self.initDefaults["argParser_creationKwargs"],
+            self.initDefaults["restArgumentOpts"],
+            self.initDefaults["cmdIdentifier"],
+            self.initDefaults["aliasIdentifiers"],
+            _cmdArgPlaceholders,
+            _regionalVars
+        )
+        _regionalVars["RegisteredArgs"] = _arguments
+        _regionalVars["RegisteredCmdArgPlaceHolders"] = _cmdArgPlaceholders
+        del _arguments,_cmdArgPlaceholders
+
+        # [Add the regionalVars to the session]
+        # Append possible custom
+        if regionalVars != None: _regionalVars.update(regionalVars)
+        # Normalize al paths in values
+        _regionalVars = normPathSepObj(_regionalVars)
+        # Apply
+        self.regionalUpdate(_regionalVars)
+
+        self.init_handleAdvArgs(launchWith_stripAnsi,launchWith_noVerboseStart)
+
+    def init_createTagManagers(self):
         # base_ptm (register al tags set as registerAsPaths)
-        self.register("base_ptm", pathTagManager(initSubstTags))
+        self.register("base_ptm", pathTagManager(self.regionalGet("base_PathTags")))
         self.getregister("base_ptm").ensureAl() # Ensure pathtags existance
         # base_stm (register al tags set as registerAsTags)
         _substTags = {}
+        _regionalVars = self.regionalGet()
         for k in self.regionalGet("__registerAsTags"):
             if k in _regionalVars.keys():
                 _substTags[self.storage.addPrefToKey(k)] = _regionalVars[k]
         self.register("base_stm", tagSubstitionManager(_substTags))
         # Make collectionalTagMan from both the previous
-        self.register("stm", collectionalTagManager(initSubstTags,_substTags))
+        self.register("stm", collectionalTagManager(self.regionalGet("base_PathTags"),_substTags))
         self.regionalSet("SubstTags", self.getregister("stm").getAlTags() ) # add tags to regionalVars
+        del _regionalVars,_substTags
 
-        # [Make settings and persistance]
+    def init_createSettingsAndPersistance(self):
         # Handle if the configurators should have stm access (set through argument)
         _setUseTagMan = self.getregister("stm")
         if self.regionalGet("Pargs").noModStm == True: _setUseTagMan = None
@@ -2301,11 +2411,13 @@ class crshSession():
         self.register("per", modularSettingsLinker(_filePer,encoding=self.getEncoding(),ensure=True,readerMode=self.regionalGet("SettingsReaderMode"),stm=_setUseTagMan,fileIsStream=_isStream,streamType="yaml"))
         self.getregister("per").createFile() # Incase the linker is using a file ensure its existance
 
-        # [Populate settings and persistance]
-        ## enable allow flag
-        self.flags.enable("--enableUnsafeOperations")
+        del _setUseTagMan,_isStream,_fileSet,_filePer
+
+    def init_populateSettingsAndPersistance(self):
         ## Ingest the defaults and the tags that will be allowed for it
-        self.ingestDefaults(defaults,_ingestDefaultTags)
+        self.ingestDefaults(self.tmpGet("defaults"),self.tmpGet("ingestDefaultTags"))
+        self.tmpRemove("defaults")
+        self.tmpRemove("ingestDefaultTags")
         # Get encoding and also set it for both settings/persistance
         self.regionalSet("DefaultEncoding",self.getregister("set").getProperty("crsh","Formats.DefaultEncoding",skipTagMan=False)) # Last time to not use self.getEncoding()
         self.getregister("set").encoding = self.getEncoding()
@@ -2317,14 +2429,16 @@ class crshSession():
             self.regionalSet("VerboseStart", self.getregister("set").getProperty("crsh","Console.VerboseStart",skipTagMan=True))
         # Remove the temp variable used for storing the changedValues
         self.tmpRemove("changedValues")
-        # Load conUtils config from settings instances
+
+    def init_loadConUtilsConfig(self):
         _conUtilsConfig = self.regionalGet("conUtilsConfig")
         _conUtilsConfig["ask"] = self.getregister("set").getProperty("crsh","conUtilsConfig.ask")
         _conUtilsConfig["defW"] = self.getregister("set").getProperty("crsh","conUtilsConfig.defW")
         _conUtilsConfig["defH"] = self.getregister("set").getProperty("crsh","conUtilsConfig.defH")
         # Apply conUtils config from settings instances
         self.regionalSet("conUtilsConfig",_conUtilsConfig)
-        # Make startupWprocess from config
+
+    def init_createStartupMessagerFromConfig(self) -> object:
         pgMax = self.initDefaults["startupMessagingConfig"]["width"]
         if str(pgMax).lower() == "auto":
             pgMax = getConSize()[0]
@@ -2341,42 +2455,19 @@ class crshSession():
             pgIncr= pgIncr,
             unicodeSymbols = self.regionalGet("SupportsUnicode")()
         )
-        # Set scope on debbuger
-        self.deb.setScope(
-            self.getregister("set").getProperty("crsh_debugger","Scope",skipTagMan=True)
-        )
-        # if debug is enabled the debugger should log
-        if debug == True:
-            # Handle log file or if fileless make a stateInstance
-            if self.flags.has("--fileless"):
-                logFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
-                _isStream = True
-            else:
-                _isStream = False
-                if debugFile == None:
-                    logFile = os.path.join(self.regionalGet("BaseDir"),"debug.log")
-                else:
-                    logFile = debugFile
-            # Enable logger for the debugger using methods
-            self.deb.enableLogger(logFile,logType=debugLogType,logEncoding=self.getEncoding(),logForceUTC=debugForceUTC,logIsStream=_isStream)
-            self.deb.logFormatted = debugFormatLog
-        ## disable allow flag
-        self.flags.disable("--enableUnsafeOperations")
+        del pgMax,pgIncr
+        return st
 
-        # [Get versionData]
-        st.verb("Loading versiondata...") # VERBOSE START
-
-        # Get versionData
-        _temp = self.getregister("set").getModule("crsh",skipTagMan=True)
+    def init_loadVersionData(self,settingsData) -> dict:
         try:
             # Get from function
             _versionData = crosshellVersionManager_getData(
                 versionFile = 
                     self.getregister("stm").eval(
                         mode = "ptm",
-                        string = getKeyPath(_temp, "Version.VerFile")
+                        string = getKeyPath(settingsData, "Version.VerFile")
                     ),
-                formatVersion = getKeyPath(_temp, "Version.FileFormatVer"),
+                formatVersion = getKeyPath(settingsData, "Version.FileFormatVer"),
                 encoding = self.getEncoding()
             )
             # Make id
@@ -2390,27 +2481,25 @@ class crshSession():
         # Apply to regional
         self.regionalSet("VersionData",_versionData)
 
-        # [Load formatter]
-        st.verb("Loading formatter...") # VERBOSE START
+        del _versionData
+        return settingsData
+
+    def init_loadCSGT(self,data=dict):
         # Get the settings module and use it to get values for CSGT
         _textInst = crosshellGlobalTextSystem(
             pathtagInstance = self.getregister("stm"),
-            palette = getKeyPath(_temp,"CGTS.ANSI_Hex_Palette"),
-            parseWebcolor = getKeyPath(_temp,"Parse.Text.Webcolors"),
-            customTags = getKeyPath(_temp,"CGTS.CustomMappings")
+            palette = getKeyPath(data,"CGTS.ANSI_Hex_Palette"),
+            parseWebcolor = getKeyPath(data,"Parse.Text.Webcolors"),
+            customTags = getKeyPath(data,"CGTS.CustomMappings")
         )
         # Apply stripansi if set in settings
         _textInst.stripAnsi = self.regionalGet("StripAnsi")
         # Apply to regionaGet and the debugger
         self.deb.setFormatterInstance( _textInst )
         self.register("txt", _textInst)
-        # Test msg
-        st.verb("Does it work? {#DA70D6}*Toad*{r}") # VERBOSE START
-        # Apply methods that relly on the formatter
-        self.register("fprint",self.regionalGet("fprint"))
-        self.register("sformat",self.regionalGet("sformat"))
+        del _textInst,data
 
-        # [Init language system]
+    def init_loadLanguageService(self) -> object:
         # Make a language pathObject and add to regionals
         self.regionalSet(
             "LangPathObj",
@@ -2432,7 +2521,7 @@ class crshSession():
         for x in langListApplicapleSubstTags:
             if self.regionalGet(x) != None:
                 langListApplicapleSubstTags_.update(self.regionalExport(x))
-        _cslp = crosshellLanguageProvider(
+        cslp = crosshellLanguageProvider(
             languageListFile = _file,
             defaultLanguage = self.getregister("set").getProperty("crsh","Language.Loaded",skipTagMan=False),
             listFormat = self.getregister("set").getProperty("crsh","Language.ListFormat",skipTagMan=True),
@@ -2446,26 +2535,20 @@ class crshSession():
         )
         del langListApplicapleSubstTags,langListApplicapleSubstTags_
         # Register and add to debugger
-        self.deb.setLanguageProvider(_cslp)
-        self.register("lng",_cslp)
-        # Test msg
-        st.verb(f"Populating languageList... (len: {len(_cslp.languageList)})",l="cs.startup.populanglist._nonadrss_",ct={"len":len(_cslp.languageList)}) # VERBOSE START
-        # Call poplulateList to make it aware of the languages present
-        _cslp.populateList()
-        # Update choices in settings dynamicly
-        self.getregister("set").chnProperty("crsh","Language._choices",_cslp.choices)
+        self.deb.setLanguageProvider(cslp)
+        self.register("lng",cslp)
+        return cslp
 
-        # [Handle packages]
+    def _init_pkg_createPathObj(self):
         # Start with a pathObj for package files
         _tempPkgFilePath = pathObject([
             self.regionalGet("PackageFilePath")
         ])
         _tempPkgFilePath.ensureAl()
         self.regionalSet("PkgFilePathObj",_tempPkgFilePath)
+        del _tempPkgFilePath
 
-        # VERBOSE START #
-        st.verb("Discovering non-installed packages...",l="cs.startup.discoverpkgs")
-
+    def _init_pkg_discoverPackageFiles(self) -> (dict,dict):
         # Retrive a list of packages in /packages
         _tempPkgFileList = self.regionalGet("PkgFileList")
         _installedPackages = {
@@ -2475,7 +2558,7 @@ class crshSession():
         ## load moduloPackages
         _tempPkgFileList["modulo"],_installedPackages["modulo"] = discoverPackageFiles(
             type_ = "modulo",
-            sourcePath = _tempPkgFilePath,
+            sourcePath = self.regionalGet("PkgFilePathObj"),
             installDest = self.regionalGet("mPackPath"),
             fileExtensions = handleOSinExtensionsList(
                 self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Packages.Modulo")
@@ -2489,7 +2572,7 @@ class crshSession():
         ## load legacyPackages
         _tempPkgFileList["legacy"],_installedPackages["legacy"] = discoverPackageFiles(
             type_ = "legacy",
-            sourcePath = _tempPkgFilePath,
+            sourcePath = self.regionalGet("PkgFilePathObj"),
             installDest = self.regionalGet("lPackPath"),
             fileExtensions = handleOSinExtensionsList(
                 self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Packages.Legacy")
@@ -2501,34 +2584,21 @@ class crshSession():
             legacyDiscoverTraverseDepth = int(self.getregister("set").getProperty("crsh","Packages.Discover.LegacyTraverseDepth")),
         )
         self.regionalSet("PkgFileList",_tempPkgFileList)
-        # VERBOSE START #
-        unilen = len([*_tempPkgFileList["legacy"],*_tempPkgFileList["modulo"]])
-        if unilen < 1:
-            st.verb("Installing {amnt} packages, continuing...",l="cs.startup.installpkgs.zero",ct={"amnt":unilen})
-        else:
-            st.verb("Found {amnt} non-installed packages...",l="cs.startup.installpkgs",ct={"amnt":unilen})
+        return _tempPkgFileList,_installedPackages
 
-        # Install any uninstalled package-files, then add to the packageList
-        if unilen > 0:
-            _installedPackages = installPackageFiles(
-                nonInstalledPackages = _tempPkgFileList,
-                installedPackages = _installedPackages,
+    def _init_pkg_installUninstalledPkgFiles(self,amntPackages=None,tempPkgFileList=dict,installedPackages=dict):
+        if amntPackages == None: amntPackages = len([*tempPkgFileList["legacy"],*tempPkgFileList["modulo"]])
+        if amntPackages > 0:
+            installedPackages = installPackageFiles(
+                nonInstalledPackages = tempPkgFileList,
+                installedPackages = installedPackages,
                 installDestModulo = self.regionalGet("mPackPath"),
                 installDestLegacy = self.regionalGet("lPackPath")
             )
-        self.regionalSet("PackageList",_installedPackages)
-        
-        self.tmpSet("amntPkgsToLoad",len([*_installedPackages["legacy"],*_installedPackages["modulo"]]))
+        self.regionalSet("PackageList",installedPackages)
+        self.tmpSet("amntPkgsToLoad",len([*installedPackages["legacy"],*installedPackages["modulo"]]))
 
-        # clean up
-        del unilen
-        del _installedPackages
-        del _tempPkgFileList
-        del _tempPkgFilePath
-
-        # VERBOSE START #
-        st.verb("Loading and registring features...",l="cs.startup.loadfeatures")
-
+    def _init_pkg_loadPackageConfigs(self) -> (dict,int):
         # use loadPackageConfig() to get the packageData and features
         packageConfigs,foundFeatures = loadPackageConfig(
             installedPackages = self.regionalGet("PackageList"),
@@ -2541,13 +2611,12 @@ class crshSession():
 
         tempList = []    
         for i in [list(i.keys()) for i in list(foundFeatures.values())]: tempList.extend(i)
-        unilen2 = len(tempList)
-        del tempList
+        
+        del foundFeatures
 
-        # VERBOSE START #
-        st.verb("Loading package data... (Pkgs: {amnt}, Features: {amnt2})",l="cs.startup.loadpkgdata",ct={"amnt":self.tmpGet("amntPkgsToLoad"),"amnt2":unilen2})
+        return packageConfigs,len(tempList)
 
-        # [Fill in mangler kwargs]
+    def _init_pkg_fillInManglerKwargs(self,addReaderMethod=object) -> (str,bool):
         ## reader
         if self.flags.has("--fileless"):
             _readerManglerFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
@@ -2562,7 +2631,7 @@ class crshSession():
                     open(_readerManglerFile,'w',encoding=self.getEncoding()).write("")
             _readerManglerFileIsStream = False
         self.initDefaults["builtInPkgFeatures"]["builtin"]["readers"]["manglerKwargs"] = {
-            "addMethod": addReader,
+            "addMethod": addReaderMethod,
             "readerFile": _readerManglerFile,
             "readerFileEncoding": self.getEncoding(),
             "readerFileIsStream": _readerManglerFileIsStream
@@ -2584,8 +2653,9 @@ class crshSession():
             "enableParsingOfRudamentaryDotFiles": self.getregister("set").getProperty("crsh","Packages.RudamentaryDotFiles.Enable"),
             "dotFileEncoding": self.getEncoding()
         }
+        return _readerManglerFile,_readerManglerFileIsStream
 
-        # using the loaded features and packageconfigs load package data for the features
+    def _init_pkg_loadPackageFeaturesAndManageTheData(self,packageConfigs=dict) -> (dict,dict):
         loadedFeatures = loadPackageFeatures(
             loadedFeatures = self.storage.getFeatures(),
             packageConfigs = packageConfigs,
@@ -2637,17 +2707,19 @@ class crshSession():
         else:
             mergedDeffintions = self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Cmdlets",skipTagMan=True)
 
-        ## Add the ReaderRegistry with the data from the above
+        return loadedFeatures,mergedDeffintions
+
+    def _init_pkg_addReaderRegistry(self,mergedDeffintions=dict,readerManglerFile=str,readerManglerFileIsStream=bool):
         self.regionalSet("ReaderRegistry",
             toReaderFormat(
                 dictFromSettings = mergedDeffintions,
-                readerFile = _readerManglerFile,
+                readerFile = readerManglerFile,
                 encoding = self.getEncoding(),
-                isStream = _readerManglerFileIsStream
+                isStream = readerManglerFileIsStream
             )
         )
-        del _readerManglerFile,_readerManglerFileIsStream
 
+    def _init_pkg_filterCmdletsByType(self,loadedFeatures=dict) -> dict:
         # Filter out cmdlets not type-selected
         for gid,cmdlet in loadedFeatures["cmdlets"]["data"].items():
             found = False
@@ -2658,40 +2730,91 @@ class crshSession():
                         found = True
             if found == False:
                 del loadedFeatures["cmdlets"]["data"][gid]
+        del gid,cmdlet,found,extensions
+        return loadedFeatures
 
-        # Append builtin cmdlet-data
+    def _init_pkg_appendBuiltinCmdletData(self,loadedFeatures=dict) -> dict:
         for k,v in self.initDefaults["defaultCmdlet_data"].items():
             v["index"] = len(loadedFeatures["cmdlets"]["data"])
             v["data"]["encoding"] = self.getEncoding()
             loadedFeatures["cmdlets"]["data"][k] = v
+        return loadedFeatures
 
-        self.regionalSet("LoadedPackageData",loadedFeatures)
-        del mergedDeffintions,loadedFeatures,gid,cmdlet,found,reader,extensions
+    def init_handlePackages(self,debMethod=None):
+
+        self._init_pkg_createPathObj()
 
         # VERBOSE START #
-        st.verb(f"Preparing for console...",l="cs.startup.preparing-console")
+        if debMethod != None: debMethod("Discovering non-installed packages...",l="cs.startup.discoverpkgs")
 
+        # Retrive a list of packages in /packages
+        _tempPkgFileList, _installedPackages = self._init_pkg_discoverPackageFiles()
+        unilen = len([*_tempPkgFileList["legacy"],*_tempPkgFileList["modulo"]])
+
+        # VERBOSE START #
+        if debMethod != None:
+            if unilen < 1:
+                debMethod("Installing {amnt} packages, continuing...",l="cs.startup.installpkgs.zero",ct={"amnt":unilen})
+            else:
+                debMethod("Found {amnt} non-installed packages...",l="cs.startup.installpkgs",ct={"amnt":unilen})
+
+        # Install any uninstalled package-files, then add to the packageList
+        self._init_pkg_installUninstalledPkgFiles(unilen,_tempPkgFileList,_installedPackages)
+
+        # VERBOSE START #
+        if debMethod != None: debMethod("Loading and registring features...",l="cs.startup.loadfeatures")
+
+        # load package config
+        packageConfigs, unilen2 = self._init_pkg_loadPackageConfigs()
+
+        # VERBOSE START #
+        if debMethod != None: debMethod("Loading package data... (Pkgs: {amnt}, Features: {amnt2})",l="cs.startup.loadpkgdata",ct={"amnt":self.tmpGet("amntPkgsToLoad"),"amnt2":unilen2})
+
+        # Fill in mangler kwargs
+        _readerManglerFile, _readerManglerFileIsStream = self._init_pkg_fillInManglerKwargs(addReader)
+
+        # Load package data and filter cmdlets based on reader-settings
+        loadedFeatures, mergedDeffintions = self._init_pkg_loadPackageFeaturesAndManageTheData(packageConfigs)
+
+        # Add the ReaderRegistry with the data from the above
+        self._init_pkg_addReaderRegistry(mergedDeffintions,_readerManglerFile,_readerManglerFileIsStream)
+
+        # Filter out cmdlets not type-selected
+        loadedFeatures = self._init_pkg_filterCmdletsByType(loadedFeatures)
+
+        # Append builtin cmdlet-data
+        loadedFeatures = self._init_pkg_appendBuiltinCmdletData(loadedFeatures)
+
+        # Add to regionalVars
+        self.regionalSet("LoadedPackageData",loadedFeatures)
+
+        # Clean up
+        del _tempPkgFileList,_installedPackages,unilen,packageConfigs,unilen2,_readerManglerFile,_readerManglerFileIsStream,mergedDeffintions,loadedFeatures
+
+    def init_updatePaletteMappingChoicesInSettings(self):
         # Update the palette/mapping choices in settings
         mappingPackages = [i for i in [list(i.keys())[0] if len(i.keys()) > 0 else None for i in list(self.regionalGet("LoadedPackageData")["mappings"]["data"].values())] if i != None]
         palettePackages = [i for i in [list(i.keys())[0] if len(i.keys()) > 0 else None for i in list(self.regionalGet("LoadedPackageData")["palette"]["data"].values())] if i != None]
         self.getregister("set").chnProperty("crsh","Packages.Formatting.Mappings._choices",mappingPackages)
         self.getregister("set").chnProperty("crsh","Packages.Formatting.Palettes._choices",palettePackages)
-        
+
+    def init_getSelectedPaletteMappingAndApply(self) -> (dict,dict):
         # Get selected palette/mapping and apply
         selectedMapping = self.getregister("set").getProperty("crsh","Packages.Formatting.Mappings.Selected")
         selectedPalette = self.getregister("set").getProperty("crsh","Packages.Formatting.Palettes.Selected")
         map_of_mappings, map_of_palette = {}, {}
         for p in list(self.regionalGet("LoadedPackageData")["mappings"]["data"].values()): map_of_mappings.update(p)
         for p in list(self.regionalGet("LoadedPackageData")["palette"]["data"].values()): map_of_palette.update(p)
-        selectedMappingData = map_of_mappings.get(selectedMapping)
-        selectedPaletteData = map_of_palette.get(selectedPalette)
+        return map_of_mappings.get(selectedMapping), map_of_palette.get(selectedPalette)
         
+    def init_applyPaletteMappingToTextSys(self,selectedMappingData,selectedPaletteData):
         # Apply to text
         if selectedMappingData != None:
             self.getregister("txt").customTags.update(selectedMappingData)
         if selectedPaletteData != None:
             self.getregister("txt").palette.update(selectedPaletteData)
 
+    def init_reloadLanguages(self):
         _tempLng = self.getregister("lng")
         if self.getregister("set").getProperty("crsh","Language.LoadSameSuffixedLangs",skipTagMan=True) == True:
             _tempLng.loadSameSuffixedLanguages()
@@ -2699,7 +2822,8 @@ class crshSession():
             self.getregister("set").chnProperty("crsh","Language.Loaded", _tempLng.languagePrios)
         del _tempLng
 
-        # [Add the default user-vars to storage using self.userVarUpdate()]
+    def init_addDefaultUserVars(self):
+        # Add the default user-vars to storage using self.userVarUpdate()
         ## Update the keys from regionalVars
         for k,v in self.initDefaults["default_userVars"].items():
             if type(v) == str and v.startswith("@regionalVars:"):
@@ -2710,12 +2834,143 @@ class crshSession():
         ## Update the userVars
         self.userVarUpdate(self.initDefaults["default_userVars"])
 
+    # endregion: Init-SubMethods
+
+    def init(self, cliArgs=None, regionalVars=None, argumentDeffinionOvw=None, cmdArgPlaceholders=None, pathTagBlacklistKeys=None, additionalSettings=None, additionalPipDeps=None, additionalIngestDefaultTags=None, pipDepsCusPip=None, pipDepsTags=None, launchWith_stripAnsi=False, launchWith_noVerboseStart=False, debug=False,debugFile=None,debugLogType="text",debugForceUTC=False,debugFormatLog=False):
+        """Initiates the session."""
+
+        # Setup
+        self.init_setupStep()
+
+        # Fill in base regionalvars
+        self.init_populateBaseRegionalVars(cliArgs,regionalVars,argumentDeffinionOvw,cmdArgPlaceholders,pathTagBlacklistKeys,additionalSettings,additionalPipDeps,additionalIngestDefaultTags,pipDepsCusPip,pipDepsTags,launchWith_stripAnsi,launchWith_noVerboseStart)
+        self.regionalSet("LaunchedWithNoVerbStart",launchWith_noVerboseStart)
+        self.regionalSet("LauncherWithStripAnsi",launchWith_stripAnsi)
+
+        # Register ptm and stm (bases and final collection)
+        self.init_createTagManagers()
+
+        # Make settings and persistance
+        self.init_createSettingsAndPersistance()
+
+        # Enable allow flag
+        self.flags.enable("--enableUnsafeOperations")
+
+        # Populate settings and persistance
+        self.init_populateSettingsAndPersistance()
+
+        # Load conUtils config from settings instances
+        self.init_loadConUtilsConfig()
+
+        # Make startupWprocess from config
+        st = self.init_createStartupMessagerFromConfig()
+        
+        # Set scope on debbuger
+        self.deb.setScope(
+            self.getregister("set").getProperty("crsh_debugger","Scope",skipTagMan=True)
+        )
+
+        # if debug is enabled the debugger should log
+        if debug == True:
+            # Handle log file or if fileless make a stateInstance
+            if self.flags.has("--fileless"):
+                logFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
+                _isStream = True
+            else:
+                _isStream = False
+                if debugFile == None:
+                    logFile = os.path.join(self.regionalGet("BaseDir"),"debug.log")
+                else:
+                    logFile = debugFile
+            # Enable logger for the debugger using methods
+            self.deb.enableLogger(logFile,logType=debugLogType,logEncoding=self.getEncoding(),logForceUTC=debugForceUTC,logIsStream=_isStream)
+            self.deb.logFormatted = debugFormatLog
+
+        # Disable allow flag
+        self.flags.disable("--enableUnsafeOperations")
+
+        # [Get versionData]
+        st.verb("Loading versiondata...") # VERBOSE START
+
+        # Get versionData
+        _temp = self.getregister("set").getModule("crsh",skipTagMan=True)
+        _temp = self.init_loadVersionData(_temp)
+
+        # [Load formatter]
+        st.verb("Loading formatter...") # VERBOSE START
+        self.init_loadCSGT(_temp)
+        st.verb("Does it work? {#DA70D6}*Toad*{r}") # VERBOSE START, Test msg
+
+        # Apply methods that relly on the formatter
+        self.register("fprint",self.regionalGet("fprint"))
+        self.register("sformat",self.regionalGet("sformat"))
+
+        # [Init language system]
+        _cslp = self.init_loadLanguageService()
+        # Test msg
+        st.verb(f"Populating languageList... (len: {len(_cslp.languageList)})",l="cs.startup.populanglist._nonadrss_",ct={"len":len(_cslp.languageList)}) # VERBOSE START
+        # Call poplulateList to make it aware of the languages present
+        _cslp.populateList()
+        # Update choices in settings dynamicly
+        self.getregister("set").chnProperty("crsh","Language._choices",_cslp.choices)
+        # Clean up
+        del _cslp
+
+        # Handle packages
+        self.init_handlePackages(st.verb) # CONTAINS # VERBOSE START #
+
+        # VERBOSE START #
+        st.verb(f"Preparing for console...",l="cs.startup.preparing-console")
+
+        # Update the palette/mapping choices in settings
+        self.init_updatePaletteMappingChoicesInSettings()
+        
+        # Get selected palette/mapping and apply
+        selectedMappingData,selectedPaletteData = self.init_getSelectedPaletteMappingAndApply()
+        
+        # Apply to text
+        self.init_applyPaletteMappingToTextSys(selectedMappingData,selectedPaletteData)
+
+        # Clean up
+        del selectedMappingData,selectedPaletteData
+
+        # Reload languages incase updated by package
+        self.init_reloadLanguages()
+
+        # Add the default user-vars to storage
+        self.init_addDefaultUserVars()
+
         # [Finish up]
         # Set flag
         self.flags.enable("--haveBeenInited")
         # Return
         return self
 
+    def runExecLine(self,execline=object) -> object:
+        """
+        Runs an exec-line
+
+        Takes: exec-line class instance
+        Returns: exec-line class instance
+        """
+
+    def parseInput(self,input=str) -> object:
+        """
+        Parses an input string to an exec-line.
+
+        Takes: input string
+        Returns exec-line class instance
+        """
+
+    def evalAndExec(self,input=str):
+        """Validates, Parses and Executes an input string."""
+
+    def prompt(self,promptText="> "):
+        """Prompts the user for input."""
+
+    def eprompt(self,promptText="> "):
+        """Prompts the user for input and executes it."""
+
     def start(self):
-        """Starts the set prompt."""
+        """Starts an interactive prompt."""
         

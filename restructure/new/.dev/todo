@@ -1,3 +1,5 @@
+- IMPORTANT! ALOT OF THE MANGLERS USER PKG-NAME TO ASSUME A PATH INSTEAD OF pathableName FIX THIS!
+
 - Rewrite package loader with the steps:
     1. Path discovery
     2. Package discovery

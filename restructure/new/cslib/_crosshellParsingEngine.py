@@ -157,3 +157,49 @@ def removeAnsiSequences(inputString):
     # Use re.sub to replace ANSI sequences with an empty string
     cleanedString = ansiPattern.sub('', inputString)
     return cleanedString
+
+def split_string_by_spaces(input_string) -> list:
+    '''CSlib.CSPE: Function to split a string by spaces not inside qoutes.'''
+    substrings = []
+    current_substring = []
+    inside_quotes = False
+    quote_char = None
+    for char in input_string:
+        if char == ' ' and not inside_quotes:
+            # If we encounter a space and we're not inside quotes, consider it as a delimiter
+            if current_substring:
+                substrings.append(''.join(current_substring))
+                current_substring = []
+        elif char in ('"', "'"):
+            # Toggle the inside_quotes flag and set the quote_char when encountering a quote
+            inside_quotes = not inside_quotes
+            if inside_quotes:
+                quote_char = char
+            else:
+                quote_char = None
+        else:
+            # Add the character to the current substring
+            current_substring.append(char)
+    # Add the last substring if it exists
+    if current_substring:
+        substrings.append(''.join(current_substring))
+    return substrings
+
+def splitByDelimiters(inputString, delimiters):
+    '''CSlib.CSPE: Split a string by multiple delimiters.
+    Split the input string by any of the specified delimiters.
+
+    Args:
+    input_string (str): The string to be split.
+    delimiters (list): A list of delimiter strings.
+
+    Returns:
+    list: A list of substrings obtained by splitting the input string by any of the delimiters.
+    '''
+    substrings = [inputString]
+    for delimiter in delimiters:
+        newSubstrings = []
+        for substring in substrings:
+            newSubstrings.extend(substring.split(delimiter))
+        substrings = newSubstrings
+    return substrings

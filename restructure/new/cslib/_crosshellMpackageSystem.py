@@ -181,9 +181,9 @@ def _getNameOfModuloPackage(packageConfigFile=str,encoding="utf-8",fileIsStream=
         if dataRaw["package"].get("name") != None:
             gidd["package"]["name"] = dataRaw["package"]["name"]
         elif dataRaw["package"].get("author") != None:
-            gidd["package"]["author"] = dataRaw["package"]["author"].lower() + "." + name
+            gidd["package"]["author"] = dataRaw["package"]["author"].lower()
         elif dataRaw["package"].get("version") != None:
-            gidd["package"]["version"] = name + "." + dataRaw["package"]["version"].lower()
+            gidd["package"]["version"] = dataRaw["package"]["version"].lower()
     if gidd["package"]["name"] != None:
         name = gidd["package"]["name"]
     if gidd["package"]["author"] != None:
@@ -471,8 +471,11 @@ def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,tra
                             searchDirs.extend(listNonHiddenFolders(addressPath,maxRecursiveDepth,travelSymlink))
                     # Load data based on type
                     ## Raw
-                    if featureType == "raw":
-                        dataFile = featureName+"."+featureMappingFileType
+                    if "raw" in featureType:
+                        featureFileName = featureName
+                        if ":" in featureType:
+                            featureFileName = featureType.split(":")[1].strip()
+                        dataFile = featureFileName+"."+featureMappingFileType
                         mappingFtype = featureMappingFileType.lower()
                         if (mappingFtype == "yml"): mappingFtype = "yaml"# Iterate over the search directories and look for mappings file
                         for sdir in searchDirs:

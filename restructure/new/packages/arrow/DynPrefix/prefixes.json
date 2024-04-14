@@ -1,0 +1,12 @@
+{
+    "single": "{parent}\\single.py",
+    "double": "{parent}\\double.py",
+    "small": "{parent}\\small.py",
+    "double-small": "{parent}\\double-small.py",
+    "mini": "{parent}\\mini.py",
+
+    "heavy": "{parent}\\heavy.py",
+    "heavy-thick": "{parent}\\heavy-thick.py",
+
+    "easter-egg-sick": "{parent}\\easter-egg-sick.py"
+}

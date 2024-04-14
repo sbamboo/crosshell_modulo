@@ -16,6 +16,8 @@
     "cs.startup.loadfeatures": "Loading and registring features...",
     "cs.startup.loadpkgdata": "Loading package data... (Pkgs: {amnt}, Features: {amnt2})",
     "cs.startup.preparing-console": "Preparing for console...",
+    "cs.startup.loading-components": "Loading and registring components...",
+    "cs.startup.reloading-languages": "Reloading languages...",
 
     "cs.cmdletexec.traceback":"&31m{traceback}&0m",
     "cs.cmdletexec.error": "&33mCmdlet '{name}' didn't execute fully, might be an error in the cmdet code! &0m",
@@ -25,7 +27,9 @@
     "cs.cmdletexec.reader.errornotfound": "&31mReader {reader} not found!&0m",
     "cs.cmdletexec.reader.errorinexec": "&31mThere was an error executing {reader}!\n{traceback}&0m",
     "cs.cmdletexec.reader.errorincall": "&31mThere was an error calling the reader main function for {reader}!\n{traceback}&0m",
+    "cs.cmdletexec.reader.failedtoloadmodule": "&31mFailed to load {reader} could't get py-module!&0m",
     "cs.cmdletexec.notfound": "&31mCmdlet '{command}' not found!&0m",
+    "cs.cmdletexec.emptyreaderfield": "&31mNo reader was found for the cmdlet '{command}'!&0m",
     "cs.cmdletexec.invalidinput": "&31mInvalid input: {input}&0m",
 
     "cs.cmdlet.changedir.dirnotfound": "&31mCould not find directory/path: '{dirIn}'&0m",

@@ -4,8 +4,29 @@ from cslib.types import picklePrioCopy, merge_dicts
 from cslib.datafiles import _fileHandler,config_to_dict,rudaDotfile_to_dict
 from cslib._crosshellMpackageSystem import toLeastInfoStr
 
+from cslib.execution import input_to_pipelineStructure,execline
+from cslib.externalLibs.conUtils import clear,setConTitle
+from cslib.exceptions import CrosshellDebErr
+
 # region: [FeatureManglers]
-def readerMangler(data=dict,addMethod=None,readerFile=None,readerFileEncoding="utf-8",readerFileIsStream=False) -> dict:
+def componentMangler(data=dict,pkgConfigs=dict,componentFolder=str) -> dict:
+    for packageType,componentIncludingPkg in data.items():
+        for package,componentD in componentIncludingPkg.items():
+            for componentName,componentData in componentD.items():
+                if componentData.get("file") != None:
+                    rootPath = os.path.join( ("{CS_lPackPath}" if packageType == "legacy" else "{CS_mPackPath}"), package ) + componentFolder
+                    file = componentData["file"]
+                    if file.startswith("{parent}"):
+                        file = file.replace("{parent}",rootPath)
+                    else:
+                        file = file.replace("\\","/")
+                        if file.startswith("./"):
+                            file = rootPath + file.lstrip(".")
+                    file = file.replace("\\","/")
+                    data[packageType][package][componentName]["file"] = file
+    return data
+
+def readerMangler(data=dict,pkgConfigs=dict,readerFolder=str,addMethod=None,readerFile=None,readerFileEncoding="utf-8",readerFileIsStream=False) -> dict:
     # Add the readers to the readerFile
     readers = {}
     for packageType,readerIncludingPkg in data.items():
@@ -14,13 +35,14 @@ def readerMangler(data=dict,addMethod=None,readerFile=None,readerFileEncoding="u
                 if package.lower() != "builtins":
                     if packageType == "legacy": rootPath = "{CS_lPackPath}"
                     else: rootPath = "{CS_mPackPath}"
-                    readerBase = os.path.join(rootPath,package,reader)
+                    pathableName = os.path.basename(pkgConfigs[packageType][package]["path"])
+                    readerBase = rootPath + os.sep + pathableName + os.sep + readerFolder + os.sep + reader
                     readerPath = readerBase + ".py"
                     readerName = os.path.splitext(os.path.basename(readerPath))[0]
                     addMethod(readerName,readerPath,readerFile,encoding=readerFileEncoding,isStream=readerFileIsStream)
     return data
 
-def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=str) -> dict:
+def langpckMangler(data=dict,pkgConfigs=dict,languageProvider=None,languagePath=None,mPackPath=str) -> dict:
     languageFiles = []
     for x in data.values():
         for package,y in x.items():
@@ -39,7 +61,7 @@ def langpckMangler(data=dict,languageProvider=None,languagePath=None,mPackPath=s
                 languageProvider.populateList()
     return {"langfiles":languageFiles}
 
-def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"],enableParsingOfRudamentaryDotFiles=False,dotFileEncoding="utf-8") -> dict:
+def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cmdletSchema=dict,allowedPackageConfigTypes=["json"],allowedCmdletConfigTypes=["cfg","config"],enableParsingOfRudamentaryDotFiles=False,dotFileEncoding="utf-8") -> dict:
     rearrangedData = {}
     knowBase_duplicateAmnt = {}
     knowBase_duplicateAmnt_sn = {}
@@ -96,6 +118,7 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                         "fending": os.path.splitext(cmdletPath)[1].replace(".","",1),
                         "filename": os.path.basename(cmdlet),
                         "method": None,
+                        "reader": reader,
                         "path": cmdletPath,
                         "parentPackage": {
                             "name": pkg,
@@ -330,9 +353,117 @@ def cmdletMangler(data=dict,lPackPath=str,mPackPath=str,cmdletStdEncoding=str,cm
                 del rearrangedData[gid]["data"][key]
     ## return
     return rearrangedData
+
+def dynprefixMangler(data=dict,pkgConfigs=dict,dynprefixFolder=str) -> dict:
+    dynPrefixes = {}
+    for pkgType,x in data.items():
+        for pkgName,dynPrefixData in x.items():
+            for key, path in dynPrefixData.items():
+                pathableName = os.path.basename(pkgConfigs[pkgType][pkgName]["path"])
+                rootPath = normPathSep(pkgConfigs[pkgType][pkgName]["path"] + dynprefixFolder)
+                if path.startswith("{parent}"):
+                    path = path.replace("{parent}",rootPath)
+                else:
+                    path = path.replace("\\","/")
+                    if path.startswith("./"):
+                        path = rootPath + path.lstrip(".")
+                path = path.replace("\\","/")
+                dynPrefixes[pathableName+":"+key] = path
+    return dynPrefixes
+
+# endregion
+
+# region: [Components]
+def console_component(csSession):
+
+    # Create a persistant pipeline to not have to recreate it on each prompt
+    _pipeline = execline()
+
+    # Get settings obj
+    _set = csSession.getregister("set")
+
+    # Prep console
+    if _set.getProperty("crsh","Console.ClearOnStart") == True:
+        clear(skipSetXY=True)
+    if _set.getProperty("crsh","Console.TitleEnabled") == True:
+        setConTitle( csSession.getTitle() )
+
+    # Get prefix
+    if _set.getProperty("crsh","Console.PrefixEnabled") == True:
+        prefix = csSession.getPrefix()
+    else:
+        prefix = ""
+
+    # Define "running" state
+    csSession.flags.enable("--consoleRunning")
+
+    # Loop and prompt
+    ret = None
+    try:
+        while csSession.flags.has("--consoleRunning"):
+            ret = csSession.eprompt(prefix,_pipeline=_pipeline)
+            if ret != None: print(ret)
+    except KeyboardInterrupt:
+        print("\n[Crosshell]: Ended by keyboard interrupt. Bya <3")
+    del _set
+    return ret
+
+def interpriter_component(csSession,input_=str,_pipeline=None) -> object:
+    # Ensure a execline obj
+    if _pipeline == None:
+        pipeline = execline()
+    else:
+        pipeline = _pipeline
+
+    # Get it into a basic pipeline-structure
+    pipelineStructure = input_to_pipelineStructure(input_,basicExecutionDelimiters=["||",";"])
+    # Retrive the path/method to exec
+    for segI,segment in enumerate(pipelineStructure):
+        for parI,partial in enumerate(segment):
+            if partial["cmd"].strip() != "":
+                for cmdletID,cmdletData in csSession.regionalGet("LoadedPackageData")["cmdlets"]["data"].items():
+                    cmdAliases = cmdletData["data"].get("aliases")
+                    if cmdAliases == None: cmdAliases = []
+                    if partial["cmd"] == cmdletData["name"] or partial["cmd"] in cmdAliases: #TODO: assuming string aliases might not be the best
+                        pipelineStructure[segI][parI]["cmd"] = cmdletData
+                        pipelineStructure[segI][parI]["handle"] = "valid"
+                        break
+                else:
+                    pipelineStructure[segI][parI]["handle"] = "invalid"
+            else:
+                pipelineStructure[segI][parI]["handle"] = "ignore"
+    pipeline.setSegments(pipelineStructure)
+    return pipeline
+
+def execute_component(csSession,execline=object) -> object:
+    try:
+        return execline.execute(csSession)
+    except CrosshellDebErr as e:
+        return e
+
+def prompt_component(csSession,prompt=str) -> str:
+    return input(prompt)
 # endregion
 
 # region: [Cmdlets]
 def methodCmdet_exit(globalData):
-    pass
+    csSession = globalData["csSession"]
+    if csSession.flags.has("--consoleRunning"):
+        csSession.flags.disable("--consoleRunning")
+    exit(0)
+
+def methodCmdet_print(globalData):
+    print(globalData["args"].sargv)
+# endregion
+
+# region: [PassableMethods]
+def dynprefix_include_constructor(csSession,dynPrefixFile,allow,fromPath):
+    def dynprefix_include(filename=str):
+        if "\\"  in filename or "/" in filename or "." in filename:
+            csSession.deb.perror("lng:cs.prefixsys.dynprefix.invalidinclude",{"dynPrefixFile":dynPrefixFile})
+        if allow == True:
+            filename += ".py"
+            return fromPath(os.path.join(os.path.dirname(dynPrefixFile),filename))
+    return dynprefix_include
+
 # endregion

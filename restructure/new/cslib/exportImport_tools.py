@@ -11,7 +11,7 @@ def getArgsForFunc(func_var):
         "defa": argspec.defaults,
         "varargs": argspec.varargs,
         "varkwargs": argspec.varkw,
-        "asocdefa": zip(argspec.args[-len(argspec.defaults):], argspec.defaults)
+        "asocdefa": zip(argspec.args[-len(argspec.defaults):], argspec.defaults) if argspec.defaults != None else ()
     }
 
 class UnserializableObjectReference():

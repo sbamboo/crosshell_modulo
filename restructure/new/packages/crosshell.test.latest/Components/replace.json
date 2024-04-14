@@ -1,0 +1,6 @@
+{
+    "console": {
+        "desc": "Testing Console-Component",
+        "file": "./console.py"
+    }
+}

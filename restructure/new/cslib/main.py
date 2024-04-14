@@ -1,19 +1,20 @@
 import pickle, sys, json, os, argparse, inspect, re
 from datetime import datetime, timezone
+from typing import Union
 
-from cslib.piptools import installPipDeps_fl
+from cslib.piptools import installPipDeps_fl,fromPath
 from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
-from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem
+from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem,parsePrefixDirTag
 from cslib._crosshellMpackageSystem import discoverPackageFiles,installPackageFiles,loadPackageConfig,normFeatureDataAndReg,loadPackageFeatures
 from cslib.externalLibs.filesys import filesys
 from cslib.externalLibs.conUtils import getConSize
 from cslib.datafiles import _fileHandler,setKeyPath,getKeyPath
-from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict
+from cslib.exportImport_tools import argParse_to_dict,argParse_from_dict,getArgsForFunc
 from cslib.pathtools import normPathSep,normPathSepObj,absPathSepObj
 from cslib.progressMsg import startupMessagingWProgress
 from cslib.exceptions import CrosshellDebErr
 from cslib.types import expectedList
-from cslib.customImplements import readerMangler,cmdletMangler,langpckMangler, methodCmdet_exit
+from cslib.customImplements import *
 from cslib.platformAndOS import handleOSinExtensionsList
 
 class stateInstance():
@@ -1326,6 +1327,75 @@ class crosshellDebugger():
     def disableLogger(self):
         self.logger = None
 
+class componentManager():
+    def __init__(self,callGlobals={},callEncoding="utf-8"):
+        self.components = {}
+        self.callGlobals = callGlobals
+        self.callEncoding = callEncoding
+
+    def registerComponent(self,name,component,desc=None,type_="file"):
+        self.components[name] = {
+            "entry": component,
+            "desc": desc,
+            "type": type_
+        }
+
+    def unregisterComponent(self,name):
+        del self.components[name]
+    
+    def getComponent(self,name=None) -> Union[dict,Union[list,tuple],None]:
+        if name == None:
+            toRet = {}
+            for k,v in self.components.items():
+                toRet[k] = (v["entry"],v["desc"],v["type"])
+            return toRet
+        else:
+            d = self.components.get(name)
+            if d != None:
+                return d["entry"],d["desc"],d["type"]
+            else:
+                return None
+
+    class varHolder():
+        def __init__(self,data=None):
+            self.data = data
+        def __call__(self,data=None):
+            if data == None:
+                return data
+            else:
+                self.data = data
+
+    def callComponent(self,name,**kwargs) -> any:
+            d = self.components.get(name)
+            if d != None:
+                type_ = d.get("type")
+                entry = d.get("entry")
+                # Type: file
+                if type_ == "file":
+                    # TODO: MAKE SAFE
+                    returner = self.varHolder() # init
+                    toSend = {"returner":returner}
+                    toSend.update(self.callGlobals)
+                    toSend.update(kwargs)
+                    exec( open(entry,'r',encoding=self.callEncoding).read(), toSend )
+                    return returner.data
+                # Type: file
+                elif type_ == "method":
+                    try:
+                        return entry(**(self.callGlobals|kwargs))
+                    except TypeError as e:
+                        if str(e).startswith( f"{entry.__name__}() got an unexpected keyword argument" ):
+                            # If failed try with only the functions requested args
+                            kwargsToCall = {}
+                            for arg in getArgsForFunc(entry)["args"]:
+                                if arg in (self.callGlobals|kwargs).keys():
+                                    kwargsToCall[arg] = (self.callGlobals|kwargs)[arg]
+                            return entry(**kwargsToCall)
+                        else:
+                            raise
+            else:
+                raise Exception(f"Component '{name}' is not registered!")
+
 class crshSession():
     # The identification is used on import to ensure classes are compatible.
     global identification; identification = "f09682eb-5be1-4675-b9a0-68148b48e09c"
@@ -1477,6 +1547,11 @@ class crshSession():
             return self.registry[name]
         else:
             raise KeyError(f"No object with the name '{name}' found in the registry.")
+    
+    def checkregister(self,name):
+        """Check if a key is registered."""
+        if self.registry.get(name) == None: return False
+        else: return True
 
     def formatReTagsStr(self,string=str,tags=dict,abs=False):
         for tag,tagValue in tags.items():
@@ -1508,6 +1583,9 @@ class crshSession():
 
     def getEncoding(self):
         return self.regionalGet("DefaultEncoding")
+
+    def getCwd(self):
+        return os.getcwd()
 
     def sformat(self,text) -> str:
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
@@ -1584,6 +1662,7 @@ class crshSession():
             "VersionFile": "{CoreDir}/version.yaml",
             "MsgProfileFile": "{AssetsDir}/profile.msg",
             "PyProfileFile": "{AssetsDir}/profile.py",
+            "Components": "{CoreDir}/components",
             "BuiltInReaders": {
                 "PLATFORM_EXECUTABLE": "{ReadersFolder}/platexecs.py"
             },
@@ -1619,6 +1698,7 @@ class crshSession():
 
             "ReaderRegistry": None,
             "LoadedPackageData": None,
+            "LoadedPackages": None,
 
             "RegisteredArgs": None,
             "RegisteredCmdArgPlaceHolders": None,
@@ -1644,7 +1724,7 @@ class crshSession():
             },
 
             "__registerAsPaths": [ # __registerAsPaths is used to register the paths as pathTags, so any key in this list will be replaceable, for other keys.
-                "CSlibDir","BaseDir","CoreDir","AssetsDir","CacheDir","PackagesFolder","PackageFilePath","mPackPath","lPackPath","ReadersFolder","AssetsLangPath","CoreLangPath"
+                "CSlibDir","BaseDir","CoreDir","AssetsDir","CacheDir","PackagesFolder","PackageFilePath","mPackPath","lPackPath","ReadersFolder","AssetsLangPath","CoreLangPath","Components"
             ],
             "__registerAsTags": [ # __registerAsTags is used to register additional substituteTags, not usable when initiating regional-vars.
                 "DefaultEncoding", "VersionFile","ReaderListFile"
@@ -1753,6 +1833,13 @@ class crshSession():
                     "Console.StripAnsi": False,
                     "Console.DefPrefix": "> ",
                     "Console.DefTitle": "Crosshell Modulo",
+                    "Console.PrefixEnabled": True,
+                    "Console.PrefixShowDir": True,
+                    "Console.DynamicPrefixes": True,
+                    "Console.RestrictDynPrefixes": False,
+                    "Console.ParsePrefixes": True,
+                    "Console.TitleEnabled": True,
+                    "Console.ClearOnStart": True,
                     "Formats.DefaultEncoding": "{CS_DefaultEncoding}",
                     "Version.VerFile": "{CS_VersionFile}",
                     "Version.FileFormatVer": "1",
@@ -1769,6 +1856,11 @@ class crshSession():
                     "conUtilsConfig.defW": 120,
                     "conUtilsConfig.defH": 30,
 
+                    "Packages.Components": "AUTOFILLED",
+                    "Packages.Formatting.Mappings.Selected": None,
+                    "Packages.Formatting.Mappings._choices": [],
+                    "Packages.Formatting.Palettes.Selected": None,
+                    "Packages.Formatting.Palettes._choices": [],
                     "Packages.Discover.TraverseSymLinks": False,
                     "Packages.Discover.LegacyTraverseDepth": 10,
                     "Packages.AllowedFileTypes.Cmdlets.INTERNAL_PYTHON": ["py"],
@@ -1778,10 +1870,6 @@ class crshSession():
                     "Packages.AllowedFileTypes.Config.Config": ["cfg","config"],
                     "Packages.RudamentaryDotFiles.Enable": False,
                     "Packages.Readers.ReaderFile": "{CS_ReaderListFile}",
-                    "Packages.Formatting.Mappings.Selected": None,
-                    "Packages.Formatting.Mappings._choices": [],
-                    "Packages.Formatting.Palettes.Selected": None,
-                    "Packages.Formatting.Palettes._choices": [],
                     "CGTS.ANSI_Hex_Palette": "{CS_CGTS_StandardHexPalette}",
                     "CGTS.CustomMappings": {},
                 },
@@ -1819,9 +1907,9 @@ class crshSession():
         }
 
         self.initDefaults["startupMessagingConfig"] = {
-            "width": 30,
+            "width": 24,
             "incr": "auto",
-            "steps": 10,
+            "steps": 12,
         }
 
         self.initDefaults["DefaultVersionData"] = {
@@ -1835,6 +1923,18 @@ class crshSession():
 
         self.initDefaults["builtInPkgFeatures"] = {
             "builtin": {
+                "components": {
+                    "registeredBy": "builtin",
+                    "type": "raw_forfilename:replace",
+                    "addr": "/Components",
+                    "legacy_addr": None,
+                    "recursive": False,
+                    "mangler": componentMangler,
+                    "manglerKwargs": {
+                        "pkgConfigs": None,
+                        "componentFolder": None
+                    }
+                },
                 "readers": {
                     "registeredBy": "builtin",
                     "type": "mapping_1-1",
@@ -1843,6 +1943,8 @@ class crshSession():
                     "recursive": False,
                     "mangler": readerMangler,
                     "manglerKwargs": {
+                        "pkgConfigs": None,
+                        "readerFolder": None,
                         "addMethod": addReader,
                         "readerFile": None,
                         "readerFileEncoding": None,
@@ -1857,6 +1959,7 @@ class crshSession():
                     "recursive": True,
                     "mangler": cmdletMangler,
                     "manglerKwargs": {
+                        "pkgConfigs": None,
                         "lPackPath": None,
                         "mPackPath": None,
                         "cmdletStdEncoding": None,
@@ -1872,27 +1975,40 @@ class crshSession():
                     "type": "raw",
                     "addr": "/Formatting",
                     "legacy_addr": None,
-                    "recursive": True
+                    "recursive": False
                 },
                 "palette": {
                     "registeredBy": "builtin",
                     "type": "raw",
                     "addr": "/Formatting",
                     "legacy_addr": None,
-                    "recursive": True
+                    "recursive": False
                 },
                 "langpack": {
                     "registeredBy": "builtin",
                     "type": "registry_fortype:json",
                     "addr": "/Langpck",
                     "legacy_addr": None,
-                    "recursive": True,
+                    "recursive": False,
                     "mangler": langpckMangler,
                     "manglerKwargs": {
+                        "pkgConfigs": None,
                         "languageProvider": None,
                         "languagePath": None,
                         "mPackPath": None,
                         "rootSubstTags": None
+                    }
+                },
+                "dynprefix": {
+                    "registeredBy": "builtin",
+                    "type": "raw_forfilename:prefixes",
+                    "addr": "/DynPrefix",
+                    "legacy_addr": None,
+                    "recursive": False,
+                    "mangler": dynprefixMangler,
+                    "manglerKwargs": {
+                        "pkgConfigs": None,
+                        "dynprefixFolder": None
                     }
                 }
             }
@@ -1907,6 +2023,7 @@ class crshSession():
             "mapping_filep-m",
             "registry_fortype:<type>",
             "registry_forfeature:<feature>",
+            "raw_forfilename:<filename>",
             "raw"
         ]
 
@@ -1940,6 +2057,7 @@ class crshSession():
             "filename": "CMDLET_FILENAME",
             "path": "CMDLET_PATH",
             "method": "CMDLET_METHOD",
+            "reader": "CMDLET_READER",
             "parentPackage": {
                 "name": "CMDLET_PARENTPACKAGE_NAME",
                 "shortname": "CMDLET_PARENTPACKAGE_SHORTNAME",
@@ -1968,6 +2086,7 @@ class crshSession():
             "filename": None,
             "path": None,
             "method": None,
+            "reader": None,
             "parentPackage": {
                 "name": "builtin",
                 "shortname": "builtin",
@@ -1980,8 +2099,63 @@ class crshSession():
             "modulo:builtins/exit#1": self.initDefaults["cmdletDataSchema"] | self.initDefaults["defaultCmdlet_mergeSchema"] | {
                 "name": "exit",
                 "method": methodCmdet_exit
+            },
+            "modulo:builtins/print#1": self.initDefaults["cmdletDataSchema"] | self.initDefaults["defaultCmdlet_mergeSchema"] | {
+                "name": "print",
+                "method": methodCmdet_print,
+                "data": {
+                    "aliases": [
+                        "echo"
+                    ]
+                }
             }
         }
+
+        self.initDefaults["registerableComponents"] = [
+            "console", "interpriter", "execute", "prompt"
+        ]
+
+        self.initDefaults["defaultComponent_data"] = {
+            "builtins": {
+                "console": {
+                    "name": "builtins",
+                    "desc": "Default console component.",
+                    "method": console_component
+                },
+                "interpriter": {
+                    "name": "builtins",
+                    "desc": "Default interpriter component.",
+                    "method": interpriter_component
+                },
+                "execute": {
+                    "name": "builtins",
+                    "desc": "Default execute component.",
+                    "method": execute_component
+                },
+                "prompt": {
+                    "name": "builtins",
+                    "desc": "Default prompt component.",
+                    "method": prompt_component
+                }
+            }
+        }
+
+        self.initDefaults["componentCallGlobals"] = {
+            "csSession": self,
+            "a": 1
+        }
+
+        self.initDefaults["dynprefixCallGlobals"] = {
+            "csSession": self,
+            "include": None,
+            "stripAnsi": None
+        }
+
+        self.initDefaults["cmdletGlobals"] = {
+            "csSession": self
+        }
+
+        self.initDefaults["readerCallGlobals"] = {}
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
@@ -2617,6 +2791,11 @@ class crshSession():
         return packageConfigs,len(tempList)
 
     def _init_pkg_fillInManglerKwargs(self,addReaderMethod=object) -> (str,bool):
+        ## components
+        self.initDefaults["builtInPkgFeatures"]["builtin"]["components"]["manglerKwargs"] = {
+            "pkgConfigs": self.regionalGet("LoadedPackages"),
+            "componentFolder": self.initDefaults["builtInPkgFeatures"]["builtin"]["components"]["addr"]
+        }
         ## reader
         if self.flags.has("--fileless"):
             _readerManglerFile = stateInstance(mode="stream",encoding=self.getEncoding(),parent=self,parentKeepList=self.storage["stateInstances"])
@@ -2631,6 +2810,8 @@ class crshSession():
                     open(_readerManglerFile,'w',encoding=self.getEncoding()).write("")
             _readerManglerFileIsStream = False
         self.initDefaults["builtInPkgFeatures"]["builtin"]["readers"]["manglerKwargs"] = {
+            "pkgConfigs": self.regionalGet("LoadedPackages"),
+            "readerFolder": self.initDefaults["builtInPkgFeatures"]["builtin"]["readers"]["addr"],
             "addMethod": addReaderMethod,
             "readerFile": _readerManglerFile,
             "readerFileEncoding": self.getEncoding(),
@@ -2638,12 +2819,14 @@ class crshSession():
         }
         ## langpack
         self.initDefaults["builtInPkgFeatures"]["builtin"]["langpack"]["manglerKwargs"] = {
+            "pkgConfigs": self.regionalGet("LoadedPackages"),
             "languageProvider": self.getregister("lng"),
             "languagePath": self.regionalGet("LangPathObj"),
             "mPackPath": self.regionalGet("mPackPath")
         }
         ## cmdlets
         self.initDefaults["builtInPkgFeatures"]["builtin"]["cmdlets"]["manglerKwargs"] = {
+            "pkgConfigs": self.regionalGet("LoadedPackages"),
             "mPackPath": self.regionalGet("mPackPath"),
             "lPackPath": self.regionalGet("lPackPath"),
             "cmdletStdEncoding": self.getEncoding(),
@@ -2652,6 +2835,11 @@ class crshSession():
             "allowedCmdletConfigTypes": self.getregister("set").getProperty("crsh","Packages.AllowedFileTypes.Config.Config"),
             "enableParsingOfRudamentaryDotFiles": self.getregister("set").getProperty("crsh","Packages.RudamentaryDotFiles.Enable"),
             "dotFileEncoding": self.getEncoding()
+        }
+        ## dynprefix
+        self.initDefaults["builtInPkgFeatures"]["builtin"]["dynprefix"]["manglerKwargs"] = {
+            "pkgConfigs": self.regionalGet("LoadedPackages"),
+            "dynprefixFolder": self.initDefaults["builtInPkgFeatures"]["builtin"]["dynprefix"]["addr"]
         }
         return _readerManglerFile,_readerManglerFileIsStream
 
@@ -2766,6 +2954,8 @@ class crshSession():
 
         # load package config
         packageConfigs, unilen2 = self._init_pkg_loadPackageConfigs()
+        # Add to regionalVars
+        self.regionalSet("LoadedPackages",packageConfigs)
 
         # VERBOSE START #
         if debMethod != None: debMethod("Loading package data... (Pkgs: {amnt}, Features: {amnt2})",l="cs.startup.loadpkgdata",ct={"amnt":self.tmpGet("amntPkgsToLoad"),"amnt2":unilen2})
@@ -2833,6 +3023,145 @@ class crshSession():
                     self.initDefaults["default_userVars"][k] = v2
         ## Update the userVars
         self.userVarUpdate(self.initDefaults["default_userVars"])
+
+    def init_appendDefaultComponents(self):
+        _tmp = self.regionalGet("LoadedPackageData")
+        if _tmp.get("components") != None:
+            _components = _tmp["components"]["data"]
+            if _components.get("modulo") == None:
+                _components["modulo"] = {}
+            _components["modulo"].update( self.initDefaults["defaultComponent_data"] )
+            _tmp["components"]["data"] = _components
+            del _components
+        self.regionalSet("LoadedPackageData",_tmp)
+
+    def init_registerComponents(self):
+        builtinsKey = "builtins"
+
+        if self.checkregister("cmp") == False:
+            self.register(
+                "cmp",
+                componentManager(
+                    self.initDefaults["componentCallGlobals"],
+                    self.getEncoding()
+                )
+            )
+        feature = self.regionalGet("LoadedPackageData").get("components")
+        if feature != None:
+            # Get a list of al registrand-alternatives for each component
+            componentDatas = {} # <componentName>:<componentData>
+            [componentDatas.__setitem__(x,[]) for x in self.initDefaults["registerableComponents"]]
+            componentDataPerPkgName = {} # <pkgName>:<componentData>
+            defaultOverwriting = {} # <componentName>:<pkgName>
+            [defaultOverwriting.__setitem__(x,None) for x in self.initDefaults["registerableComponents"]]
+            combined = {} # "modulo":{...} + "legacy":{...} => <componentName>:<componentData>
+            pkgTypeMapping = {} # <pkgName>:<pkgType>
+            for t,x in feature["data"].items():
+                combined.update(x)
+                for pkgName in x.keys():
+                    pkgTypeMapping[pkgName] = t
+            cmp = self.getregister("cmp")
+            for pkgName,component in combined.items():
+                for componentName,componentData in component.items():
+                    if componentName in componentDatas.keys():
+                        type_ = None
+                        entry = None
+                        if componentData.get("type") != None:
+                            type_ = componentData["type"]
+                        if type_ == "file" or componentData.get("file") != None:
+                            type_ = "file"
+                            entry = componentData.get("file")
+                        elif type_ == "method" or componentData.get("method") != None:
+                            type_ = "method"
+                            entry = componentData.get("method")
+
+                        if type_ != None and entry != None:
+                            data = {"name":pkgName,"entry":entry,"desc":componentData.get("desc"),"type":type_}
+                            if componentData.get("overwriting-default") != None:
+                                if defaultOverwriting.get(componentName) == None: defaultOverwriting[componentName] = pkgName
+                            componentDatas[componentName].append(data)
+                            if componentDataPerPkgName.get(pkgName) == None: componentDataPerPkgName[pkgName] = {}
+                            componentDataPerPkgName[pkgName][componentName] = data
+            # Create a nameBound list
+            nameBound = {}
+            for componentName in componentDatas.keys():
+                li = []
+                for x in componentDatas[componentName]:
+                    if x["name"] != builtinsKey: li.append(x["name"])
+                nameBound[componentName] = li
+            # Update the choices in settings
+            _set = self.getregister("set")
+            for componentName in componentDatas.keys():
+                curval = _set.getProperty("crsh","Packages.Components")
+                if type(curval) != dict: curval = {}
+                curSelected = None
+                if curval.get(componentName) != None and curval[componentName].get("Selected") != None: curSelected = curval[componentName]["Selected"]
+                _set.chnProperty(
+                    "crsh",
+                    "Packages.Components",
+                    curval | { componentName: {"Selected":curSelected,"_choices": nameBound[componentName]} }
+                )
+            # Get selected choice (default to builtin if invalid/None) and register it
+            for componentName in componentDatas.keys():
+                selected = _set.getProperty("crsh","Packages.Components."+componentName+".Selected")
+                selectedData = None
+                if selected not in [*nameBound[componentName],builtinsKey]:
+                    _set.chnProperty("crsh","Packages.Components."+componentName+".Selected",None)
+                    if defaultOverwriting.get(componentName) in [None,builtinsKey]:
+                        selectedData_ = self.initDefaults["defaultComponent_data"][builtinsKey].get(componentName)
+                        type_ = None
+                        value = None
+                        if selectedData_.get("type") != None:
+                            type_ = selectedData_["type"]
+                        if type_ == "file" or selectedData_.get("file") != None:
+                            type_ = "file"
+                            value = selectedData_["file"]
+                        elif type_ == "method" or selectedData_.get("method") != None:
+                            type_ = "method"
+                            value = selectedData_["method"]
+                        if type_ != None and value != None:
+                            selectedData = {"name":builtinsKey,"entry":value,"desc":selectedData_.get("desc"),"type":type_}
+                        del selectedData_
+                    else:
+                        selectedData = componentDataPerPkgName.get(defaultOverwriting.get(componentName))
+                        if selectedData != None:
+                            selectedData = selectedData.get(componentName)
+                else:
+                    selectedData = componentDataPerPkgName.get(selected)
+                    if selectedData != None:
+                        selectedData = selectedData.get(componentName)
+                if selectedData != None:
+                    entry = selectedData.get("entry")
+                    if entry != None:
+                        # Type: File
+                        if selectedData.get("type") == "file":
+                            entry = normPathSep( self.getregister("stm").eval("ptm",selectedData["entry"]) )
+                            if os.path.exists(entry):
+                                cmp.registerComponent(componentName,entry,selectedData.get("desc"),"file")
+                        # Type: Method
+                        elif selectedData.get("type") == "method":
+                            if type(entry) == str and "@" in entry:
+                                entry_ = entry
+                                entry = None
+                                pkgType = pkgTypeMapping.get(selectedData["name"])
+                                rootPath = self.regionalGet("lPackPath") if pkgType == "legacy" else self.regionalGet("mPackPath")
+                                rootPath = normPathSep( rootPath + os.sep + selectedData["name"] + self.initDefaults["builtInPkgFeatures"]["builtin"]["components"]["addr"] )
+                                path = entry_.split("@")[0].strip()
+                                methodName = entry_.split("@")[1].strip()
+                                path = normPathSep(path)
+                                if path.startswith("{parent}"):
+                                    path = rootPath + path.replace("{parent}","",1)
+                                elif path.startswith("."+os.sep):
+                                    path = rootPath + path.replace(".","",1)
+                                try:
+                                    manglerModule = fromPath(path)
+                                    entry = getattr(manglerModule, methodName)
+                                except: pass
+                                del entry_,rootPath,path,methodName
+                            if entry != None:
+                                cmp.registerComponent(componentName,entry,selectedData.get("desc"),"method")
+            del cmp,_set,componentName,componentDatas
+
 
     # endregion: Init-SubMethods
 
@@ -2920,6 +3249,19 @@ class crshSession():
         self.init_handlePackages(st.verb) # CONTAINS # VERBOSE START #
 
         # VERBOSE START #
+        st.verb(f"Loading and registring components...",l="cs.startup.loading-components")
+
+        # Register components
+        self.init_appendDefaultComponents()
+        self.init_registerComponents()
+
+        # VERBOSE START #
+        st.verb(f"Reloading languages...",l="cs.startup.reloading-languages")
+
+        # Reload languages incase updated by package
+        self.init_reloadLanguages()
+
+        # VERBOSE START #
         st.verb(f"Preparing for console...",l="cs.startup.preparing-console")
 
         # Update the palette/mapping choices in settings
@@ -2934,9 +3276,6 @@ class crshSession():
         # Clean up
         del selectedMappingData,selectedPaletteData
 
-        # Reload languages incase updated by package
-        self.init_reloadLanguages()
-
         # Add the default user-vars to storage
         self.init_addDefaultUserVars()
 
@@ -2946,6 +3285,73 @@ class crshSession():
         # Return
         return self
 
+    def getPrefix(self) -> str:
+        # get prefix
+        prefix = self.getregister("per").getProperty("crsh","Prefix")
+        # get opts
+        dirEnabled = self.getregister("set").getProperty("crsh","Console.PrefixShowDir")
+        dynamicPrefixes = self.getregister("set").getProperty("crsh","Console.DynamicPrefixes")
+        parsePrefixes = self.getregister("set").getProperty("crsh","Console.ParsePrefixes")
+        encoding = self.getEncoding()
+        stdPrefix = self.getregister("set").getProperty("crsh","Console.DefPrefix")
+        stripAnsi = self.regionalGet("StripAnsi")
+        # Dynamic prefix
+        if self.getregister("set").getProperty("crsh","Console.DynamicPrefixes") == True:
+            dynprefixes = self.regionalGet("LoadedPackageData")["dynprefix"]["data"]
+            if prefix in dynprefixes.keys():
+                # get file by resolving path
+                prefixPath = dynprefixes[prefix]
+                prefixPath = normPathSep( self.getregister("stm").eval("ptm",prefixPath) )
+                # define the globals that will be sent
+                generatorGlobals = self.initDefaults["dynprefixCallGlobals"]
+                generatorGlobals["include"] = dynprefix_include_constructor(
+                    self,
+                    prefixPath,
+                    not self.getregister("set").getProperty("crsh","Console.RestrictDynPrefixes"),
+                    fromPath
+                )
+                generatorGlobals["stripAnsi"] = self.regionalGet("stripAnsi")
+                # Execute the generator
+                module = None
+                try:
+                    #exec( open(prefixPath,'r',encoding=self.getEncoding()).read(), generatorGlobals )
+                    module = fromPath(prefixPath,generatorGlobals)
+                except FileNotFoundError:
+                    self.deb.perror("lng:cs.prefixsys.dynprefix.errornotfound",{"dynPrefixFile":prefixPath})
+                except Exception as e:
+                    self.deb.perror("lng:cs.prefixsys.dynprefix.errorinexec",{"dynPrefixFile":prefixPath,"traceback":e})
+                # exec generator function
+                if module != None:
+                    generatedPrefix = None
+                    try:
+                        generatedPrefix = module.generate()
+                    except CrosshellDebErr as e:
+                        raise
+                    except Exception as e:
+                        self.deb.perror("lng:cs.prefixsys.dynprefix.errorincall",{"dynPrefixFile":prefixPath,"traceback":e})
+                    # set prefix
+                    if generatedPrefix != None:
+                        prefix = generatedPrefix
+                    else:
+                        prefix = None
+                del module
+        # Default if none
+        if prefix == None:
+            prefix = stdPrefix
+        # Parse?
+        if parsePrefixes == True:
+            prefix = parsePrefixDirTag(prefix,self.getCwd(),dirEnabled,stdPrefix)
+            prefix = self.getregister("txt").parse(prefix,_stripAnsi=stripAnsi)
+            if stripAnsi != True: prefix = prefix + "\033[0m"
+        return prefix
+
+    def getTitle(self) -> str:
+        pers = self.getregister("per").getProperty("crsh","Title")
+        if pers == None:
+            return self.getregister("set").getProperty("crsh","Console.DefTitle")
+        else:
+            return pers
+
     def runExecLine(self,execline=object) -> object:
         """
         Runs an exec-line
@@ -2953,24 +3359,33 @@ class crshSession():
         Takes: exec-line class instance
         Returns: exec-line class instance
         """
+        return self.getregister("cmp").callComponent("execute", execline=execline)
 
-    def parseInput(self,input=str) -> object:
+    def parseInput(self,input_=str,_pipeline=None) -> object:
         """
         Parses an input string to an exec-line.
 
         Takes: input string
         Returns exec-line class instance
         """
+        return self.getregister("cmp").callComponent("interpriter", input_=input_, _pipeline=_pipeline)
 
-    def evalAndExec(self,input=str):
+    def evalAndExec(self,input_=str,_pipeline=None):
         """Validates, Parses and Executes an input string."""
+        ret = self.parseInput(input_,_pipeline)
+        return self.runExecLine(ret)
 
-    def prompt(self,promptText="> "):
+    def prompt(self,promptText=None):
         """Prompts the user for input."""
+        if promptText == None: promptText = self.getPrefix()
+        return self.getregister("cmp").callComponent("prompt", prompt=promptText)
 
-    def eprompt(self,promptText="> "):
+    def eprompt(self,promptText=None,_pipeline=None):
         """Prompts the user for input and executes it."""
+        ret = self.prompt(promptText)
+        return self.evalAndExec(ret,_pipeline)
 
     def start(self):
         """Starts an interactive prompt."""
+        return self.getregister("cmp").callComponent("console")
         

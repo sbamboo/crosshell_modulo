@@ -102,22 +102,24 @@ class argumentHandler():
         # populate
         self.argv = []
         self.sargv = ""
+        self.targv = []
         self.pargv = []
-        for arg in arguments:
-            self.sargv += toStringAny(arg) + " "
-            if arg.startswith('r"') and arg.endswith('"'):
-                self.argv.append(arg.replace('r"',"",1).rstrip('"'))
-            else:
-                self.argv.append(arg)
-        self.sargv.rstrip(" ")
-        self.targv = determineTypeForArgs(arguments)
-        targv2 = []
-        for arg in self.targv:
-            self.pargv.append( self.objectify(arg) )
-            if arg[1] == "lit-str":
-                arg = (arg[0].replace('r"',"",1).rstrip('"'),"str")
-            targv2.append(arg)
-        self.targv = targv2
+        if type(arguments) == list:
+            for arg in arguments:
+                self.sargv += toStringAny(arg) + " "
+                if arg.startswith('r"') and arg.endswith('"'):
+                    self.argv.append(arg.replace('r"',"",1).rstrip('"'))
+                else:
+                    self.argv.append(arg)
+            self.sargv.rstrip(" ")
+            self.targv = determineTypeForArgs(arguments)
+            targv2 = []
+            for arg in self.targv:
+                self.pargv.append( self.objectify(arg) )
+                if arg[1] == "lit-str":
+                    arg = (arg[0].replace('r"',"",1).rstrip('"'),"str")
+                targv2.append(arg)
+            self.targv = targv2
 
     def serializeJson(obj):
         def serialize_property(prop):

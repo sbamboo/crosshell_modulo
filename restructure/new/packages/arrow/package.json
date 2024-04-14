@@ -1,0 +1,8 @@
+{
+    "package": {
+        "author": "SimonKC",
+        "description": "Minimalistic Arrow prefix",
+        "installScript": "{parent}\\install.py",
+        "uninstallScript": "{root}\\uninstall.py"
+    }
+}

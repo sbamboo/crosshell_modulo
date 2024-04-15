@@ -88,6 +88,10 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
     # Get data:
     for pkgType,x in data.items():
         for pkg,y in x.items():
+            try:
+                pathableName = os.path.basename(pkgConfigs[pkgType][pkg]["path"])
+            except KeyError:
+                pathableName = pkg
             # Get pkgpath
             pkgPath = None
             if pkgType == "legacy": pkgPath = lPackPath
@@ -119,7 +123,7 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
                     cmdletPath_s = normPathSep(cmdlet)
                     if not cmdletPath_s.startswith(os.sep):
                         cmdletPath_s = cmdletPath_s.replace(os.sep,"",1)
-                    cmdletPath = pkgPath_s + os.sep+pkg + cmdletPath_s
+                    cmdletPath = pkgPath_s + pathableName + cmdletPath_s
                     # Set Data
                     rearrangedData[generatedID_final] = picklePrioCopy(cmdletSchema)
                     rearrangedData[generatedID_final].update({

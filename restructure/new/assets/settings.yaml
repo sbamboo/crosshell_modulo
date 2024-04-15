@@ -120,5 +120,7 @@ crsh:
       '106': b#55FFFF
       '107': b#FFFFFF
     CustomMappings: {}
+  Execution:
+    SafelyHandleExit: true
 crsh_debugger:
   Scope: error

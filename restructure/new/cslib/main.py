@@ -15,6 +15,7 @@ from cslib.progressMsg import startupMessagingWProgress
 from cslib.exceptions import CrosshellDebErr
 from cslib.types import expectedList
 from cslib.customImplements import *
+from cslib.customComponents import *
 from cslib.platformAndOS import handleOSinExtensionsList
 
 class stateInstance():
@@ -1840,6 +1841,7 @@ class crshSession():
                     "Console.ParsePrefixes": True,
                     "Console.TitleEnabled": True,
                     "Console.ClearOnStart": True,
+                    "Execution.SafelyHandleExit": True,
                     "Formats.DefaultEncoding": "{CS_DefaultEncoding}",
                     "Version.VerFile": "{CS_VersionFile}",
                     "Version.FileFormatVer": "1",
@@ -3293,11 +3295,10 @@ class crshSession():
         dirEnabled = self.getregister("set").getProperty("crsh","Console.PrefixShowDir")
         dynamicPrefixes = self.getregister("set").getProperty("crsh","Console.DynamicPrefixes")
         parsePrefixes = self.getregister("set").getProperty("crsh","Console.ParsePrefixes")
-        encoding = self.getEncoding()
         stdPrefix = self.getregister("set").getProperty("crsh","Console.DefPrefix")
         stripAnsi = self.regionalGet("StripAnsi")
         # Dynamic prefix
-        if self.getregister("set").getProperty("crsh","Console.DynamicPrefixes") == True:
+        if dynamicPrefixes == True:
             dynprefixes = self.regionalGet("LoadedPackageData")["dynprefix"]["data"]
             if prefix in dynprefixes.keys():
                 # get file by resolving path

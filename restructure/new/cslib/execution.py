@@ -6,6 +6,7 @@ from cslib.datafiles import _fileHandler
 from cslib.pathtools import normPathSep
 from cslib.exceptions import CrosshellDebErr
 from cslib.piptools import fromPath
+from cslib.customImplements import customMethod_exit
 
 def input_to_pipelineStructure(sinput=str,basicExecutionDelimiters=["||"]) -> list:
     '''CSlib.execution: Function to convert input to the pipeline structure.'''
@@ -113,6 +114,9 @@ class execline():
                 # Make globaldata
                 globalData = csSession.initDefaults["cmdletGlobals"]
                 globalData["args"] = argumentHandler(partial.get("args"))
+                if csSession.getregister("set").getProperty("crsh","Execution.SafelyHandleExit") == True:
+                    globalData["exit"] = customMethod_exit
+                    globalData["CS_oexit"] = exit
                 # Act based on handle
                 handle = partial.get("handle")
                 if handle != None:

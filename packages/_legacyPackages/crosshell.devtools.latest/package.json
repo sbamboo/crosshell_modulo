@@ -11,6 +11,9 @@
         },
         "todon": {
             "desc": "DEVTOOL: Shows todo-information from /.dev/todo"
+        },
+        "exit-test": {
+            "desc": "DEVTOOL: Runs exit()"
         }
     }
 }

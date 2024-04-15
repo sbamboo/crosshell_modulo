@@ -1993,10 +1993,10 @@ class crshSession():
                     "mangler": langpckMangler,
                     "manglerKwargs": {
                         "pkgConfigs": None,
+                        "lngPackFolder": None,
                         "languageProvider": None,
                         "languagePath": None,
-                        "mPackPath": None,
-                        "rootSubstTags": None
+                        "mPackPath": None
                     }
                 },
                 "dynprefix": {
@@ -2245,7 +2245,7 @@ class crshSession():
         # Enable ansi on windows
         os.system("")
 
-    def init_handleStartFileEfileParams(self,cliArgs=None) -> (list,str,str):
+    def init_handleStartFileEfileParams(self,cliArgs=None) -> Union[list,str,str]:
         # [Get cliargs]
         _cliArgs = cliArgs if cliArgs != None else sys.argv
 
@@ -2290,7 +2290,7 @@ class crshSession():
         
         return _cslibdir
 
-    def init_evalPathTagsInData(self,data=dict,pathTagBlackListKeys=list) -> (dict,dict):
+    def init_evalPathTagsInData(self,data=dict,pathTagBlackListKeys=list) -> Union[dict,dict]:
         """
         Evaluates pathTags in keys set under the '__registerAsPaths key'
         Places the tags it has evaluated under the 'base_PathTags' key.
@@ -2722,7 +2722,7 @@ class crshSession():
         self.regionalSet("PkgFilePathObj",_tempPkgFilePath)
         del _tempPkgFilePath
 
-    def _init_pkg_discoverPackageFiles(self) -> (dict,dict):
+    def _init_pkg_discoverPackageFiles(self) -> Union[dict,dict]:
         # Retrive a list of packages in /packages
         _tempPkgFileList = self.regionalGet("PkgFileList")
         _installedPackages = {
@@ -2772,7 +2772,7 @@ class crshSession():
         self.regionalSet("PackageList",installedPackages)
         self.tmpSet("amntPkgsToLoad",len([*installedPackages["legacy"],*installedPackages["modulo"]]))
 
-    def _init_pkg_loadPackageConfigs(self) -> (dict,int):
+    def _init_pkg_loadPackageConfigs(self) -> Union[dict,int]:
         # use loadPackageConfig() to get the packageData and features
         packageConfigs,foundFeatures = loadPackageConfig(
             installedPackages = self.regionalGet("PackageList"),
@@ -2790,7 +2790,7 @@ class crshSession():
 
         return packageConfigs,len(tempList)
 
-    def _init_pkg_fillInManglerKwargs(self,addReaderMethod=object) -> (str,bool):
+    def _init_pkg_fillInManglerKwargs(self,addReaderMethod=object) -> Union[str,bool]:
         ## components
         self.initDefaults["builtInPkgFeatures"]["builtin"]["components"]["manglerKwargs"] = {
             "pkgConfigs": self.regionalGet("LoadedPackages"),
@@ -2820,6 +2820,7 @@ class crshSession():
         ## langpack
         self.initDefaults["builtInPkgFeatures"]["builtin"]["langpack"]["manglerKwargs"] = {
             "pkgConfigs": self.regionalGet("LoadedPackages"),
+            "lngPackFolder": self.initDefaults["builtInPkgFeatures"]["builtin"]["langpack"]["addr"],
             "languageProvider": self.getregister("lng"),
             "languagePath": self.regionalGet("LangPathObj"),
             "mPackPath": self.regionalGet("mPackPath")
@@ -2843,7 +2844,7 @@ class crshSession():
         }
         return _readerManglerFile,_readerManglerFileIsStream
 
-    def _init_pkg_loadPackageFeaturesAndManageTheData(self,packageConfigs=dict) -> (dict,dict):
+    def _init_pkg_loadPackageFeaturesAndManageTheData(self,packageConfigs=dict) -> Union[dict,dict]:
         loadedFeatures = loadPackageFeatures(
             loadedFeatures = self.storage.getFeatures(),
             packageConfigs = packageConfigs,
@@ -2988,7 +2989,7 @@ class crshSession():
         self.getregister("set").chnProperty("crsh","Packages.Formatting.Mappings._choices",mappingPackages)
         self.getregister("set").chnProperty("crsh","Packages.Formatting.Palettes._choices",palettePackages)
 
-    def init_getSelectedPaletteMappingAndApply(self) -> (dict,dict):
+    def init_getSelectedPaletteMappingAndApply(self) -> Union[dict,dict]:
         # Get selected palette/mapping and apply
         selectedMapping = self.getregister("set").getProperty("crsh","Packages.Formatting.Mappings.Selected")
         selectedPalette = self.getregister("set").getProperty("crsh","Packages.Formatting.Palettes.Selected")

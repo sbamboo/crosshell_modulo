@@ -12,9 +12,13 @@ from cslib.exceptions import CrosshellDebErr
 def componentMangler(data=dict,pkgConfigs=dict,componentFolder=str) -> dict:
     for packageType,componentIncludingPkg in data.items():
         for package,componentD in componentIncludingPkg.items():
+            try:
+                pathableName = os.path.basename(pkgConfigs[packageType][package]["path"])
+            except KeyError:
+                pathableName = package
             for componentName,componentData in componentD.items():
                 if componentData.get("file") != None:
-                    rootPath = os.path.join( ("{CS_lPackPath}" if packageType == "legacy" else "{CS_mPackPath}"), package ) + componentFolder
+                    rootPath = os.path.join( ("{CS_lPackPath}" if packageType == "legacy" else "{CS_mPackPath}"), pathableName ) + componentFolder
                     file = componentData["file"]
                     if file.startswith("{parent}"):
                         file = file.replace("{parent}",rootPath)
@@ -28,29 +32,35 @@ def componentMangler(data=dict,pkgConfigs=dict,componentFolder=str) -> dict:
 
 def readerMangler(data=dict,pkgConfigs=dict,readerFolder=str,addMethod=None,readerFile=None,readerFileEncoding="utf-8",readerFileIsStream=False) -> dict:
     # Add the readers to the readerFile
-    readers = {}
     for packageType,readerIncludingPkg in data.items():
         for package,readerD in readerIncludingPkg.items():
+            try:
+                pathableName = os.path.basename(pkgConfigs[packageType][package]["path"])
+            except KeyError:
+                pathableName = package
             for reader in readerD.keys():
                 if package.lower() != "builtins":
                     if packageType == "legacy": rootPath = "{CS_lPackPath}"
                     else: rootPath = "{CS_mPackPath}"
-                    pathableName = os.path.basename(pkgConfigs[packageType][package]["path"])
                     readerBase = rootPath + os.sep + pathableName + os.sep + readerFolder + os.sep + reader
                     readerPath = readerBase + ".py"
                     readerName = os.path.splitext(os.path.basename(readerPath))[0]
                     addMethod(readerName,readerPath,readerFile,encoding=readerFileEncoding,isStream=readerFileIsStream)
     return data
 
-def langpckMangler(data=dict,pkgConfigs=dict,languageProvider=None,languagePath=None,mPackPath=str) -> dict:
+def langpckMangler(data=dict,pkgConfigs=dict,lngPackFolder=str,languageProvider=None,languagePath=None,mPackPath=str) -> dict:
     languageFiles = []
-    for x in data.values():
+    for pkgType,x in data.items():
         for package,y in x.items():
+            try:
+                pathableName = os.path.basename(pkgConfigs[pkgType][package]["path"])
+            except KeyError:
+                pathableName = package
             for z in y.values():
                 for file in z:
                     if mPackPath.endswith("."):
                         mPackPath = (mPackPath[::-1].replace(".","",1))[::-1]
-                    fpath = mPackPath + "/" + package + "/Langpck/" + file
+                    fpath = mPackPath + "/" + pathableName + lngPackFolder + os.sep + file
                     fpath = normPathSep(fpath)
                     languageFiles.append( fpath )
     if languageProvider != None and languagePath != None:
@@ -358,8 +368,11 @@ def dynprefixMangler(data=dict,pkgConfigs=dict,dynprefixFolder=str) -> dict:
     dynPrefixes = {}
     for pkgType,x in data.items():
         for pkgName,dynPrefixData in x.items():
-            for key, path in dynPrefixData.items():
+            try:
                 pathableName = os.path.basename(pkgConfigs[pkgType][pkgName]["path"])
+            except KeyError:
+                pathableName = pkgName
+            for key, path in dynPrefixData.items():
                 rootPath = normPathSep(pkgConfigs[pkgType][pkgName]["path"] + dynprefixFolder)
                 if path.startswith("{parent}"):
                     path = path.replace("{parent}",rootPath)

@@ -1,36 +1,61 @@
-import os,sys,subprocess
-from cslib._crosshellParsingEngine import splitByDelimiters,split_string_by_spaces
+import os,sys,subprocess,traceback
+
+from cslib._crosshellParsingEngine import splitByDelimiters,splitStringBySpaces
 from cslib.longPathHandler import lph_isAllowed
 from cslib.pipeline import argumentHandler
-from cslib.datafiles import _fileHandler
 from cslib.pathtools import normPathSep
 from cslib.exceptions import CrosshellDebErr
 from cslib.piptools import fromPath
 from cslib.customImplements import customMethod_exit
+from cslib.externalLibs.limitExec import DummyObject,RaisingDummyObject,ReturningDummyObject,CustomizableContextManager
 
-def input_to_pipelineStructure(sinput=str,basicExecutionDelimiters=["||"]) -> list:
-    '''CSlib.execution: Function to convert input to the pipeline structure.'''
+def input_to_pipelineStructure(sinput=str,basicExecutionDelimiters=["||"],pipeingDelimiters=["|"],argReplacors={"!cs.nl!":"\n"}) -> list:
+    """
+    CSlib.execution: Function to convert input to the pipeline structure.\n
+    Takes `sinput` as a string and uses the delimiters to split it up into a segments list,\n
+    where each segment is a list containg al consequent executions (the ones that are linked together).\n
+    The executions themself is a dict of `{"cmd":"<cmdlet/firstArg>", "args":[...argsExclFirst...], "type":None}`\n
+    Type is set to none since it should be determined later in the input handling.\n
+    Example:\n
+    `> cmd1 arg1 | cmd2 arg2 || cmd3 arg3`\n
+    Would become:\n
+    ```
+    [
+        [
+            {"cmd":"cmd1", "args":[ "arg1" ], "type":None},
+            {"cmd":"cmd2", "args":[ "arg2" ], "type":None}
+        ],
+        [
+            {"cmd":"cmd3", "args":[ "arg3" ], "type":None}
+        ]
+    ]
+    ```\n
+    The function will also 
+    """
     # Split to execution order
     execution_order = splitByDelimiters(sinput,basicExecutionDelimiters)
     # Split into pipeline (Note! this function should only ever be called with simple pipeline syntax: " | ")
     pipelineSplit_executionOrder = []
     for partial in execution_order:
         partial = partial.strip() # strip partials
-        spartial = partial.split("|")
+        spartial = splitByDelimiters(partial,pipeingDelimiters)
         # Expression
         for i,expression in enumerate(spartial):
             stripped_expression = expression.strip() # strip expression
             # split by spaces to sepparete args from cmd
-            split_expression = split_string_by_spaces(stripped_expression)
+            split_expression = splitStringBySpaces(stripped_expression)
             # sort
             if len(split_expression) > 0:
                 cmd = split_expression[0]
                 split_expression.pop(0)
+                # iterate over args and replace !cs.nl!
                 for i2,part in enumerate(split_expression):
-                    split_expression[i2] = part.replace("!cs.nl!","\n")
+                    for k,v in argReplacors.items():
+                        part = part.replace(k,v)
+                    split_expression[i2] = part
             else:
                 cmd,split_expression = expression,[]
-            dict_expression = {"cmd":cmd, "args":split_expression, "type":"file"}
+            dict_expression = {"cmd":cmd, "args":split_expression, "type":None}
             # add
             spartial[i] = dict_expression
         # add to partial
@@ -38,7 +63,7 @@ def input_to_pipelineStructure(sinput=str,basicExecutionDelimiters=["||"]) -> li
     # return
     return pipelineSplit_executionOrder
 
-def safe_decode_utf8_cp437(bytestring,defencoding="utf-8"):
+def safeDecodeUtf8Cp437(bytestring,defencoding="utf-8"):
     '''CSlib.execution: Function safely handle unicode and/or cp437.'''
     try:
         decoded_string = bytestring.decode(defencoding)
@@ -58,17 +83,17 @@ def runShell(csSession,shellExecPath=str,shellExecArgs=[],capture=False,cmdletpa
     else:
         proc = subprocess.Popen(execList, stderr=sys.stderr, stdout=subprocess.PIPE)
         out = proc.communicate()[0] # Get output
-        out = safe_decode_utf8_cp437(out,defencoding)
+        out = safeDecodeUtf8Cp437(out,defencoding)
         return out
 
 def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,isCaptured=bool,globalValues=dict,globalsToReader=dict,retVars=False):
     '''CSlib.execution: Function to execute a command using a reader.'''
     # setup globals
-    globalsToReader["cs_isCaptured"] = isCaptured
-    globalsToReader["cs_defEncoding"] = csSession.getEncoding()
-    globalsToReader["cs_readerPath"] = readerPath
-    globalsToReader["cs_lph_isAllowed"] = lph_isAllowed
-    globalsToReader["cs_runShell"] = runShell
+    for key,val in globalsToReader.items():
+        if val.startswith("{evalLocal:") and val.endswith("}"):
+            varn = (val.replace("{","",1))[::-1].replace("}","",1)[::-1]
+            varn = varn.replace("evalLocal:","",1)
+            globalsToReader[key] = eval(varn)
     # create and exec command
     module = None
     try:
@@ -122,37 +147,56 @@ class execline():
                 if handle != None:
                     # Run
                     if handle == "valid":
-                        cmdData = partial["cmd"]
-                        if cmdData["type"] == "file":
-                            path = cmdData["path"]
-                            if cmdData.get("reader") != None:
-                                if cmdData["reader"] == "INTERNAL_PYTHON":
-                                    exec(open(path,'r',encoding=csSession.getEncoding()).read(),globalData)
+                        try:
+                            cmdData = partial["cmd"]
+                            # Restrict 
+                            print(cmdData["Options"])
+                            _ = input()
+                            # execute
+                            if cmdData["type"] == "file":
+                                path = cmdData["path"]
+                                if cmdData.get("reader") != None:
+                                    if cmdData["reader"] == "INTERNAL_PYTHON":
+                                        exec(open(path,'r',encoding=csSession.getEncoding()).read(),globalData)
+                                    else:
+                                        # Get reader file content
+                                        readerPath = None
+                                        for entry in csSession.regionalGet("ReaderRegistry"):
+                                            if entry["name"] == cmdData["reader"]:
+                                                readerPath = entry["exec"]
+                                                break
+                                        readerPath = normPathSep(csSession.getregister("stm").eval("ptm",readerPath))
+                                        if readerPath != None and os.path.exists(readerPath):
+                                            cmdletEncoding = cmdData["data"].get("encoding")
+                                            exec_reader(
+                                                csSession = csSession,
+                                                readerPath = readerPath,
+                                                command = cmdData,
+                                                cmdargs = partial["args"],
+                                                encoding = cmdletEncoding if cmdletEncoding != "CMDLET_ENCODING" else None,
+                                                isCaptured = False,
+                                                globalValues = globalData,
+                                                globalsToReader = csSession.initDefaults["readerCallGlobals"],
+                                                retVars = False
+                                            )
                                 else:
-                                    # Get reader file content
-                                    readerPath = None
-                                    for entry in csSession.regionalGet("ReaderRegistry"):
-                                        if entry["name"] == cmdData["reader"]:
-                                            readerPath = entry["exec"]
-                                            break
-                                    readerPath = normPathSep(csSession.getregister("stm").eval("ptm",readerPath))
-                                    if readerPath != None and os.path.exists(readerPath):
-                                        cmdletEncoding = cmdData["data"].get("encoding")
-                                        exec_reader(
-                                            csSession = csSession,
-                                            readerPath = readerPath,
-                                            command = cmdData,
-                                            cmdargs = partial["args"],
-                                            encoding = cmdletEncoding if cmdletEncoding != "CMDLET_ENCODING" else None,
-                                            isCaptured = False,
-                                            globalValues = globalData,
-                                            globalsToReader = csSession.initDefaults["readerCallGlobals"],
-                                            retVars = False
-                                        )
+                                    csSession.deb.perror("lng:cs.cmdletexec.emptyreaderfield, txt:No reader was found for the cmdlet '{command}'!",{"command":cmdData.get("name"),"args":partial.get("args"),"type":partial.get("type")},raiseEx=True)
+                            elif cmdData["type"] == "method":
+                                cmdData["method"](globalData)
+                        except Exception:
+                            if csSession.getregister("set").getProperty("crsh","Execution.HandleCmdletError") == True:
+                                toret = {
+                                    "cmdData": cmdData.get("name") if type(cmdData) == dict else cmdData
+                                }
+                                if csSession.getregister("set").getProperty("crsh","Execution.PrintCmdletDebug") == True:
+                                    toret["traceback"] = traceback.format_exc()
+                                    # MAKE THEESE USE crshDebug
+                                    csSession.deb.perror("lng:cs.cmdletexec.traceback",toret)
+
+                                else:
+                                    csSession.deb.perror("lng:cs.cmdletexec.error",toret)
                             else:
-                                csSession.deb.perror("lng:cs.cmdletexec.emptyreaderfield, txt:No reader was found for the cmdlet '{command}'!",{"command":cmdData.get("name"),"args":partial.get("args"),"type":partial.get("type")},raiseEx=True)
-                        elif cmdData["type"] == "method":
-                            cmdData["method"](globalData)
+                                raise
                     # Raise
                     elif handle == "invalid":
                         cmdData = partial.get("cmd")

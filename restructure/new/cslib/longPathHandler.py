@@ -2,7 +2,7 @@
 CSlib: Windows long path handler
 '''
 
-from .externalLibs.conUtils import IsWindows
+from cslib.externalLibs.conUtils import IsWindows
 
 # Non windows default function
 def lph_isAllowed(pathstr=str) -> bool:

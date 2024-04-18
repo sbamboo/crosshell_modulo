@@ -78,6 +78,7 @@ def toLeastInfoStr(gid,mgids) -> str:
     authors = []
     prefixs = []
     ids = []
+    features = []
     for gid2 in mgids:
         if gid2 != gid:
             _t = idToDict(gid2)
@@ -86,6 +87,7 @@ def toLeastInfoStr(gid,mgids) -> str:
             if _t["package"]["author"] != None: authors.append(_t["package"]["author"])
             if _t["package"]["prefix"] != None: prefixs.append(_t["package"]["prefix"])
             if _t["package"]["id"] != None: ids.append(_t["package"]["id"])
+            if _t["feature"] != None: features.append(_t["feature"])
     gid = idToDict(gid)
     name_ = gid["package"]["name"]
     version_ = gid["package"]["version"]
@@ -93,17 +95,21 @@ def toLeastInfoStr(gid,mgids) -> str:
     prefix_ = gid["package"]["prefix"]
     id_ = gid["package"]["id"]
     path_ = gid["path"]
+    feature_ = gid["feature"]
     # made
     if name_ in names:
         if version_ in versions:
             if author_ in authors:
-                if feature_ in features:
-                    if prefix_ in prefixs:
-                        least = feature_+"@"+prefix_+":"+author_+"."+name_+"."+version_+"#"+id_
+                if feature_ != None:
+                    if feature_ in features:
+                        if prefix_ in prefixs:
+                            least = feature_+"@"+prefix_+":"+author_+"."+name_+"."+version_+"#"+id_
+                        else:
+                            least = feature_+"@"+prefix_+":"+author_+"."+name_+"."+version_    
                     else:
-                        least = feature_+"@"+prefix_+":"+author_+"."+name_+"."+version_    
+                        least = feature_+"@"+author_+"."+name_+"."+version_    
                 else:
-                    least = feature_+"@"+author_+"."+name_+"."+version_    
+                    least = author_+"."+name_+"."+version_    
             else:
                 least = author_+"."+name_+"."+version_    
         else:
@@ -345,7 +351,7 @@ def loadPackageConfig(installedPackages,defaultFeatures=dict,encoding="utf-8"):
                 packageConfigs[type_][packageName] = packageData
                 packageConfigs[type_][packageName]["path"] = packagePath
                 if packageData.get("features") != None:
-                    foundFeatures[type_+"@"+packageName] = packageData["features"]
+                    foundFeatures[str(type_+"@"+packageName)] = packageData["features"]
     return packageConfigs,foundFeatures
 
 def normPathsInFeatureData(path) -> str:
@@ -417,7 +423,7 @@ def normFeatureDataAndReg(foundFeatures,registerMethod,allowedFeatureTypes):
             if typeAllowed == True and featureData.get("addr") not in ["",None]:
                 registerMethod(featureName,featureData)
 
-def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,travelSymlink=False,defaultFeatureConfigType="json",mappingFileEncoding="utf-8",preLoadedReaders={},preLoadedReadersType="modulo",preLoadedReadersFeature="readers",legacyPackagePath=str,moduloPackagePath=str):
+def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,travelSymlink=False,defaultFeatureConfigType="json",mappingFileEncoding="utf-8",configFileEncoding="utf-8",preLoadedReaders={},preLoadedReadersType="modulo",preLoadedReadersFeature="readers",legacyPackagePath=str,moduloPackagePath=str):
     if preLoadedReaders not in [None,{}]:
         if loadedFeatures[preLoadedReadersFeature]["data"].get(preLoadedReadersType) == None: loadedFeatures[preLoadedReadersFeature]["data"][preLoadedReadersType] = {}
         loadedFeatures[preLoadedReadersFeature]["data"][preLoadedReadersType]["builtins"] = preLoadedReaders
@@ -485,7 +491,7 @@ def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,tra
                                 # If file was found load it and add the data based on the mapping_type
                                 if mappingFtype in ["cfg","config","property","properties"]:
                                     mappingFileData = config_to_dict(
-                                        open(mappingFilePath,'r',encoding=encoding).read()
+                                        open(mappingFilePath,'r',encoding=configFileEncoding).read()
                                     )
                                 elif mappingFtype in ["json","yaml"]:
                                     mappingFileData = _fileHandler(mappingFtype,"get",mappingFilePath,encoding=mappingFileEncoding)
@@ -505,7 +511,7 @@ def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,tra
                                 # If file was found load it and add the data based on the mapping_type
                                 if mappingFtype in ["cfg","config","property","properties"]:
                                     mappingFileData = config_to_dict(
-                                        open(mappingFilePath,'r',encoding=encoding).read()
+                                        open(mappingFilePath,'r',encoding=configFileEncoding).read()
                                     )
                                 elif mappingFtype in ["json","yaml"]:
                                     mappingFileData = _fileHandler(mappingFtype,"get",mappingFilePath,encoding=mappingFileEncoding)
@@ -595,7 +601,8 @@ def loadPackageFeatures(loadedFeatures,packageConfigs,maxRecursiveDepth=None,tra
                                     if type(typeTypes) == str: typeTypes = [typeTypes]
                                     typeTypes = handleOSinExtensionsList(typeTypes)
                                     # Get al files of types and link to their parent
-                                    filesOfTypes = listFilesOfType(sdir,typeTypes,givePaths=False)
+                                    filesOfTypes = listFilesOfType(sdir,typeTypes,givePaths=True)
+                                    filesOfTypes = [x.replace(addressPath,"",1) for x in filesOfTypes]
                                     if filesOfTypes not in [None,[]]:
                                         if loadedFeatures[featureName]["data"][packageType].get(packageName) == None: loadedFeatures[featureName]["data"][packageType][packageName] = {}
                                         files_ = []

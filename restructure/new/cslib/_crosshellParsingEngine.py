@@ -158,31 +158,34 @@ def removeAnsiSequences(inputString):
     cleanedString = ansiPattern.sub('', inputString)
     return cleanedString
 
-def split_string_by_spaces(input_string) -> list:
-    '''CSlib.CSPE: Function to split a string by spaces not inside qoutes.'''
+def splitStringBySpaces(inputString, sp=" ", q1='"', q2="'") -> list:
+    '''CSlib.CSPE: Function to split a string by spaces not inside quotes.'''
     substrings = []
-    current_substring = []
-    inside_quotes = False
-    quote_char = None
-    for char in input_string:
-        if char == ' ' and not inside_quotes:
+    currentSubstring = []
+    insideQuotes = False
+    quoteChar = None
+    for char in inputString:
+        if char == sp and not insideQuotes:
             # If we encounter a space and we're not inside quotes, consider it as a delimiter
-            if current_substring:
-                substrings.append(''.join(current_substring))
-                current_substring = []
-        elif char in ('"', "'"):
-            # Toggle the inside_quotes flag and set the quote_char when encountering a quote
-            inside_quotes = not inside_quotes
-            if inside_quotes:
-                quote_char = char
-            else:
-                quote_char = None
+            if currentSubstring:
+                substrings.append(''.join(currentSubstring))
+                currentSubstring = []
+        elif char in (q1, q2) and not insideQuotes:
+            # Toggle the insideQuotes flag and set the quoteChar when encountering a quote
+            insideQuotes = True
+            quoteChar = char
+            currentSubstring.append(char)  # Include the quote character in the substring
+        elif char == quoteChar and insideQuotes:
+            # End of quote, toggle insideQuotes off
+            insideQuotes = False
+            quoteChar = None
+            currentSubstring.append(char)  # Include the quote character in the substring
         else:
             # Add the character to the current substring
-            current_substring.append(char)
+            currentSubstring.append(char)
     # Add the last substring if it exists
-    if current_substring:
-        substrings.append(''.join(current_substring))
+    if currentSubstring:
+        substrings.append(''.join(currentSubstring))
     return substrings
 
 def splitByDelimiters(inputString, delimiters):

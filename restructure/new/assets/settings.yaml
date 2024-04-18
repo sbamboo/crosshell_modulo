@@ -122,5 +122,7 @@ crsh:
     CustomMappings: {}
   Execution:
     SafelyHandleExit: true
+    HandleCmdletError: true
+    PrintCmdletDebug: true
 crsh_debugger:
   Scope: error

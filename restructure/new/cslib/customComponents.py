@@ -13,7 +13,8 @@ def console_component(csSession):
 
     # Prep console
     if _set.getProperty("crsh","Console.ClearOnStart") == True:
-        clear(skipSetXY=csSession.regionalGet("StripAnsi"))
+        if csSession.regionalGet("Pargs").nocls != True:
+            clear(skipSetXY=csSession.regionalGet("StripAnsi"))
     if _set.getProperty("crsh","Console.TitleEnabled") == True:
         setConTitle( csSession.getTitle() )
 
@@ -65,12 +66,17 @@ def interpriter_component(csSession,input_=str,_pipeline=None) -> object:
     return pipeline
 
 def execute_component(csSession,execline=object) -> object:
+    catchSysExit = csSession.getregister("set").getProperty("crsh","Execution.SafelyHandleExit")
     try:
         return execline.execute(csSession)
     except CrosshellDebErr as e:
         return e
-    except CrosshellExit:
-        pass
+    except CrosshellExit as e:
+        if catchSysExit == True and str(e) == "cs.exit": exit()
+        else: pass
+    except SystemExit as e:
+        if catchSysExit == True and str(e) == "cs.exit": exit()
+        else: pass
 
 def prompt_component(csSession,prompt=str) -> str:
     return input(prompt)

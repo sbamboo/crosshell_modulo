@@ -1436,6 +1436,9 @@ class crshSession():
 
         self.storage["stateInstances"] = []
 
+        self.cslib = None
+        self.linkCslib()
+
         if initOnStart == True:
             self.init()
 
@@ -1480,6 +1483,7 @@ class crshSession():
                 import dill # local, should have been resolved by init
                 _mode = "dill"
             except ImportError: pass
+        self.unlinkCslib() # unlink cslib var
         if _mode.lower() == "json":
             with open(filename, 'w') as f:
                 f.write( json.dumps(self.__dict__) )
@@ -1499,6 +1503,7 @@ class crshSession():
                 import dill # local, should have been resolved by init
                 _mode = "dill"
             except ImportError: pass
+        self.linkCslib() # link cslib var
         # fix main-missing
         if sys.modules.get("main") is None:
             sys.modules["main"] = sys.modules[__name__]
@@ -1842,6 +1847,8 @@ class crshSession():
                     "Console.TitleEnabled": True,
                     "Console.ClearOnStart": True,
                     "Execution.SafelyHandleExit": True,
+                    "Execution.HandleCmdletError": True,
+                    "Execution.PrintCmdletDebug": True,
                     "Formats.DefaultEncoding": "{CS_DefaultEncoding}",
                     "Version.VerFile": "{CS_VersionFile}",
                     "Version.FileFormatVer": "1",
@@ -2157,7 +2164,13 @@ class crshSession():
             "csSession": self
         }
 
-        self.initDefaults["readerCallGlobals"] = {}
+        self.initDefaults["readerCallGlobals"] = {
+            "cs_isCaptured": "{evalLocal:isCaptured}",
+            "cs_defEncoding": "{evalLocal:csSession.getEncoding()}",
+            "cs_readerPath": "{evalLocal:readerPath}",
+            "cs_lph_isAllowed": "{evalLocal:lph_isAllowed}",
+            "cs_runShell": "{evalLocal:runShell}"
+        }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
@@ -2203,6 +2216,16 @@ class crshSession():
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
         self.regionalSet("VerboseStart",value)
+
+    def linkCslib(self):
+        import cslib as cslib
+        self.cslib = cslib
+        self.exlibs = cslib.externalLibs
+        del cslib
+
+    def unlinkCslib(self):
+        self.cslib = None
+        self.exlibs = None
 
 
     def reparseArgs(self,cliArgs=None):
@@ -2854,6 +2877,7 @@ class crshSession():
             travelSymlink = False,
             defaultFeatureConfigType = "json",
             mappingFileEncoding = self.getEncoding(),
+            configFileEncoding = self.getEncoding(),
             preLoadedReaders = self.initDefaults["defaultReaders"],
             preLoadedReadersType = "modulo",
             preLoadedReadersFeature = "readers",

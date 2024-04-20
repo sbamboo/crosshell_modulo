@@ -2107,14 +2107,23 @@ class crshSession():
         self.initDefaults["defaultCmdlet_data"] = {
             "modulo:builtins/exit#1": self.initDefaults["cmdletDataSchema"] | self.initDefaults["defaultCmdlet_mergeSchema"] | {
                 "name": "exit",
-                "method": methodCmdet_exit
+                "method": methodCmdlet_exit
             },
             "modulo:builtins/print#1": self.initDefaults["cmdletDataSchema"] | self.initDefaults["defaultCmdlet_mergeSchema"] | {
                 "name": "print",
-                "method": methodCmdet_print,
+                "method": methodCmdlet_print,
                 "data": {
                     "aliases": [
                         "echo"
+                    ]
+                }
+            },
+            "modulo:builtins/getwebpkg#1": self.initDefaults["cmdletDataSchema"] | self.initDefaults["defaultCmdlet_mergeSchema"] | {
+                "name": "getwebpkg",
+                "method": methodCmdlet_getwebpkg,
+                "data": {
+                    "aliases": [
+                        "get-web-package"
                     ]
                 }
             }

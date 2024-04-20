@@ -150,8 +150,7 @@ class execline():
                         try:
                             cmdData = partial["cmd"]
                             # Restrict 
-                            print(cmdData["Options"])
-                            _ = input()
+                            #print(cmdData["data"].get("Options")) #DEBUG
                             # execute
                             if cmdData["type"] == "file":
                                 path = cmdData["path"]

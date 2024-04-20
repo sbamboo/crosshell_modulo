@@ -389,14 +389,74 @@ def dynprefixMangler(data=dict,pkgConfigs=dict,dynprefixFolder=str) -> dict:
 # endregion
 
 # region: [Cmdlets]
-def methodCmdet_exit(globalData):
+def methodCmdlet_exit(globalData):
     csSession = globalData["csSession"]
     if csSession.flags.has("--consoleRunning"):
         csSession.flags.disable("--consoleRunning")
     exit(0)
 
-def methodCmdet_print(globalData):
+def methodCmdlet_print(globalData):
     print(globalData["args"].sargv)
+
+def methodCmdlet_getwebpkg(globalData):
+    import requests, json
+    args = globalData["args"].argv
+    if len(args) > 0:
+        file = None
+        url = None
+        useGit = False
+        # git?
+        if "-git" in args:
+            try:
+                useGit = True
+                args.remove("-git")
+                p = args[0].split("@")
+                owner = p[0]
+                p = p[1].split(":")
+                repo = p[0]
+                path = os.path.dirname(p[1]).replace("\\","/")
+                file = os.path.basename(p[1])
+                url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}/"
+                del p,owner,repo,path
+            except:
+                print("Invalid input give url or using the '-git' flag write in the format '<repoOwner>@<repo>:<path>/<file>'!")
+                globalData["exit"]()
+        else:
+            url = args[0]
+            file = os.path.basename(args[0])
+        # hand
+        if useGit == True:
+            print("Fetching api.github.api...")
+            resp = requests.get(url)
+            if resp.status_code != 200:
+                print(f"Github fetch failed with status-code {resp.status_code}!")
+                globalData["exit"]()
+            url = None
+            for entry in json.loads( resp.content.decode("utf-8") ):
+                if entry.get("name") != None and entry.get("name") == file:
+                    url = entry.get("download_url")
+                    break
+            if url == None:
+                print("Failed to get entry download path from api.github.com!")
+                globalData["exit"]()
+        # 
+        if url != None:
+            print("Downloading content...")
+            resp = requests.get(url)
+            if resp.status_code != 200:
+                print(f"Fetch failed with status-code {resp.status_code}!")
+            else:
+                path = os.path.join(globalData["csSession"].regionalGet("PackageFilePath"),file)
+                if os.path.exists(path) == True:
+                    os.remove(path)
+                with open(path,'wb') as fileo:
+                    fileo.write(resp.content)
+                    fileo.close()
+                print(f"Done, wrote '{file}' to package-file folder.")
+        else:
+            print("Url invalid or empty!")
+    else:
+        print("Invalid input give url or using the '-git' flag write in the format '<repoOwner>@<repo>:<path>/<file>'!")
 # endregion
 
 # region: [PassableMethods]

@@ -61,6 +61,8 @@ crsh:
       Cmdlets:
         INTERNAL_PYTHON:
         - py
+        Bython:
+        - by
         PLATFORM_EXECUTABLE:
         - win@exe
         - win@cmd

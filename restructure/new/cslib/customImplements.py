@@ -188,10 +188,12 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
                 extras = {}
                 allowed_keys = list(rearrangedData[gid]["data"].keys())
                 allowed_keys.extend(sumAllowedKeys)
-                for k,v in cmdlets[filename_d].items():
+                copy = cmdlets[filename_d].copy()
+                for k,v in copy.items():
                     if k not in allowed_keys:
                         extras[k] = v
                         del cmdlets[filename_d][k]
+                del copy
                 # Mode: Raw
                 if mode == "raw":
                     rearrangedData[gid] = merge_dicts(rearrangedData[gid],cmdlets[filename_d])

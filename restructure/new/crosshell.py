@@ -5,3 +5,6 @@ from cslib.main import *
 csSession = crshSession()
 csSession.init()
 csSession.start()
+exit()
+r = csSession.regionalGet()["LoadedPackages"]["modulo"]["simonkc.whosh"]
+print(r)

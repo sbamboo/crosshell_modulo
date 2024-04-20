@@ -1,0 +1,3 @@
+if (csSession.regionalGet("SessionIdentifier") != None) {
+    print("Hello");
+}

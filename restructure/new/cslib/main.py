@@ -2159,8 +2159,7 @@ class crshSession():
         }
 
         self.initDefaults["componentCallGlobals"] = {
-            "csSession": self,
-            "a": 1
+            "csSession": self
         }
 
         self.initDefaults["dynprefixCallGlobals"] = {

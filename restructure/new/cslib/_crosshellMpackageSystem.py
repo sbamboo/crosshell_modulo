@@ -299,6 +299,9 @@ def discoverPackageFiles(type_=str, sourcePath=str|object, installDest=str, file
     # return
     return noninstalledPackageFiles,installedPackages["paths"]
 
+def runOnInstallScript():
+    pass
+
 def installPackageFiles(nonInstalledPackages=dict,installedPackages=dict,installDestModulo=str,installDestLegacy=str):
     """Installs package files. (uncompresses them to right folder and adds them to "installed" list)"""
     # install modulo

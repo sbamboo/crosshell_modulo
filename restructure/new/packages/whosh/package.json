@@ -1,0 +1,18 @@
+{
+    "package": {
+        "author": "SimonKC",
+        "desc": "Main crosshell package",
+        "version": "latest",
+        "events": {
+            "onLoad": "{parent}\\load.py",
+            "": "{parent}\\",
+            "onInstall": "{parent}\\install.py",
+            "onUninstall": "{root}\\uninstall.py"
+        }
+    },
+    "cmdlets": {
+        "whosh": {
+            "aliases": ["wh"]
+        }
+    }
+}

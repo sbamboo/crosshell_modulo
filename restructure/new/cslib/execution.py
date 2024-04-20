@@ -90,10 +90,11 @@ def exec_reader(csSession,readerPath=str,command=str,cmdargs=list,encoding=str,i
     '''CSlib.execution: Function to execute a command using a reader.'''
     # setup globals
     for key,val in globalsToReader.items():
-        if val.startswith("{evalLocal:") and val.endswith("}"):
-            varn = (val.replace("{","",1))[::-1].replace("}","",1)[::-1]
-            varn = varn.replace("evalLocal:","",1)
-            globalsToReader[key] = eval(varn)
+        if type(val) == str:
+            if val.startswith("{evalLocal:") and val.endswith("}"):
+                varn = (val.replace("{","",1))[::-1].replace("}","",1)[::-1]
+                varn = varn.replace("evalLocal:","",1)
+                globalsToReader[key] = eval(varn)
     # create and exec command
     module = None
     try:
@@ -154,6 +155,7 @@ class execline():
                             # execute
                             if cmdData["type"] == "file":
                                 path = cmdData["path"]
+                                globalData["CSScriptRoot"] = path
                                 if cmdData.get("reader") != None:
                                     if cmdData["reader"] == "INTERNAL_PYTHON":
                                         exec(open(path,'r',encoding=csSession.getEncoding()).read(),globalData)

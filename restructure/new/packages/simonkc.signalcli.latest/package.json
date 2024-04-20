@@ -1,0 +1,91 @@
+{
+    "package": {
+        "author": "SimonKC",
+        "desc": "Signal-cli in crosshell?",
+        "version": "latest"
+    },
+    "cmdlets": {
+
+        "signal-cli_install": {
+            "aliases": [ "signal-install" ],
+            "desc": "Script to install 'signal-cli' from 'github.com/AsamK/signal-cli/releases'",
+            "params": []
+        },
+        "signal-cli_uninstall": {
+            "aliases": [ "signal-uninstall" ],
+            "desc": "Script to uninstall signal-cli, Note this dosen't remove user data!",
+            "params": []
+        },
+
+        "signal-cli_addContact": {
+            "aliases": [ "signal-add-contact" ],
+            "desc": "Adds a contact.",
+            "params": [ "<contactName>", "<contact-telephone-number>" ]
+        },
+        "signal-cli_getContact": {
+            "aliases": [ "signal-get-contact" ],
+            "desc": "Gets the number set for a contact.",
+            "params": [ "<contactName>" ]
+        },
+        "signal-cli_getContacts": {
+            "aliases": [ "signal-get-contacts" ],
+            "desc": "Gets a list of al contacts.",
+            "params": []
+        },
+        "signal-cli_resContacts": {
+            "aliases": [ "signal-res-contacts" ],
+            "desc": "Removes the contact list. (Irreversible)",
+            "params": []
+        },
+        "signal-cli_remContact": {
+            "aliases": [ "signal-rem-contact" ],
+            "desc": "Removes a contact. (Irreversible)",
+            "params": [ "<contactName>" ]
+        },
+
+        "signal-cli_link": {
+            "aliases": [ "signal-link" ],
+            "desc": "Start a signal-account-device linking wizard.",
+            "params": [ "<telephone-number>" ]
+        },
+        "signal-cli_raw": {
+            "aliases": [ "signal-raw" ],
+            "desc": "Allows you to interact with the signal-cli tool/api directly.",
+            "params": [ "<...expression>" ]
+        },
+
+        "signal-cli_send": {
+            "aliases": [ "signal-send" ],
+            "desc": "Send a message to a recipient.",
+            "params": [ "<sender>", "<message>", "<recipient>" ]
+        },
+        "signal-cli_receive": {
+            "aliases": [ "signal-receive" ],
+            "desc": "Gets the 'recive' feed for an account.",
+            "params": [ "<accountName>" ]
+        },
+
+        "signal-cli_remUsrData": {
+            "aliases": [ "signal-rem-usr-data" ],
+            "desc": "Attempts removal of signal-cli data from ~/.local/share/signal-cli.",
+            "params": []
+        },
+
+        "signal-cli_str-to-qr": {
+            "aliases": [ "signal-str-to-qr" ],
+            "desc": "SignalCli implementation: Generates a QR-code from a string.",
+            "params": [ "<str>" ]
+        },
+        "signal-cli_str-to-qr2": {
+            "aliases": [ "signal-str-to-qr2" ],
+            "desc": "SignalCli implementation: Generates a QR-code from a string. (TextOnly, invalid for urls)",
+            "params": [ "<str>" ]
+        },
+
+        "signal-cli_jsonRpc": {
+            "aliases": [ "signal-jsonrpc" ],
+            "desc": "Attempt to communicate with the jsonrpc mode of signal-cli. EXPERIMENTAL!",
+            "params": [ "<...expression>" ]
+        }
+    }
+}

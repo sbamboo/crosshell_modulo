@@ -6,3 +6,11 @@ assets/.history
 assets/langlist.json
 assets/readerfiles.json
 core/persistance.yaml
+
+restructure/new/packages/_private
+restructure/new/packages/_legacyPackages/_private
+
+packages/*/.data/private
+packages/_legacyPackages/*/.data/private
+restructure/new/packages/*/.data/private
+restructure/new/packages/_legacyPackages/*/.data/private

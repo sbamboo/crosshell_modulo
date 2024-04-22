@@ -2,6 +2,8 @@ import os, subprocess, tarfile, shutil
 
 path = os.path.abspath(os.path.join(os.path.dirname(CSScriptRoot),"..",".data","private"))
 
+csSession.exlibs.filesys.filesys.ensureDirPath(path)
+
 instFolder = os.path.join(path,"signal-cli")
 downFile = os.path.join(path,"signal-cli-x.x.x.tar.gz")
 

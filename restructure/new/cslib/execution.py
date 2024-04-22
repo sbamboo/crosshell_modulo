@@ -4,7 +4,7 @@ from cslib._crosshellParsingEngine import splitByDelimiters,splitStringBySpaces
 from cslib.longPathHandler import lph_isAllowed
 from cslib.pipeline import argumentHandler
 from cslib.pathtools import normPathSep
-from cslib.exceptions import CrosshellDebErr
+from cslib.exceptions import CrosshellDebErr,CrosshellExit
 from cslib.piptools import fromPath
 from cslib.customImplements import customMethod_exit
 from cslib.externalLibs.limitExec import DummyObject,RaisingDummyObject,ReturningDummyObject,CustomizableContextManager
@@ -184,7 +184,9 @@ class execline():
                                     csSession.deb.perror("lng:cs.cmdletexec.emptyreaderfield, txt:No reader was found for the cmdlet '{command}'!",{"command":cmdData.get("name"),"args":partial.get("args"),"type":partial.get("type")},raiseEx=True)
                             elif cmdData["type"] == "method":
                                 cmdData["method"](globalData)
-                        except Exception:
+                        except (CrosshellExit,CrosshellDebErr,SystemExit): #MARK: Error raiser 
+                            raise
+                        except Exception: 
                             if csSession.getregister("set").getProperty("crsh","Execution.HandleCmdletError") == True:
                                 toret = {
                                     "cmdData": cmdData.get("name") if type(cmdData) == dict else cmdData

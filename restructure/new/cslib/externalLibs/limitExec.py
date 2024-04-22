@@ -1,5 +1,6 @@
 # LimitExec: Library to limit the capabilities of an executed script
 # Author: Simon Kalmi Claesson
+# Version: 2.0
 
 # [imports]
 import os

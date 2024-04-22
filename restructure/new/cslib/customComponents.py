@@ -69,11 +69,11 @@ def execute_component(csSession,execline=object) -> object:
     catchSysExit = csSession.getregister("set").getProperty("crsh","Execution.SafelyHandleExit")
     try:
         return execline.execute(csSession)
-    except CrosshellDebErr as e:
-        return e
     except CrosshellExit as e:
         if catchSysExit == True and str(e) == "cs.exit": exit()
         else: pass
+    except CrosshellDebErr as e:
+        return e
     except SystemExit as e:
         if catchSysExit == True and str(e) == "cs.exit": exit()
         else: pass

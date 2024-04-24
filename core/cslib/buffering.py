@@ -1,5 +1,3 @@
-from types import Union
-
 # Custom stdout-buffer class
 class BufferedStdout:
     """Crosshells main buffer-collector, working as an inplace sys.stdout that also saves the content.
@@ -12,7 +10,7 @@ class BufferedStdout:
         self.printToConsole = True
         self.orgInput = orgInput
 
-    def _getBools(self) -> Union[bool,bool]:
+    def _getBools(self):
         """
         Function to get the current set boolean values for:
           stb: saveToBuffer

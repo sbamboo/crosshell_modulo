@@ -115,13 +115,13 @@ class argumentHandler():
             self.targv = determineTypeForArgs(arguments)
             targv2 = []
             for arg in self.targv:
-                self.pargv.append( self.objectify(arg) )
+                self.pargv.append( self.objectify(*arg) )
                 if arg[1] == "lit-str":
                     arg = (arg[0].replace('r"',"",1).rstrip('"'),"str")
                 targv2.append(arg)
             self.targv = targv2
 
-    def serializeJson(obj):
+    def serializeJson(self,obj):
         def serialize_property(prop):
             try:
                 json.dumps(prop)
@@ -132,15 +132,15 @@ class argumentHandler():
                 except:
                     return "§STR§="+str(prop)
         if isinstance(obj, dict):
-            return {key: serialize(value) for key, value in obj.items()}
+            return {key: self.serialize(value) for key, value in obj.items()}
         elif isinstance(obj, list):
-            return [serialize(item) for item in obj]
+            return [self.serialize(item) for item in obj]
         elif hasattr(obj, '__dict__'):
             return {key: serialize_property(value) for key, value in obj.__dict__.items()}
         else:
             return serialize_property(obj)
 
-    def deserializeJson(obj):
+    def deserializeJson(self,obj):
         if type(obj) == str:
             if obj.startswith("§PICKLE§="):
                 obj = obj.replace("§PICKLE§=","",1)
@@ -168,7 +168,7 @@ class argumentHandler():
         elif self.serializerMode == "pickle":
             return pickle.dumps(obj).hex()
         else:
-            return serializeJson(obj)
+            return self.serializeJson(obj)
 
     def deserialize(self,obj):
         if self.serializerMode == "dill":
@@ -180,11 +180,9 @@ class argumentHandler():
         elif self.serializerMode == "pickle":
             return pickle.loads(bytes.fromhex(obj))
         else:
-            return deserializeJson(obj)
+            return self.deserializeJson(obj)
 
-    def objectify(self,obj):
-        type_ = obj[1]
-        obj = obj[0]
+    def objectify(self,type_:str,obj:object) -> object:
         if type_ in ["python.int","int"]:
             return int(obj)
         elif type_ in ["python.float","float"]:
@@ -205,6 +203,9 @@ class argumentHandler():
             return obj.value
         else:
             return obj
+        
+    def determineDt(self,arg:object) -> str:
+        return determineDataType(arg)
 
 def returner(*args,**kwargs):
     """

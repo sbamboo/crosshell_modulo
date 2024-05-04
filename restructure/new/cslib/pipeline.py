@@ -9,8 +9,12 @@ def isJsonOrCodeblock(inp=str):
         try:
             json.loads(inp)
             return "json"
-        except ValueError:
-            return "codeblock"
+        except ValueError as e1:
+            #try:
+            #    json.loads(inp.replace("\\033","!ESC!"))
+            #    return "json"
+            #except ValueError as e2:
+                return "codeblock"
     else:
         return False
 
@@ -54,6 +58,8 @@ def isPipeRaw(inp=str):
 
 def determineDataType(inp):
     if type(inp) == str:
+        if inp.lower() == "true": return "bool"
+        elif inp.lower() == "false": return "bool"
         if inp.startswith('r"') and inp.endswith('"'):
             return "lit-str"
         t = isJsonOrCodeblock(inp)
@@ -183,7 +189,14 @@ class argumentHandler():
             return self.deserializeJson(obj)
 
     def objectify(self,type_:str,obj:object) -> object:
-        if type_ in ["python.int","int"]:
+        if type_ == "bool":
+            if type(obj) == str:
+                if obj.lower() == "true": return True
+                elif obj.lower() == "false": return False
+                else: return obj
+            else:
+                return obj
+        elif type_ in ["python.int","int"]:
             return int(obj)
         elif type_ in ["python.float","float"]:
             return float(obj)

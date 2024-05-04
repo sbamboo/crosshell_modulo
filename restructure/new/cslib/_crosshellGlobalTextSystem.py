@@ -180,7 +180,7 @@ class crosshellGlobalTextSystem():
         # WebcolorTags
         if self.parseWebcolor == True:
             customTags = _getWebcolorMappings()
-        customTags.update(self.customTags)
+        customTags.update(self.customTags.copy())
         if addCustomTags != None:
             customTags.update(addCustomTags)
         # Pathtags

@@ -1593,15 +1593,15 @@ class crshSession():
     def getCwd(self):
         return os.getcwd()
 
-    def sformat(self,text) -> str:
+    def sformat(self,text,customTags=None) -> str:
         if self.flags.has("--enableUnsafeOperations") == False and self.flags.has("--haveBeenInited") == False:
             raise Exception("This operation requires the session to have been inited. `init()`")
         toformat, excludes = exclude_nonToFormat(text)
-        formatted = self.getregister("txt").parse(toformat)
+        formatted = self.getregister("txt").parse(toformat,addCustomTags=customTags)
         return include_nonToFormat(formatted,excludes)
 
-    def fprint(self,text,file=None,flush=False,end=None,cusPrint=None):
-        text = self.sformat(text)
+    def fprint(self,text,file=None,flush=False,end=None,cusPrint=None,customTags=None):
+        text = self.sformat(text,customTags=customTags)
         if cusPrint == None: cusPrint = print
         if end == None:
             cusPrint(text,file=file,flush=flush)

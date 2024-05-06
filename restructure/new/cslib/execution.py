@@ -9,24 +9,24 @@ from cslib.piptools import fromPath
 from cslib.customImplements import customMethod_exit
 from cslib.externalLibs.limitExec import DummyObject,RaisingDummyObject,ReturningDummyObject,CustomizableContextManager
 
-def input_to_pipelineStructure(sinput=str,basicExecutionDelimiters=["||"],pipeingDelimiters=["|"],argReplacors={"!cs.nl!":"\n"}) -> list:
+def input_to_pipelineStructure(sinput=str,basicExecutionDelimiters=[";"],pipeingDelimiters=["|"],argReplacors={"!cs.nl!":"\n"}) -> list:
     """
     CSlib.execution: Function to convert input to the pipeline structure.\n
     Takes `sinput` as a string and uses the delimiters to split it up into a segments list,\n
     where each segment is a list containg al consequent executions (the ones that are linked together).\n
-    The executions themself is a dict of `{"cmd":"<cmdlet/firstArg>", "args":[...argsExclFirst...], "type":None}`\n
+    The executions themself is a dict of `{"cmd":"<cmdlet/firstArg>", "args":[...argsExclFirst...], "type":None, "pipetype":<pipeType>}`\n
     Type is set to none since it should be determined later in the input handling.\n
     Example:\n
-    `> cmd1 arg1 | cmd2 arg2 || cmd3 arg3`\n
+    `> cmd1 arg1 | cmd2 arg2; cmd3 arg3`\n
     Would become:\n
     ```
     [
         [
-            {"cmd":"cmd1", "args":[ "arg1" ], "type":None},
-            {"cmd":"cmd2", "args":[ "arg2" ], "type":None}
+            {"cmd":"cmd1", "args":[ "arg1" ], "type":None, "pipetype":<pipeType>},
+            {"cmd":"cmd2", "args":[ "arg2" ], "type":None, "pipetype":<pipeType>}
         ],
         [
-            {"cmd":"cmd3", "args":[ "arg3" ], "type":None}
+            {"cmd":"cmd3", "args":[ "arg3" ], "type":None, "pipetype":<pipeType>}
         ]
     ]
     ```\n

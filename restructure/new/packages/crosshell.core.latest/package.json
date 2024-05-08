@@ -15,6 +15,10 @@
         "downfile": {
             "desc": "Downloads a file from a URL. --s: Silent, --f: overwriteExisting, --g: handleGdriveVirusWarn.",
             "args": "<str:url> <str:filepath> --s --f --g"
+        },
+        "fetch": {
+            "desc": "Fetches the content of a URl. --s: Silent, --g: handleGdriveVirusWarn, --b: return as byteString.",
+            "args": "<str:url> --s --g --b"
         }
     }
 }

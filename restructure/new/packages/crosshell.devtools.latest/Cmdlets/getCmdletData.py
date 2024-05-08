@@ -2,6 +2,9 @@ cmdlet = None
 showRaw = False
 foundCmdletData = None
 
+args: object
+csSession: object
+
 if len(args.argv) > 1:
     cmdlet = args.argv[0]
     if args.targv[1][1] == "bool":
@@ -48,11 +51,11 @@ else:
     {cat2}hasOverriddenWith: {val}{d.d.hasOverriddenWith}
     {cat2}dotFileRaw:        {val}{d.d.dotFileRaw}
 {r}'''
-    cmdletPath = str(foundCmdletData["path"])
+    cmdletPath = str(foundCmdletData.get("path"))
     for k in csSession.regionalGet("__registerAsPaths")[::-1]:
         if csSession.regionalGet(k) != None:
             cmdletPath = cmdletPath.replace(csSession.regionalGet(k),"{"+f"{csSession.storage.addPrefToKey(k)}"+"}")
-    parentRootPath = str(foundCmdletData["parentPackage"]["rootPath"])
+    parentRootPath = str(foundCmdletData["parentPackage"].get("rootPath"))
     for k in csSession.regionalGet("__registerAsPaths")[::-1]:
         if csSession.regionalGet(k) != None:
             parentRootPath = parentRootPath.replace(csSession.regionalGet(k),"{"+f"{csSession.storage.addPrefToKey(k)}"+"}")
@@ -62,29 +65,29 @@ else:
             "cat": "{#3432a8}",
             "cat2": "{#8332a8}",
             "val": "{#666666}",
-            "d.format": str(foundCmdletData["format"]),
-            "d.readAs": str(foundCmdletData["readAs"]),
-            "d.dupeID": str(foundCmdletData["dupeID"]),
-            "d.index": str(foundCmdletData["index"]),
-            "d.type": str(foundCmdletData["type"]),
-            "d.name": str(foundCmdletData["name"]),
-            "d.fending": str(foundCmdletData["fending"]),
-            "d.filename": str(foundCmdletData["filename"]),
+            "d.format": str(foundCmdletData.get("format")),
+            "d.readAs": str(foundCmdletData.get("readAs")),
+            "d.dupeID": str(foundCmdletData.get("dupeID")),
+            "d.index": str(foundCmdletData.get("index")),
+            "d.type": str(foundCmdletData.get("type")),
+            "d.name": str(foundCmdletData.get("name")),
+            "d.fending": str(foundCmdletData.get("fending")),
+            "d.filename": str(foundCmdletData.get("filename")),
             "d.path": cmdletPath,
-            "d.method": str(foundCmdletData["method"]),
-            "d.reader": str(foundCmdletData["reader"]),
-            "d.p.name": str(foundCmdletData["parentPackage"]["name"]),
-            "d.p.shortname": str(foundCmdletData["parentPackage"]["shortname"]),
-            "d.p.type": str(foundCmdletData["parentPackage"]["type"]),
+            "d.method": str(foundCmdletData.get("method")),
+            "d.reader": str(foundCmdletData.get("reader")),
+            "d.p.name": str(foundCmdletData["parentPackage"].get("name")),
+            "d.p.shortname": str(foundCmdletData["parentPackage"].get("shortname")),
+            "d.p.type": str(foundCmdletData["parentPackage"].get("type")),
             "d.p.rootpath": str(parentRootPath),
-            "d.d.desc": str(foundCmdletData["data"]["desc"]),
-            "d.d.aliases": str(foundCmdletData["data"]["aliases"]),
-            "d.d.args": str(foundCmdletData["data"]["args"]),
-            "d.d.encoding": str(foundCmdletData["data"]["encoding"]),
-            "d.d.options": str(foundCmdletData["data"]["options"]),
-            "d.d.extras": str(foundCmdletData["data"]["extras"]),
-            "d.d.hasOverriddenWith": str(foundCmdletData["data"]["hasOverriddenWith"]),
-            "d.d.dotFileRaw": "..." if showRaw != True else "{#666666}↓\n{#3b3b3b}"+str(foundCmdletData["data"]["dotFileRaw"])+"\n",
+            "d.d.desc": str(foundCmdletData["data"].get("desc")),
+            "d.d.aliases": str(foundCmdletData.get("aliases")),
+            "d.d.args": str(foundCmdletData["data"].get("args")),
+            "d.d.encoding": str(foundCmdletData["data"].get("encoding")),
+            "d.d.options": str(foundCmdletData["data"].get("options")),
+            "d.d.extras": str(foundCmdletData["data"].get("extras")),
+            "d.d.hasOverriddenWith": str(foundCmdletData["data"].get("hasOverriddenWith")),
+            "d.d.dotFileRaw": "..." if showRaw != True else "{#666666}↓\n{#3b3b3b}"+str(foundCmdletData["data"].get("dotFileRaw"))+"\n",
             
         }
     )

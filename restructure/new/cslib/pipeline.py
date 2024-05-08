@@ -121,7 +121,7 @@ class argumentHandler():
             self.targv = determineTypeForArgs(arguments)
             targv2 = []
             for arg in self.targv:
-                self.pargv.append( self.objectify(*arg) )
+                self.pargv.append( self.objectify(*arg[::-1]) )
                 if arg[1] == "lit-str":
                     arg = (arg[0].replace('r"',"",1).rstrip('"'),"str")
                 targv2.append(arg)

@@ -231,7 +231,9 @@ class modularSettingsLinker():
                 toc = ""
                 if self.filetype == "json":
                     toc = "{}"
-                open(self.file,'w',encoding=encoding).write(toc)
+                par = os.path.dirname(self.file)
+                filesys.ensureDirPath(par)
+                filesys.writeToFile(toc,self.file,encoding=encoding,autocreate=True)
         self.readerMode = readerMode
         self.discardNewlines = discardNewlines
         self.keptComments = None

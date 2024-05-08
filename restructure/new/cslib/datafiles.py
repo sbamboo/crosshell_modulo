@@ -1,5 +1,5 @@
 import json, re, os
-from cslib.piptools import intpip
+from cslib.piptools import autopipImport
 from cslib.commentParsing import _stripJsonComments, extractComments_v2, injectComments_v2, extractComments_newlineSupport, injectComments_newlineSupport
 from cslib.pathtools import normPathSep,normPathSepObj
 from cslib.commentParsing import finBet,finBetWl
@@ -8,8 +8,7 @@ import yaml
 try:
     import yaml
 except:
-    intpip("install pyyaml")
-    import yaml
+    yaml = autopipImport("yaml","pyyaml")
 
 '''
 CSlibs: Datafiles module, contains a jsonYamlProvider class for using such files with more ease

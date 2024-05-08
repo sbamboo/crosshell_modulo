@@ -1,6 +1,6 @@
 # FileSys: Library to work with filesystems.
 # Made by: Simon Kalmi Claesson
-# Version: 1.2
+# Version: 1.3
 
 # Imports
 import os
@@ -69,7 +69,8 @@ class filesys():
           - notExist: Checks if a file/directory does not exist. (Taking "path=<str>")
           - isFile: Checks if a object is a file. (Taking "path=<str>")
           - isDir: Checks if a object is a directory. (Taking "path=<str>")
-          - ensureDirPath: Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH. (Taking "path=<str>")
+          - ensureDirPathS: Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH. (Taking "path=<str>")
+          - ensureDirPath: Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH. Same as ensureDirPathS but attemps with multiple methods. (Taking "path=<str>")
           - getFileName: Returns the filename of the given file, excluding file extension. (Taking "path=<str>")
           - getFileExtension: Gets the fileextension of a file. (Taking "path=<str>")
           - createFile: Creates a file. (Taking "filepath=<str>", "overwrite=<bool>" and "encoding=<encoding>")
@@ -115,7 +116,7 @@ class filesys():
         else: return True
 
     # Function to create a path, folder per folder
-    def ensureDirPath(path=str()):
+    def ensureDirPathS(path=str()):
         '''Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH'''
         path = filesys.replaceSeps(path)
         sections = path.split(os.sep)
@@ -132,6 +133,19 @@ class filesys():
                 filesys.setWorkingDir(sectionpath)
         except: pass
         filesys.setWorkingDir(curdir)
+
+    # Same as ensureDirPath but attemps with multiple methods.
+    def ensureDirPath(path=str()):
+        '''Creates a path, folder per folder. DON'T INCLUDE FILES IN THE PATH. Same as ensureDirPath but attemps with multiple methods.'''
+        filesys.ensureDirPathS(path)
+        if not os.path.exists(path): 
+            try:
+                os.makedirs(path)
+            except:
+                try:
+                    os.mkdir(path)
+                except Exception as e:
+                    print(f"\033[31mensureDirPath: An error occured: \033[0m",e)
 
     # Function to check if object is file
     def isFile(path=str()):

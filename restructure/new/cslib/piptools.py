@@ -10,8 +10,11 @@ def _check_pip(pipOvw=None) -> bool:
     if pipOvw != None and os.path.exists(pipOvw): pipPath = pipOvw
     else: pipPath = getExecutingPython()
     try:
-        with open(os.devnull, 'w') as devnull:
-            subprocess.check_call([pipPath, "-m", "pip", "--version"], stdout=devnull, stderr=subprocess.STDOUT)
+        try:
+            with open(os.devnull, 'w') as devnull:
+                subprocess.check_call([pipPath, "-m", "pip", "--version"], stdout=devnull, stderr=subprocess.STDOUT)
+        except OSError:
+            subprocess.check_call([pipPath, "-m", "pip", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError:
         return False
     except FileNotFoundError:

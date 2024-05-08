@@ -86,10 +86,29 @@ def injectComments_newlineSupport(json_or_yaml_string,extractedLines) -> str:
     else:
         return json_or_yaml_string
 
-def _stripJsonComments(jsonString):
-    commentPattern = r'(\/\/[^\n]*|\/\*[\s\S]*?\*\/)'
-    jsonWithoutComments = re.sub(commentPattern, '', jsonString)
-    return jsonWithoutComments
+#def _stripJsonComments(jsonString):
+#    commentPattern = r'(\/\/[^\n]*|\/\*[\s\S]*?\*\/)'
+#    jsonWithoutComments = re.sub(commentPattern, '', jsonString)
+#    return jsonWithoutComments
+#def _stripJsonComments(jsonString):
+#    commentPattern = r'(\/\/[^\n]*|\/\*.*?\*\/)'
+#    jsonWithoutComments = re.sub(commentPattern, '', jsonString, flags=re.DOTALL)
+#    return jsonWithoutComments
+def _stripJsonComments(json_str):
+    lines = json_str.split('\n')
+    stripped_lines = []
+    for line in lines:
+        # Remove inline comments
+        if '//' in line:
+            line = line[:line.index('//')]
+        # Remove block comments
+        if '/*' in line:
+            if '*/' in line:
+                line = line[:line.index('/*')] + line[line.index('*/')+2:]
+            else:
+                continue  # Skip lines with unclosed block comments
+        stripped_lines.append(line)
+    return '\n'.join(stripped_lines)
 
 def is_substring_enclosed_by_double_quotes(s: str, substring: str) -> bool:
     inside_quotes = False

@@ -40,7 +40,10 @@ def readerMangler(data=dict,pkgConfigs=dict,readerFolder=str,addMethod=None,read
                 if package.lower() != "builtins":
                     if packageType == "legacy": rootPath = "{CS_lPackPath}"
                     else: rootPath = "{CS_mPackPath}"
-                    readerBase = rootPath + os.sep + pathableName + os.sep + readerFolder + os.sep + reader
+                    sepa = os.sep
+                    if readerFolder.startswith(os.sep):
+                        sepa = ""
+                    readerBase = rootPath + os.sep + pathableName + sepa + readerFolder + os.sep + reader
                     readerPath = readerBase + ".py"
                     readerName = os.path.splitext(os.path.basename(readerPath))[0]
                     addMethod(readerName,readerPath,readerFile,encoding=readerFileEncoding,isStream=readerFileIsStream)

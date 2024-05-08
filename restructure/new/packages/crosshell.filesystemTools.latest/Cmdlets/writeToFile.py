@@ -1,0 +1,1 @@
+csSession.filesys.writeToFile(*args.argv,autocreate=True)

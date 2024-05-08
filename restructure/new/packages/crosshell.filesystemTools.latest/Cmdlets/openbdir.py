@@ -1,0 +1,1 @@
+csSession.filesys.openFolder(csSession.regionalGet("BaseDir"))

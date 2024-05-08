@@ -2,6 +2,7 @@ import pickle, sys, json, os, argparse, inspect, re
 from datetime import datetime, timezone
 from typing import Union
 
+# Import the rest as needed
 from cslib.piptools import installPipDeps_fl,fromPath
 from cslib._crosshellParsingEngine import tagSubstitionManager, pathTagManager, collectionalTagManager, exclude_nonToFormat, include_nonToFormat
 from cslib._crosshellGlobalTextSystem import standardHexPalette,crosshellGlobalTextSystem,parsePrefixDirTag
@@ -1433,12 +1434,15 @@ class crshSession():
         self.regionalPrefix = self.storage.regionalPrefix = regionalVarPrefix
 
         self.deb = crosshellDebugger()
+        self.debr = self.deb.pexception
 
         self.initDefaults = {}
 
         self.storage["stateInstances"] = []
 
         self.cslib = None
+        self.exlibs = None
+        self.filesys = None
         self.linkCslib()
 
         if initOnStart == True:
@@ -2231,6 +2235,13 @@ class crshSession():
         import cslib as cslib
         self.cslib = cslib
         self.exlibs = cslib.externalLibs
+        # Re-link external-libary files
+        for entry in os.listdir(self.exlibs.__path__[0]):
+            entry = os.path.join(self.exlibs.__path__[0],entry)
+            if os.path.isfile(entry) and os.path.splitext(entry)[1] == ".py":
+                name = os.path.basename(os.path.splitext(entry)[0])
+                if name != None: setattr(self.exlibs,name,fromPath(entry))
+        self.filesys = filesys
         del cslib
 
     def unlinkCslib(self):

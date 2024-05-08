@@ -1,5 +1,20 @@
 {
     "package": {
         "desc": "Main crosshell package"
+    },
+    
+    "cmdlets": {
+        "advprint": {
+            "desc": "Print but will format output, extra tags can also be given as a second-argument in JSON form.",
+            "args": "<str:input> <json:tags>"
+        },
+        "clear": {
+            "desc": "Clears the screen.",
+            "aliases": ["cls"]
+        },
+        "downfile": {
+            "desc": "Downloads a file from a URL. --s: Silent, --f: overwriteExisting, --g: handleGdriveVirusWarn.",
+            "args": "<str:url> <str:filepath> --s --f --g"
+        }
     }
 }

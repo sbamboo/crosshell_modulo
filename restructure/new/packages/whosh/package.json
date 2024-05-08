@@ -12,6 +12,7 @@
     },
     "cmdlets": {
         "whosh": {
+            "desc": "TEST",
             "aliases": ["wh"]
         }
     }

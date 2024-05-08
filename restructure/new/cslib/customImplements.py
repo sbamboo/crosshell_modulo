@@ -124,7 +124,8 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
                     cmdletPath_s = normPathSep(cmdlet)
                     if not cmdletPath_s.startswith(os.sep):
                         cmdletPath_s = cmdletPath_s.replace(os.sep,"",1)
-                    cmdletPath = pkgPath_s + os.sep + pathableName + cmdletPath_s
+                    packagePath = pkgPath_s + os.sep + pathableName 
+                    cmdletPath = packagePath + cmdletPath_s
                     # Set Data
                     rearrangedData[generatedID_final] = picklePrioCopy(cmdletSchema)
                     rearrangedData[generatedID_final].update({
@@ -139,7 +140,7 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
                             "name": pkg,
                             "shortname": shortname_final,
                             "type": pkgType,
-                            "rootPath": normPathSep(pkgPath + os.sep+pkg)
+                            "rootPath": normPathSep(packagePath)
                         },
                         "dupeID": knowBase_duplicateAmnt[generatedID],
                         "index": index
@@ -150,6 +151,7 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
     # Clean up
     del knowBase_duplicateAmnt
     # Load cmdletdata from configs
+    alreadyRead = {} ## init a list to skip having to read the file for each cmdlet
     ## load from package.json
     for gid,data1 in rearrangedData.items():
         # Find possible
@@ -166,7 +168,11 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
         # If found load it under the cmdlets key
         if packageJsonFilePath != None and packageJsonFileType != None:
             # Get
-            raw = _fileHandler(packageJsonFileType,"get",packageJsonFilePath)
+            if packageJsonFilePath in alreadyRead.keys():
+                raw = alreadyRead[packageJsonFilePath]
+            else:
+                raw = _fileHandler(packageJsonFileType,"get",packageJsonFilePath)
+                alreadyRead[packageJsonFilePath] = raw
             # Compat
             compatability = raw.get("compat")
             if compatability != None:

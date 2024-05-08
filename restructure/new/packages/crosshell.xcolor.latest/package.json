@@ -1,0 +1,43 @@
+{
+    "cmdlets": {
+        "xcolor": {
+            "options": {"dontLoad":true}
+        },
+        "colorTool": {
+            "desc": "Tool for colors written in Python.",
+            "args": "--nc/--nocolor"
+        },
+        "getXcolor": {
+            "desc": "Returns the xcolor format type of the input.",
+            "args": "<expression>"
+        },
+        "setXcolor": {
+            "desc": "Returns the arguments colored in an xcolor format.",
+            "args": "<expression> <xcolor>"
+        },
+        "toAnsi": {
+            "desc": "Converts input to xcolor:ansi-format.",
+            "args": "<expression>"
+        },
+        "toFormat": {
+            "desc": "Converts xcolor formats to crosshell formatting.",
+            "args": "<expression>"
+        },
+        "toHex": {
+            "desc": "Converts input to xcolor:hex-format.",
+            "args": "<expression>"
+        },
+        "toRgb": {
+            "desc": "Converts input to xcolor:rgb-format.",
+            "args": "<expression>"
+        },
+        "toStr": {
+            "desc": "Converts input to xcolor:str-format.",
+            "args": "<expression>"
+        },
+        "toWebcolor": {
+            "desc": "Converts input to xcolor:webcolor-format.",
+            "args": "<expression>"
+        }
+    }
+}

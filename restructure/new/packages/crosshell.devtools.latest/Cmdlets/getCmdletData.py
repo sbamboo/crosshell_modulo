@@ -81,7 +81,7 @@ else:
             "d.p.type": str(foundCmdletData["parentPackage"].get("type")),
             "d.p.rootpath": str(parentRootPath),
             "d.d.desc": str(foundCmdletData["data"].get("desc")),
-            "d.d.aliases": str(foundCmdletData.get("aliases")),
+            "d.d.aliases": str(foundCmdletData["data"].get("aliases")),
             "d.d.args": str(foundCmdletData["data"].get("args")),
             "d.d.encoding": str(foundCmdletData["data"].get("encoding")),
             "d.d.options": str(foundCmdletData["data"].get("options")),

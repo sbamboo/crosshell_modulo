@@ -1,0 +1,1 @@
+print( csSession.filesys.readFromFile(*args.argv) )

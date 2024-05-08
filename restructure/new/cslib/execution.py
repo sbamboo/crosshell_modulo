@@ -155,7 +155,7 @@ class execline():
                             # execute
                             if cmdData["type"] == "file":
                                 path = cmdData["path"]
-                                globalData["CSScriptRoot"] = path
+                                globalData["CSScriptRoot"] = os.path.dirname(path)
                                 if cmdData.get("reader") != None:
                                     if cmdData["reader"] == "INTERNAL_PYTHON":
                                         exec(open(path,'r',encoding=csSession.getEncoding()).read(),globalData)

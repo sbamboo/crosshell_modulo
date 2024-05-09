@@ -92,17 +92,23 @@ else:
             print(len(res.keys()))
     else:
         if mode == "keys":
-            dat = list(res.keys())
+            if type(res) != dict:
+                dat = [res]
+            else:
+                dat = list(res.keys())
             if silent == False: 
                 csSession.fprint("{f.darkgray}Length: "+str(len(dat))+"\n{f.darkmagenta}Keys{f.darkgray}: {f.blue}"+'{f.darkgray}, {f.blue}'.join(dat)+"{r}")
             else:
                 print(','.join(dat))
 
         elif mode == "values":
-            if doFilter != False:
-                dat = list([str(csSession.cslib.datafiles.getKeyPath(v,doFilter)) if doFilter not in [None,""] else str(v) for v in res.values()])
+            if type(res) != dict:
+                dat = [res]
             else:
-                dat = list([str(v) for v in res.values()])
+                if doFilter != False:
+                    dat = list([str(csSession.cslib.datafiles.getKeyPath(v,doFilter)) if doFilter not in [None,""] else str(v) for v in res.values()])
+                else:
+                    dat = list([str(v) for v in res.values()])
 
             if silent == False: 
                 csSession.fprint("{f.darkgray}Length: "+str(len(dat))+compact2+"{f.darkmagenta}Values{f.darkgray}: {f.blue}"+str('{f.darkgray}, '+compact+'{f.blue}').join(dat)+"{r}")
@@ -111,17 +117,23 @@ else:
 
         elif mode == "entries":
             dat = {}
-            if doFilter != False:
-                for k_,v_ in res.items():
-                    if doFilter not in [None,""]:
-                        if silent == False:
-                            dat[k_] = csSession.cslib.datafiles.getKeyPath(v_,doFilter)
-                        else:
-                            csSession.cslib.datafiles.setKeyPath(dat,k_+"."+doFilter, csSession.cslib.datafiles.getKeyPath(v_,doFilter) )
-                    else:
-                        dat[k_] = v_
+            if type(res) != dict:
+                if silent == False:
+                    dat = {"{f.darkyellow}#Value":res}
+                else:
+                    dat = {keypath.split(".")[-1]:res}
             else:
-                dat = res
+                if doFilter != False:
+                    for k_,v_ in res.items():
+                        if doFilter not in [None,""]:
+                            if silent == False:
+                                dat[k_] = csSession.cslib.datafiles.getKeyPath(v_,doFilter)
+                            else:
+                                csSession.cslib.datafiles.setKeyPath(dat,k_+"."+doFilter, csSession.cslib.datafiles.getKeyPath(v_,doFilter) )
+                        else:
+                            dat[k_] = v_
+                else:
+                    dat = res
             if silent == False: 
                 csSession.fprint("{f.darkgray}Length: "+str(len(dat.keys()))+compact2+"{f.darkmagenta}Entries:\n"+'\n'.join(["{f.darkgreen}"+str(k)+"{f.darkgray}: {f.blue}"+str(v)+compact for k,v in dat.items() ])+"{r}")
             else:

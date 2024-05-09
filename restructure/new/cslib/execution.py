@@ -192,7 +192,7 @@ class execline():
                                     "cmdData": cmdData.get("name") if type(cmdData) == dict else cmdData
                                 }
                                 if csSession.getregister("set").getProperty("crsh","Execution.PrintCmdletDebug") == True:
-                                    toret["traceback"] = traceback.format_exc()
+                                    toret["^traceback"] = traceback.format_exc() # ^ is used to tell stringTags to not format the content of the tag (not evaluate the traceback content)
                                     # MAKE THEESE USE crshDebug
                                     csSession.deb.perror("lng:cs.cmdletexec.traceback",toret)
 

@@ -19,6 +19,9 @@
         "fetch": {
             "desc": "Fetches the content of a URl. --s: Silent, --g: handleGdriveVirusWarn, --b: return as byteString.",
             "args": "<str:url> --s --g --b"
+        },
+        "list": {
+            "desc": "List out regionalData from the crosshell session."
         }
     }
 }

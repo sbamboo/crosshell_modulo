@@ -1,6 +1,6 @@
 # StringTags: Smal library to handle some nice string formatting.
 # Made by: Simon Kalmi Claesson
-# Version: 1.0
+# Version: 1.1
 #
 
 # [Imports]
@@ -22,32 +22,44 @@ import getpass
 # RGB Background:   {rgb!<R>;<G>;<B>} INTEGER ONLY
 # Esc Char:         {esc} / §esc§
 # Newline Char:     {\n}  / §nl§
+# Unformatted tags: {^<tagName>}    THESE TAGS GETS REPLACED LAST, CONTENT IS NOT FORMATTED
 
 # Main function
 def formatStringTags(inputText,allowedVariables={},customTags={}): # AllowedVariables are dict of {varName: varValue}
     '''CSlib.externalLibs.stringTags: Formats stringTags. Note! Not compatible with crosshell's old stringFormat library!
-      Variables:      [<variable>]
-      Ansi:           {!<AnsiCode>}      FOR COLOR DON'T FORGET m AT THE END
-      GeneralTags:    {<tagName>}
-      PwshCompatTags: {<tagName>}
-      Unicode:        {u.<unicode>}
-      ColorsFground:  {f.<colorName>}
-      ColorsBground:  {b.<colorName>}
-      Reset:          {r}
-      Hex Foreground: {#<hex>}           NO OPACITY SUPPORT
-      Hex Background: {#!<hex>}          NO OPACITY SUPPORT
-      RGB Foreground: {rgb.<R>;<G>;<B>}  INTEGER ONLY
-      RGB Background: {rgb!<R>;<G>;<B>}  INTEGER ONLY
-      Esc Char:       {esc} / §esc§
-      Newline char:   {\\n} / §nl§
+      Variables:        [<variable>]
+      Ansi:             {!<AnsiCode>}      FOR COLOR DON'T FORGET m AT THE END
+      GeneralTags:      {<tagName>}
+      PwshCompatTags:   {<tagName>}
+      Unicode:          {u.<unicode>}
+      ColorsFground:    {f.<colorName>}
+      ColorsBground:    {b.<colorName>}
+      Reset:            {r}
+      Hex Foreground:   {#<hex>}           NO OPACITY SUPPORT
+      Hex Background:   {#!<hex>}          NO OPACITY SUPPORT
+      RGB Foreground:   {rgb.<R>;<G>;<B>}  INTEGER ONLY
+      RGB Background:   {rgb!<R>;<G>;<B>}  INTEGER ONLY
+      Esc Char:         {esc} / §esc§
+      Newline char:     {\\n} / §nl§
+      Unformatted tags: {^<tagName>}       THESE TAGS GETS REPLACED LAST, CONTENT IS NOT FORMATTED
     '''
     _lastUsedTag = None
+    placeholders = {}
     # Custom Tags
     for tag,tagValue in customTags.items():
+        placehold = False
+        if tag.startswith("^"):
+            placehold = True
+            tag = tag.replace("^","",1)
         rtext = '{' + str(tag) + '}'
         if tagValue in customTags.keys():
             tagValue = customTags[tagValue]
-        inputText = inputText.replace(rtext,tagValue)
+        if placehold == True:
+            plk = "%PLC%"+tag+"%PLC%"
+            placeholders[plk] = tagValue
+            inputText = inputText.replace(rtext,plk)
+        else:
+            inputText = inputText.replace(rtext,tagValue)
     # New lines parsing
     inputText = inputText.replace("{\\n}","\n")
     inputText = inputText.replace("§nl§","\n")
@@ -184,5 +196,9 @@ def formatStringTags(inputText,allowedVariables={},customTags={}): # AllowedVari
     # Replace esc chars
     inputText = inputText.replace("§esc§","\033")
     inputText = inputText.replace("{esc}","\033")
+    # Put-in placeholded sections
+    for k,v in placeholders.items():
+        if k in inputText:
+            inputText = inputText.replace(k,v)
     # Return
     return inputText

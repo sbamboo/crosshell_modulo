@@ -56,7 +56,7 @@ def isPipeRaw(inp=str):
 
 # endregion: Validators
 
-def determineDataType(inp):
+def determineDataType(inp) -> str:
     if type(inp) == str:
         if inp.lower() == "true": return "bool"
         elif inp.lower() == "false": return "bool"
@@ -74,7 +74,7 @@ def determineDataType(inp):
     else:
         return "python."+type(inp).__name__
 
-def determineTypeForArgs(args=list) -> dict:
+def determineTypeForArgs(args=list) -> list:
     pairs = []
     for arg in args:
         pairs.append((arg,determineDataType(arg)))
@@ -105,6 +105,7 @@ class argumentHandler():
 
     def __init__(self,arguments=list,serializerMode="dill"):
         self.serializerMode = serializerMode
+        self.org = arguments
         # populate
         self.argv = []
         self.sargv = ""
@@ -219,6 +220,71 @@ class argumentHandler():
         
     def determineDt(self,arg:object) -> str:
         return determineDataType(arg)
+
+    def popSargv(self,ind):
+        """Pops an index from sArgv by splitting by space, poping the index and joining back."""
+        l = self.sargv.split(" ")
+        l.pop(ind)
+        self.sargv = ' '.join(l)
+        del l
+    def popArgv(self,ind):
+        """Pops an index from the argv list."""
+        self.argv.pop(ind)
+    def popTargv(self,ind):
+        """Pops an index from the targv list."""
+        self.targv.pop(ind)
+    def popPargv(self,ind):
+        """Pops an index from the pargv list."""
+        self.pargv.pop(ind)
+    def popAl(self,ind):
+        """Pops an index from sargv, argv, targv and pargv, note sargv popping is handled by splitting by space, popping and rejoining."""
+        self.popSargv(ind)
+        self.popArgv(ind)
+        self.popTargv(ind)
+        self.popPargv(ind)
+    
+    def removeSargv(self,val=str):
+        """Removes a value from sargv, by splitting by space, removing the value and rejoining."""
+        l = self.sargv.split(" ")
+        l.remove(val)
+        self.sargv = ' '.join(l)
+        del l
+    def replaceSargv(self,old=str,new="",amnt=None):
+        """Replaces a substring in sargv."""
+        if amnt != None and type(amnt) == int:
+            self.sargv = self.sargv.replace(old,new,amnt)
+        else:
+            self.sargv = self.sargv.replace(old,new)
+    def removeArgv(self,val):
+        """Removes a value from argv."""
+        self.argv.remove(val)
+    def removeTargv(self,val=tuple):
+        """Removes a value from targv, taking a tuple of ("<type>",<val>)"""
+        self.targv.remove(val)
+    def removeTargvAnyType(self,type_=str):
+        """Removes any entry with a type from targv."""
+        l = self.targv
+        for i,x in enumerate(l):
+            if x[1] == type_:
+                self.targv.remove(x)
+        del l
+    def removeTargvAnyVal(self,val):
+        """Removes any entry with a value from targv."""
+        l = self.targv
+        for i,x in enumerate(l):
+            if x[0] == val:
+                self.targv.remove(x)
+        del l
+    def removePargv(self,val):
+        """Removes a value from pargv."""
+        self.pargv.remove(val)
+    def removeAl(self,val):
+        """Removes a value from sargv if its a string, argv, targv but any value match and pargv."""
+        if type(val) == str:
+            self.removeSargv(val)
+        self.removeArgv(val)
+        self.removeTargvAnyVal(val)
+        self.removePargv(val)
 
 def returner(*args,**kwargs):
     """

@@ -2,17 +2,49 @@
 # Set filter to None to not change the user defined filter and the same with mode and compact
 shortcuts = {
     "#cmdletids": ("LoadedPackageData.cmdlets.data",None,None,None),
-    "#cmdlets": ("LoadedPackageData.cmdlets.data","name","values",("","\n"))
+    "#cmdlets": ("LoadedPackageData.cmdlets.data","name","values",("","\n")),
+
+    "#components": ("LoadedPackageData.components.data",None,None,None),
+    "#components-l": ("LoadedPackageData.components.data.legacy",None,None,None),
+    "#components-m": ("LoadedPackageData.components.data.modulo",None,None,None),
+
+    "#readers": ("LoadedPackageData.readers.data",None,None,None),
+    "#readers-l": ("LoadedPackageData.readers.data.legacy",None,None,None),
+    "#readers-m": ("LoadedPackageData.readers.data.modulo",None,None,None),
+
+    "#mappings": ("LoadedPackageData.mappings.data",None,None,None),
+    "#mappings-l": ("LoadedPackageData.mappings.data.legacy",None,None,None),
+    "#mappings-m": ("LoadedPackageData.mappings.data.modulo",None,None,None),
+
+    "#palette": ("LoadedPackageData.palette.data",None,None,None),
+    "#palette-l": ("LoadedPackageData.palette.data.legacy",None,None,None),
+    "#palette-m": ("LoadedPackageData.palette.data.modulo",None,None,None),
+
+    "#langpack": ("LoadedPackageData.langpack.data",None,None,None),
+    "#langfiles": ("LoadedPackageData.langpack.data.langfiles",None,None,None),
+
+    "#dynprefix": ("LoadedPackageData.dynprefix.data",None,None,None),
+
+    "#versiondata": ("VersionData",None,"entries",("","\n")),
+
+    "#loadedpkgs-m": ("LoadedPackages.modulo",None,None,None),
+    "#loadedpkgs-l": ("LoadedPackages.legacy",None,None,None),
+
+    "#pkgfilelist-m": ("PkgFileList.modulo",None,None,None),
+    "#pkgfilelist-l": ("PkgFileList.legacy",None,None,None),
+
+    "#pkglist-m": ("PackageList.modulo",None,None,None),
+    "#pkglist-l": ("PackageList.legacy",None,None,None)
 }
 
-helpText = "{f.darkmagenta}Additional arguments are:\n{f.darkblue}--v{f.darkgray}: Display values.\n{f.darkblue}--e{f.darkgray}: Display entries.\n{f.darkblue}--l{f.darkgray}: To only get the lenght of the result.\n{f.darkblue}--s{f.darkgray}: For non-formated raw output and ommitted warns/errors.\n{f.darkblue}--c{f.darkgray}: To display a more compact view.\n{f.darkblue}-f {f.blue}<subkeypath>{f.darkgray}: To apply a keypath to each entry. (not keys)\n{f.darkblue}--h{f.darkgray}: Displays this help text.{r}"
+helpText = "{f.darkmagenta}Additional arguments are:\n{f.darkblue}--v{f.darkgray}: Display values.\n{f.darkblue}--e{f.darkgray}: Display entries.\n{f.darkblue}--l{f.darkgray}: To only get the lenght of the result.\n{f.darkblue}--s{f.darkgray}: For non-formated raw output and ommitted warns/errors.\n{f.darkblue}--c{f.darkgray}: To display a more compact view.\n{f.darkblue}-f {f.blue}<subkeypath>{f.darkgray}: To apply a keypath to each entry. (not keys)\n{f.darkblue}--d{f.darkgray}: Displays the shortcuts.\n{f.darkblue}--h{f.darkgray}: Displays this help text.{r}"
 
 mode = None
 silent = False
 lengthOnly = False
 doFilter = False
 
-compact = "\n\n"
+compact = "\n"
 compact2 = "\n\n"
 
 if "--v" in args.argv:
@@ -47,6 +79,10 @@ if "-f" in args.argv:
 
 if "--h" in args.argv:
     csSession.fprint(helpText)
+    exit()
+
+if "--d" in args.argv:
+    csSession.fprint("{f.darkmagenta}Shortcuts:\n{f.darkblue}"+'{f.darkgray},{f.darkblue} '.join(shortcuts.keys()))
     exit()
 
 if len(args.argv) > 0:
@@ -86,24 +122,43 @@ if res == None and silent == False:
         csSession.deb.perror("{f.darkred}The path '"+keypath+"' returned empty, invalid mode?{r}")
 else:
     if lengthOnly == True:
-        if silent == False:
-            csSession.fprint("{f.darkgray}Length: "+str(len(res.keys()))+"{r}")
+        if type(res) != dict:
+            if type(res) in [list,tuple,set]:
+                dat = list(res)
+            else:
+                dat = [res]
+            par = "Values"
         else:
-            print(len(res.keys()))
+            dat = list(res.keys())
+        if silent == False:
+            csSession.fprint("{f.darkgray}Length: "+str(len(dat))+"{r}")
+        else:
+            print(len(dat))
     else:
         if mode == "keys":
+            par = "Keys"
             if type(res) != dict:
-                dat = [res]
+                if type(res) in [list,tuple,set]:
+                    dat = list(res)
+                else:
+                    dat = [res]
+                par = "Values"
             else:
                 dat = list(res.keys())
             if silent == False: 
-                csSession.fprint("{f.darkgray}Length: "+str(len(dat))+"\n{f.darkmagenta}Keys{f.darkgray}: {f.blue}"+'{f.darkgray}, {f.blue}'.join(dat)+"{r}")
+                csSession.fprint("{f.darkgray}Length: "+str(len(dat))+"\n{f.darkmagenta}"+par+"{f.darkgray}: {f.blue}"+'{f.darkgray}, {f.blue}'.join([str(x) for x in dat])+"{r}")
             else:
-                print(','.join(dat))
+                if type(res) in [list,tuple,dict,set]:
+                    print(dat)
+                else:
+                    print(','.join(dat))
 
         elif mode == "values":
             if type(res) != dict:
-                dat = [res]
+                if type(res) in [list,tuple,set]:
+                    dat = list(res)
+                else:
+                    dat = [res]
             else:
                 if doFilter != False:
                     dat = list([str(csSession.cslib.datafiles.getKeyPath(v,doFilter)) if doFilter not in [None,""] else str(v) for v in res.values()])
@@ -111,9 +166,12 @@ else:
                     dat = list([str(v) for v in res.values()])
 
             if silent == False: 
-                csSession.fprint("{f.darkgray}Length: "+str(len(dat))+compact2+"{f.darkmagenta}Values{f.darkgray}: {f.blue}"+str('{f.darkgray}, '+compact+'{f.blue}').join(dat)+"{r}")
+                csSession.fprint("{f.darkgray}Length: "+str(len(dat))+compact2+"{f.darkmagenta}Values{f.darkgray}: {f.blue}"+str('{f.darkgray}, '+compact+'{f.blue}').join([str(x) for x in dat])+"{r}")
             else:
-                print(','.join(dat))
+                if type(res) in [list,tuple,dict,set]:
+                    print(dat)
+                else:
+                    print(','.join(dat))
 
         elif mode == "entries":
             dat = {}
@@ -138,6 +196,5 @@ else:
                 csSession.fprint("{f.darkgray}Length: "+str(len(dat.keys()))+compact2+"{f.darkmagenta}Entries:\n"+'\n'.join(["{f.darkgreen}"+str(k)+"{f.darkgray}: {f.blue}"+str(v)+compact for k,v in dat.items() ])+"{r}")
             else:
                 print(str(dat))
-
         else:
             csSession.fprint("{f.darkgray}Length: "+str(len(res.keys()))+compact2+"{f.darkyellow}Unknown mode:{f.blue}\n"+str(res))

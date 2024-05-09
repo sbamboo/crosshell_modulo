@@ -21,7 +21,11 @@
             "args": "<str:url> --s --g --b"
         },
         "list": {
-            "desc": "List out regionalData from the crosshell session."
+            "desc": "List out regionalData from the crosshell session. --h: Help.",
+            "args": "<str:keypath> --h --v --e --l --s --c -f <str:filter-keypath>"
+        },
+        "normfloat": {
+            "desc": "Normalizes dots in float deffinitions, example .1 -> 0.1 and 1. -> 1.0"
         }
     }
 }

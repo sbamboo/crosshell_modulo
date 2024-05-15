@@ -1911,6 +1911,18 @@ class crshSession():
             },
             {
                 "moduleName": "dill"
+            },
+            {
+                "moduleName": "requests"
+            },
+            {
+                "moduleName": "chardet"
+            },
+            {
+                "moduleName": "bs4"
+            },
+            {
+                "moduleName": "rich"
             }
         ]
 

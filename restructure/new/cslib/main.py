@@ -1674,6 +1674,7 @@ class crshSession():
             "VersionFile": "{CoreDir}/version.yaml",
             "MsgProfileFile": "{AssetsDir}/profile.msg",
             "PyProfileFile": "{AssetsDir}/profile.py",
+            "ExtensionsFile": "{AssetsDir}/extensions.json",
             "Components": "{CoreDir}/components",
             "BuiltInReaders": {
                 "PLATFORM_EXECUTABLE": "{ReadersFolder}/platexecs.py"
@@ -2196,6 +2197,22 @@ class crshSession():
             "cs_readerPath": "{evalLocal:readerPath}",
             "cs_lph_isAllowed": "{evalLocal:lph_isAllowed}",
             "cs_runShell": "{evalLocal:runShell}"
+        }
+
+        self.initDefaults["defaultExtensions"] = {
+            "crshmodulo_helper_v1": {
+                "mapping": {
+                    "csSession": "crshSession"
+                },
+                "blockedDefs": [],
+                "blockedUnmappedDefs": ["crshSession"],
+                "blockedParams": [],
+                "root": "../",
+                "sourceFile": "../cslib/main.py",
+                "parsed": None,
+                "disableFromRoot": True,
+                "msgOnRootDisabled": True
+            }
         }
 
     def ingestDefaults(self,defaults=None,ingestTags=None):
@@ -3222,6 +3239,25 @@ class crshSession():
                                 cmp.registerComponent(componentName,entry,selectedData.get("desc"),"method")
             del cmp,_set,componentName,componentDatas
 
+    def init_populateExtensionsJsonDefaults(self):
+        if not self.flags.has("--fileless"):
+            extensionsFile = self.regionalGet("ExtensionsFile")
+            if not os.path.exists( extensionsFile ):
+                filesys.writeToFile("{}", extensionsFile, encoding="utf-8", autocreate=True)
+            current = _fileHandler("json","get",extensionsFile,encoding="utf-8")
+            tmp = self.initDefaults["defaultExtensions"].copy()
+            def update_defaults(current, defaults):
+                """
+                Update the current dictionary recursively with values from the defaults dictionary.
+                """
+                for key, default_value in defaults.items():
+                    if key not in current:
+                        current[key] = default_value
+                    elif isinstance(default_value, dict) and isinstance(current[key], dict):
+                        update_defaults(current[key], default_value)
+            update_defaults(current,tmp)
+            _fileHandler("json","set",extensionsFile, content=current, encoding="utf-8")
+            del extensionsFile,tmp
 
     # endregion: Init-SubMethods
 
@@ -3247,6 +3283,9 @@ class crshSession():
 
         # Populate settings and persistance
         self.init_populateSettingsAndPersistance()
+
+        # Fill in extensions.json file
+        self.init_populateExtensionsJsonDefaults()
 
         # Load conUtils config from settings instances
         self.init_loadConUtilsConfig()

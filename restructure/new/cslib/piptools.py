@@ -1,4 +1,13 @@
-import os, json, sys, subprocess, importlib, platform
+import os, json, sys, subprocess, platform
+
+# Ensure importlib.util
+try:
+    import importlib
+    _ = getattr(importlib,"util")
+except AttributeError:
+    from importlib import util as ua
+    setattr(importlib,"util",ua)
+    del ua
 
 # Python
 def getExecutingPython() -> str:

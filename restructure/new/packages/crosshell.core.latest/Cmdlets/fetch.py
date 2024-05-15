@@ -37,7 +37,6 @@ if silent == False:
     useLoadingBar = True
     title = textsys.parse("{f.darkblue}Fetching "+os.path.basename(url)+"...{r}")
     gdriveWarnText = textsys.parse("{f.darkyellow}Found gdrive scan warning, attempting to extract link and download from there...{r}")
-onFileExiError = "raise"
 
 #Function to send a get request to a url, and if a gdrive-virus-scan-warning appears try to extract the link and send a get request to it instead.
 resp = csSession.exlibs.fancyPants.getUrlContent_HandleGdriveVirWarn(

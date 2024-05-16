@@ -82,7 +82,7 @@ if "--h" in args.argv:
     exit()
 
 if "--d" in args.argv:
-    csSession.fprint("{f.darkmagenta}Shortcuts:\n{f.darkblue}"+'{f.darkgray},{f.darkblue} '.join(shortcuts.keys()))
+    csSession.fprint("{f.darkmagenta}Shortcuts:\n{f.darkblue}"+'{f.darkgray},{f.darkblue} '.join(shortcuts.keys())+"{r}")
     exit()
 
 if len(args.argv) > 0:

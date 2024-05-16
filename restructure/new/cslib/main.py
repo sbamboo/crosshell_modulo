@@ -2206,12 +2206,13 @@ class crshSession():
                 },
                 "blockedDefs": [],
                 "blockedUnmappedDefs": ["crshSession"],
-                "blockedParams": [],
+                "blockedParams": ["self"],
                 "root": "../",
                 "sourceFile": "../cslib/main.py",
                 "parsed": None,
                 "disableFromRoot": True,
-                "msgOnRootDisabled": True
+                "msgOnRootDisabled": True,
+	            "addParamDefaults": False
             }
         }
 

@@ -1,1 +1,16 @@
-{"crshmodulo_helper_v1": {"mapping": {"csSession": "crshSession"}, "blockedDefs": [], "blockedUnmappedDefs": ["crshSession"], "blockedParams": [], "root": "../", "sourceFile": "../cslib/main.py", "parsed": null, "disableFromRoot": true, "msgOnRootDisabled": true}}
+{
+    "crshmodulo_helper_v1": {
+        "mapping": {
+            "csSession": "crshSession"
+        },
+        "blockedDefs": [],
+        "blockedUnmappedDefs": ["crshSession"],
+        "blockedParams": ["self"],
+        "root": "../",
+        "sourceFile": "../cslib/main.py",
+        "parsed": null,
+        "disableFromRoot": true,
+        "msgOnRootDisabled": true,
+        "addParamDefaults": false
+    }
+}

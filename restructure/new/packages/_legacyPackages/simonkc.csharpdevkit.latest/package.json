@@ -1,0 +1,12 @@
+{
+    "package": {
+        "name": "C# Devkit",
+        "version": "latest",
+        "author": "simonkc"
+    },
+
+    "cmdlets": {
+        "csdk": {
+        }
+    }
+}

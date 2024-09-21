@@ -1,0 +1,33 @@
+{
+    "schema-compat": {
+        "raw": {
+            "merge": [
+                ["@", "$"]
+            ],
+            "move": {},
+            "dels": []
+        },
+
+        "modulo.new": {
+            "merge": [
+                ["@.data", "$"]
+            ],
+            "move": {},
+            "dels": []
+        },
+
+        "modulo.old": {
+            "merge": [
+                ["@.data", "$"]
+            ],
+            "move": {
+                "@.data.Options.blockCommonParams": "@.data.blockCommonparams",
+                "@.data.Options.test": "@.data.test"
+            },
+            "dels": [
+                "@.data.blockCommonparams",
+                "@.data.test"
+            ]
+        }
+    }
+}

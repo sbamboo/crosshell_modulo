@@ -2038,6 +2038,13 @@ class crshSession():
                         "pkgConfigs": None,
                         "dynprefixFolder": None
                     }
+                },
+                "compatlayers": {
+                    "registeredBy": "builtin",
+                    "type": "raw_forfilename:compat", # /Layers/compat.json
+                    "addr": "/Layers",
+                    "legacy_addr": None,
+                    "recursive": False
                 }
             }
         }
@@ -2213,6 +2220,123 @@ class crshSession():
                 "disableFromRoot": True,
                 "msgOnRootDisabled": True,
 	            "addParamDefaults": False
+            }
+        }
+
+        self.initDefaults["defaultLayers"] = {
+            "schema-compat": "modulo.new",
+            "DotfileOverride": "modulo.new",
+            "Override": "module.new"
+        }
+
+        self.initDefaults["defaultLayerData"] = {
+            "schema-compat": {
+                # Target <- Source mapping:
+                # Target is: rearrangedData[gid] ("@")
+                # Source is: cmdlets[filename_d] ("$")
+                "raw": {
+                    "merge": [
+                        ["@", "$"]
+                    ],
+                    "move": {},
+                    "dels": []
+                },
+
+                "modulo.new": {
+                    "merge": [
+                        ["@.data", "$"]
+                    ],
+                    "move": {},
+                    "dels": []
+                },
+
+                "modulo.old": {
+                    "merge": [
+                        ["@.data", "$"]
+                    ],
+                    "move": {
+                        "@.data.Options.blockCommonParams": "@.data.blockCommonparams"
+                    },
+                    "dels": ["@.data.blockCommonparams"]
+                }
+            },
+
+            # Does not map source/target lists destinations
+            # dest <- from
+            "DotfileOverride": {
+                "raw": {
+                    "override_path": "Override.path",
+                    "override_name": "Override.name",
+                    "override_id": "Override.id"
+                },
+                "module.new": {
+                    "override_path": "Override.path",
+                    "override_name": "Override.name",
+                    "override_id": "Override.id"
+                },
+                "module.old": {
+                    "pathoverwrite": "Override.path",
+                    "nameoverwrite": "Override.name",
+                    "idoverwrite": "Override.id"
+                }
+            },
+
+            # Target <- Source mapping, no char needed.
+            # Both are same obj (rearrangeData[gid])
+            "Override": {
+                "raw": {
+                    "move": {
+                        "path": "data.override_path",
+                        "name": "data.override_name",
+                        "#.": "data.override_id" # Sets the rearrangedData[gid] to rearrangedData[^data.override_id]
+                    },
+                    "set": {
+                        "data.hasOverriddenWith.path": "data.override_path",
+                        "data.hasOverriddenWith.name": "data.override_name",
+                        "data.hasOverriddenWith.id": "data.override_id"
+                    },
+                    "dels": [
+                        "data.override_path",
+                        "data.override_name",
+                        "data.override_id"
+                    ]
+                },
+                
+                "module.new": {
+                    "move": {
+                        "path": "data.override_path",
+                        "name": "data.override_name",
+                        "#.": "data.override_id" # Sets the rearrangedData[gid] to rearrangedData[^data.override_id]
+                    },
+                    "set": {
+                        "data.hasOverriddenWith.path": "data.override_path",
+                        "data.hasOverriddenWith.name": "data.override_name",
+                        "data.hasOverriddenWith.id": "data.override_id"
+                    },
+                    "dels": [
+                        "data.override_path",
+                        "data.override_name",
+                        "data.override_id"
+                    ]
+                },
+                
+                "module.old": {
+                    "move": {
+                        "path": "data.pathoverwrite",
+                        "name": "data.nameoverwrite",
+                        "#.": "data.idoverwrite" # Sets the rearrangedData[gid] to rearrangedData[^data.idoverwrite]
+                    },
+                    "set": {
+                        "data.hasOverriddenWith.path": "data.pathoverwrite",
+                        "data.hasOverriddenWith.name": "data.nameoverwrite",
+                        "data.hasOverriddenWith.id": "data.idoverwrite"
+                    },
+                    "dels": [
+                        "data.pathoverwrite",
+                        "data.nameoverwrite",
+                        "data.idoverwrite"
+                    ]
+                }
             }
         }
 

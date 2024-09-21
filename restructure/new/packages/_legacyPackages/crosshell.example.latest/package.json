@@ -3,11 +3,5 @@
         "name": "example",
         "version": "latest",
         "author": "crosshell"
-    },
-
-    "cmdlets": {
-        "test_leg": {
-            "desc": "hello"
-        }
     }
 }

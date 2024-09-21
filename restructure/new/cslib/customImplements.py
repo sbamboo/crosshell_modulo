@@ -232,6 +232,7 @@ def cmdletMangler(data=dict,pkgConfigs=dict,lPackPath=str,mPackPath=str,cmdletSt
                         allowed_keys = list(rearrangedData[gid]["data"].keys())
                         allowed_keys.extend(sumAllowedKeys)
                         allowed_keys.extend(sumAllowedKeys2)
+                        # MARK: ?
                         if k == "blockCommonparams":
                             if type(newData.get("options")) != dict: newData["Options"] = {}
                             newData["Options"]["blockCommonParams"] = v

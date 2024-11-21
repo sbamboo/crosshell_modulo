@@ -125,7 +125,8 @@ def _getWebcolorMappings():
         intpip("install webcolors")
         import webcolors
     colorMapping = {}
-    for color,_hex in webcolors.CSS3_NAMES_TO_HEX.items():
+    #for color,_hex in webcolors.CSS3_NAMES_TO_HEX.items():
+    for color,_hex in {x: webcolors.name_to_hex(x) for x in webcolors.names("css3")}.items():
         _hex = _hex.lstrip("#")
         lv = len(_hex)
         r,g,b = tuple(int(_hex[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))

@@ -747,7 +747,7 @@ class crosshellSession():
             self.tmpDPersVals = tempDataPersistantValues
             self.tempData.update(tempDataPersistantValues)
     # TempData
-    def tmpSet(self,key=None,value=str|int|list|dict):
+    def tmpSet(self,key=None,value=None):
         if key == None and type(value) == dict:
             self.tempData = value
         else:
